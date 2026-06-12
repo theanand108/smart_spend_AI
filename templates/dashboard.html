@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}
+    Dashboard
+{% endblock title %}
+
+{% block body %}
+
+<div class="container1 mx-5 mt-3">
+    <h2> Expense Summary of the month</h2>
+<div class="card" style="width: 20rem;">
+  <ul class="list-group list-group-flush">
+    <li class="list-group-item">Total Expanse = {{month_spending}} </li>
+    <li class="list-group-item">Top Category = {{top_category}} </li>
+    <li class="list-group-item">Total Transactions = {{total_transactions}} </li>
+    <li class="list-group-item">Average Expense = {{average_expense}} </li>
+  </ul>
+</div>
+</div>
+
+<div class="card mt-4 mx-5" style="width: 24rem;">
+    <div class="card-body">
+        <canvas
+            id="myPieChart"
+            data-labels='{{ chart_labels | tojson }}'
+            data-values='{{ chart_values | tojson }}'
+        ></canvas>
+        <div class="expense mt-3"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+
+
+    
+{% endblock body %}

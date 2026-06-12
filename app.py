@@ -69,6 +69,47 @@ def home():
     allTransactions = Transaction.query.all()
     return render_template("index.html", allTransactions = allTransactions)
 
+@app.route("/dashboard")
+def dashboard1():
+    allTransactions = Transaction.query.all()
+    total_expense = db.session.query(db.func.sum(Transaction.amount)).scalar()
+    total_transactions = db.session.query(Transaction.id).count()
+
+    curr_month = datetime.now().month
+    curr_year = datetime.now().year
+    month_spending = db.session.query(db.func.sum(Transaction.amount)).filter(
+        db.extract('month', Transaction.date) == curr_month,
+        db.extract('year', Transaction.date) == curr_year
+    ).scalar() or 0
+
+    top_category_query = db.session.query(
+        Transaction.category, 
+        db.func.sum(Transaction.amount).label('total')
+    ).group_by(Transaction.category).order_by(db.text('total DESC')).first()
+    top_category = top_category_query[0] if top_category_query else "N/A"
+
+    average_expense = month_spending / total_transactions if total_transactions else 0
+
+    ##for chart
+    category_data = db.session.query(
+        Transaction.category, 
+        db.func.sum(Transaction.amount)
+    ).group_by(Transaction.category).all()
+    
+    # Split the query tuple results into distinct arrays
+    labels = [row[0] for row in category_data]
+    values = [float(row[1]) for row in category_data]
+
+    print(total_expense)
+    return render_template("dashboard.html",
+         total_expense=total_expense,
+        total_transactions=total_transactions,
+        month_spending=month_spending,
+        top_category=top_category,
+         average_expense = average_expense, chart_labels = labels, chart_values = values )
+
+
+
 
 if __name__ == '__main__':
     with app.app_context():

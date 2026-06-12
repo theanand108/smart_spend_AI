@@ -3,8 +3,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+
 df = pd.read_csv('data/transaction.csv')
-print(df.head())
+# print(df.head())
 
 # 3. Define the Categorization Logic
 def categorize(merchant):
@@ -40,9 +42,7 @@ print("\n--- Spending Summary ---")
 
 summary = df.groupby("Category")["Amount"].sum()
 for category, total in summary.items():
-    print(f"{category} : {total}")
-
-
+    print(f"{category} : {total}") 
 
 # 6. Feature 5 — Visualization
 print("\n--- Generating Spending Charts ---")
