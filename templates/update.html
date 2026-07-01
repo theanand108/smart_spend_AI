@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}
+  Update
+{% endblock title %}
+{% block body %}
+<div class="container2">
+      <form action="/update/{{transaction.id}}" method="POST" class="w-75 mx-auto">
+        <h1 class="mb-5 mt-2">Update your Expenses</h1>
+  <div class="mb-3 ">
+    <label for="merchant_name" class="form-label">Merchant's name</label>
+    <input type="text" class="form-control" name="merchant_name" id="merchant_name" value="{{ transaction.merchant_name }}" aria-describedby="merchant" required>
+  </div>
+  <div class="mb-3 ">
+    <label for="amount" class="form-label">Amount paid</label>
+    <input type="number" class="form-control" name="amount" id="amount" value="{{ transaction.amount }}" aria-describedby="amount" required>
+  </div>
+  <div class="mb-3 ">
+    <label for="notes" class="form-label">Note (optional)</label>
+    <input type="text" class="form-control" name="notes" id="notes" value="{{ transaction.notes }}" aria-describedby="notes">
+  </div>
+<div class="dropdown mb-3">
+  <select class="form-select" name="payment_method" id="payment_method" value="{{ transaction.payment_method }}" aria-label="Default select example">
+  <option selected>Select payment method</option>
+  <option value="upi" >UPI</option>
+  <option value="credit">Credit Card</option>
+  <option value="debit">Debit Card</option>
+  <option value="netbanking">Net Banking</option>
+</select>
+
+<script>
+    // Let JavaScript set the value dynamically on page load
+    document.getElementById('payment_method').value = "{{ transaction.payment_method }}";
+</script>
+
+</div>
+  <button type="submit" class="btn btn-dark">Submit</button>
+</form>
+
+   <script src="{{ url_for('static', filename='update.js') }}"></script>
+{% endblock  %}

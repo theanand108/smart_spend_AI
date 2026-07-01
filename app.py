@@ -1,5 +1,8 @@
+from calendar import month
+# pyright: reportMissingImports=false
 from flask import Flask, request, render_template, redirect
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import or_
 from datetime import datetime
 
 app = Flask(__name__)
@@ -12,13 +15,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 class Transaction(db.Model):
-    id = db.Column(db.Integer, primary_key = True)
-    date = db.Column(db.DateTime, default = datetime.utcnow)
-    merchant_name = db.Column(db.String, nullable = False)
-    amount = db.Column(db.Float, nullable = False)
-    category = db.Column(db.String(50), nullable = True)
-    payment_method = db.Column(db.String(50))
-    notes = db.Column(db.String(200))
+    try:
+        id = db.Column(db.Integer, primary_key = True)
+        date = db.Column(db.DateTime, default = datetime.utcnow)
+        merchant_name = db.Column(db.String, nullable = False)
+        amount = db.Column(db.Float, nullable = False)
+        category = db.Column(db.String(50), nullable = True)
+        payment_method = db.Column(db.String(50))
+        notes = db.Column(db.String(200))
+    except Exception as e:
+        print(f"Error defining Transaction model: {e}")
 
     def __repr__(self):
 
@@ -39,7 +45,7 @@ def categorize(merchant):
         return "Bills & Utilities"
     elif "myntra" in merchant or "h&m" in merchant or "amazon" in merchant or "flipkart" in merchant:
         return "Shopping"
-    elif "gym" in merchant:
+    elif "gym" in merchant or "health" in merchant or "hospital" in merchant:
         return "Health & Fitness"
     else:
         return "Others"
@@ -69,46 +75,178 @@ def home():
     allTransactions = Transaction.query.all()
     return render_template("index.html", allTransactions = allTransactions)
 
-@app.route("/dashboard")
-def dashboard1():
-    allTransactions = Transaction.query.all()
-    total_expense = db.session.query(db.func.sum(Transaction.amount)).scalar()
-    total_transactions = db.session.query(Transaction.id).count()
-
+@app.route('/dashboard')
+@app.route('/dashboard/<int:month>')
+def dashboard1(month=None):
     curr_month = datetime.now().month
     curr_year = datetime.now().year
-    month_spending = db.session.query(db.func.sum(Transaction.amount)).filter(
+    if month is not None:
+        curr_month = month
+
+    search_query = request.args.get('q', '').strip()
+
+    month_filters = [
         db.extract('month', Transaction.date) == curr_month,
-        db.extract('year', Transaction.date) == curr_year
-    ).scalar() or 0
+        db.extract('year', Transaction.date) == curr_year,
+    ]
 
-    top_category_query = db.session.query(
-        Transaction.category, 
-        db.func.sum(Transaction.amount).label('total')
-    ).group_by(Transaction.category).order_by(db.text('total DESC')).first()
+    total_expense = db.session.query(db.func.sum(Transaction.amount)).filter(*month_filters).scalar() or 0
+    total_transactions = db.session.query(Transaction.id).filter(*month_filters).count()
+
+    month_spending = db.session.query(db.func.sum(Transaction.amount)).filter(*month_filters).scalar() or 0
+
+    top_category_query = (
+        db.session.query(Transaction.category, db.func.sum(Transaction.amount).label('total'))
+        .filter(*month_filters)
+        .group_by(Transaction.category)
+        .order_by(db.text('total DESC'))
+        .first()
+    )
+
     top_category = top_category_query[0] if top_category_query else "N/A"
-
     average_expense = month_spending / total_transactions if total_transactions else 0
 
-    ##for chart
-    category_data = db.session.query(
-        Transaction.category, 
-        db.func.sum(Transaction.amount)
-    ).group_by(Transaction.category).all()
+    category_data = (
+        db.session.query(
+            Transaction.category,
+            db.func.sum(Transaction.amount)
+        )
+        .filter(*month_filters)
+        .group_by(Transaction.category)
+        .all()
+    )
+
+    transaction_query = Transaction.query.filter(*month_filters)
+    if search_query:
+        pattern = f"%{search_query}%"
+        transaction_query = transaction_query.filter(
+            or_(
+                Transaction.merchant_name.ilike(pattern),
+                Transaction.notes.ilike(pattern),
+                Transaction.category.ilike(pattern),
+            )
+        )
+    transactions = transaction_query.order_by(Transaction.date.desc()).all()
+
     
     # Split the query tuple results into distinct arrays
     labels = [row[0] for row in category_data]
     values = [float(row[1]) for row in category_data]
 
-    print(total_expense)
-    return render_template("dashboard.html",
-         total_expense=total_expense,
+    trend_data = db.session.query(
+        db.func.strftime('%Y-%m', Transaction.date).label('month'),
+        db.func.sum(Transaction.amount)
+    ).group_by('month').order_by('month').all()
+
+    # 2. Split the results into parallel arrays for JavaScript
+    trend_labels = [row[0] for row in trend_data] # e.g., ['2026-05', '2026-06']
+    trend_values = [float(row[1]) for row in trend_data] # e.g., [1520.0, 4680.0]
+
+    curr_month_name = datetime(curr_year, curr_month, 1).strftime('%B')
+    return render_template(
+        "dashboard.html",
+        total_expense=total_expense,
         total_transactions=total_transactions,
         month_spending=month_spending,
         top_category=top_category,
-         average_expense = average_expense, chart_labels = labels, chart_values = values )
+        average_expense=average_expense,
+        chart_labels=labels,
+        chart_values=values,
+        transactions=transactions,
+        search_query=search_query,
+        curr_month=curr_month,
+        curr_month_name=curr_month_name,
+        trend_labels=trend_labels,
+        trend_values=trend_values,
+    )
 
 
+
+@app.route('/delete/<int:id>', methods=['GET', 'POST'])
+def delete_transaction(id):
+    transaction = Transaction.query.filter_by(id = id).first()
+    db.session.delete(transaction)
+    db.session.commit()
+    return redirect("/")
+
+
+@app.route('/update/<int:id>', methods=['GET', 'POST'])
+def update_transaction(id):
+    transaction = Transaction.query.filter_by(id=id).first()
+    if request.method == 'POST':
+        transaction.merchant_name = request.form.get("merchant_name")
+        transaction.amount = float(request.form.get("amount"))
+        transaction.notes = request.form.get("notes")
+        transaction.payment_method = request.form.get("payment_method")
+        transaction.category = categorize(transaction.merchant_name)
+
+        db.session.commit()
+        return redirect("/")
+    return render_template("update.html", transaction=transaction)
+
+@app.route("/export/<int:month>")
+def exportCSV(month = None):
+    curr_month = month
+    curr_year = datetime.now().year
+    search_query = request.args.get('q', '').strip()
+
+
+    month_filters = [
+        db.extract('month', Transaction.date) == curr_month,
+        db.extract('year', Transaction.date) == curr_year,
+    ]
+
+    arrayMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+    transaction_query = Transaction.query.filter(*month_filters)
+    if search_query:
+        pattern = f"%{search_query}%"
+        transaction_query = transaction_query.filter(
+            or_(
+                Transaction.merchant_name.ilike(pattern),
+                Transaction.notes.ilike(pattern),
+                Transaction.category.ilike(pattern),
+            )
+        )
+    transactions = transaction_query.order_by(Transaction.date.desc()).all()
+
+    total_transactions = len(transactions)
+    total_amount = sum(t.amount for t in transactions)
+
+    export_date = datetime.now().strftime("%d-%b-%Y")
+    month_name = datetime(curr_year, curr_month, 1).strftime("%B")
+    # Create CSV content
+
+    csv_content = ""
+
+    csv_content += "Smart Spend AI - Expense Report\n\n"
+
+    csv_content += f"Export Date: {export_date}\n"
+    csv_content += f"Month: {month_name}\n"
+
+    csv_content += "Category: All Categories\n"
+
+    csv_content += f"Search: {search_query if search_query else 'None'}\n"
+
+    csv_content += f"Total Transactions: {total_transactions}\n"
+
+    csv_content += f"Total Amount: ₹{total_amount:.2f}\n"
+
+    csv_content += "-" * 60 + "\n\n"
+
+
+    csv_content += "S.No,Date,Merchant Name,Category,Amount,Payment Method,Notes\n"
+    for index, transaction in enumerate(transactions, start=1):
+        csv_content += f"{index},{transaction.date},{transaction.merchant_name},{transaction.amount},{transaction.category},{transaction.payment_method},{transaction.notes}\n"
+
+    # Create a response with the CSV content
+    response = app.response_class(
+        response=csv_content,
+        status=200,
+        mimetype='text/csv'
+    )
+    response.headers["Content-Disposition"] = f"attachment; filename=SmartSpend_{arrayMonths[curr_month - 1]}_{curr_year}_{search_query}.csv"
+    return response
 
 
 if __name__ == '__main__':

@@ -1,0 +1,20 @@
+.page_wrapper{
+    display:flex;
+    /* justify-content: flex-start; */
+    min-height: 50vh;
+    min-width: 100vw;
+    justify-content: space-evenly;
+    /* justify-content: space-between; */
+    
+}
+#pieChart{
+    /* width: 300px; */
+    margin-left: 1rem;
+}
+
+.barChart{
+    width: 24rem;
+    height: 30rem;
+
+  margin-right: 1rem;
+}

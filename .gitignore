@@ -5,3 +5,4 @@ venv/
 instance/
 output/
 src/output/
+.DS_Store
