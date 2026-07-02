@@ -114,8 +114,8 @@ block body %}
       <h5>Expense Summary Chart</h5>
       <canvas
         id="myPieChart"
-        data-labels="{{ chart_labels | tojson }}"
-        data-values="{{ chart_values | tojson }}"
+        data-labels='{{ chart_labels | tojson }}'
+        data-values='{{ chart_values | tojson }}'
       ></canvas>
       <div class="expense mt-3"></div>
     </div>
@@ -124,16 +124,16 @@ block body %}
   <div class="barChart">
     <canvas
       id="myChart"
-      data-labels="{{ chart_labels | tojson }}"
-      data-values="{{ chart_values | tojson }}"
+      data-labels='{{ chart_labels | tojson }}'
+      data-values='{{ chart_values | tojson }}'
     ></canvas>
   </div>
 </div>
 
 <div
   id="myBarChart"
-  data-labels="{{ trend_labels | tojson | safe }}"
-  data-values="{{ trend_values | tojson | safe }}"
+  data-labels='{{ trend_labels | tojson | safe }}'
+  data-values='{{ trend_values | tojson | safe }}'
 ></div>
 <!-- insights -->
 <div
