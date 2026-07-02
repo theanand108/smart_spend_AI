@@ -1,14 +1,16 @@
-{% extends 'base.html' %}
-{% block title %}
-    Dashboard
-{% endblock title %}
-
-{% block body %}
+{% extends 'base.html' %} {% block title %} Dashboard {% endblock title %} {%
+block body %}
 
 <div class="monthDropdownCntr dropdown mb-3">
-  <select id="monthDropdown" class="form-select" name="month" aria-label="Default select example" onchange="navigateToMonth(this.value)">
-  <option selected>Select a month</option>
-  <!-- <option value="{{curr_month}}" selected>{{curr_month}}</option>
+  <select
+    id="monthDropdown"
+    class="form-select"
+    name="month"
+    aria-label="Default select example"
+    onchange="navigateToMonth(this.value)"
+  >
+    <option selected>Select a month</option>
+    <!-- <option value="{{curr_month}}" selected>{{curr_month}}</option>
   <option value="credit"></option>
   <option value="debit">Debit Card</option>
   <option value="netbanking">Net Banking</option> -->
@@ -16,18 +18,20 @@
     <!-- {% for month in months %}
         
     {% endfor %} -->
-</select>
+  </select>
 </div>
 <div class="container1 mx-5 mt-3">
-    <h2> Expense Summary of the month</h2>
-<div class="card" style="width: 20rem;">
-  <ul class="list-group list-group-flush">
-    <li class="list-group-item">Total Expanse = {{month_spending}} </li>
-    <li class="list-group-item">Top Category = {{top_category}} </li>
-    <li class="list-group-item">Total Transactions = {{total_transactions}} </li>
-    <li class="list-group-item">Average Expense = {{average_expense}} </li>
-  </ul>
-</div>
+  <h2>Expense Summary of the month</h2>
+  <div class="card" style="width: 20rem">
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item">Total Expanse = {{month_spending}}</li>
+      <li class="list-group-item">Top Category = {{top_category}}</li>
+      <li class="list-group-item">
+        Total Transactions = {{total_transactions}}
+      </li>
+      <li class="list-group-item">Average Expense = {{average_expense}}</li>
+    </ul>
+  </div>
 </div>
 
 <div class="container1 mx-5 mt-4">
@@ -47,9 +51,16 @@
         </div>
         <div class="col-md-4 d-flex gap-2">
           <button type="submit" class="btn btn-dark">Search</button>
-          <a href="{{ url_for('dashboard1', month=curr_month) }}" class="btn btn-outline-secondary">Clear</a>
-            <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="btn btn-outline-success">Export CSV</a>
-
+          <a
+            href="{{ url_for('dashboard1', month=curr_month) }}"
+            class="btn btn-outline-secondary"
+            >Clear</a
+          >
+          <a
+            href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}"
+            class="btn btn-outline-success"
+            >Export CSV</a
+          >
         </div>
       </form>
     </div>
@@ -62,7 +73,8 @@
       <h5 class="card-title">Transactions</h5>
       {% if transactions|length == 0 %}
       <div class="alert alert-warning" role="alert">
-        No transactions found for this month{% if search_query %} matching "{{ search_query }}"{% endif %}.
+        No transactions found for this month{% if search_query %} matching "{{
+        search_query }}"{% endif %}.
       </div>
       {% else %}
       <div class="table-responsive">
@@ -93,65 +105,69 @@
       </div>
       {% endif %}
     </div>
-
   </div>
 </div>
 
 <div class="page_wrapper">
-    <div id="pieChart" class="card mt-2 mx-5" style="width: 24rem;">
-        <div class="card-body">
-            <h5>Expense Summary Chart</h5>
-            <canvas
-                id="myPieChart"
-                data-labels='{{ chart_labels | tojson }}'
-                data-values='{{ chart_values | tojson }}'
-            ></canvas>
-            <div class="expense mt-3"></div>
-        </div>
+  <div id="pieChart" class="card mt-2 mx-5" style="width: 24rem">
+    <div class="card-body">
+      <h5>Expense Summary Chart</h5>
+      <canvas
+        id="myPieChart"
+        data-labels="{{ chart_labels | tojson }}"
+        data-values="{{ chart_values | tojson }}"
+      ></canvas>
+      <div class="expense mt-3"></div>
     </div>
-    
-    <div class="barChart">
-        <canvas
-            id="myChart"
-            data-labels='{{ chart_labels | tojson }}'
-            data-values='{{ chart_values | tojson }}'
-        ></canvas>
-    </div>
+  </div>
 
+  <div class="barChart">
+    <canvas
+      id="myChart"
+      data-labels="{{ chart_labels | tojson }}"
+      data-values="{{ chart_values | tojson }}"
+    ></canvas>
+  </div>
 </div>
 
-    <div id="myBarChart"
-     data-labels="{{ trend_labels | tojson | safe }}"
-     data-values="{{ trend_values | tojson | safe }}">
+<div
+  id="myBarChart"
+  data-labels="{{ trend_labels | tojson | safe }}"
+  data-values="{{ trend_values | tojson | safe }}"
+></div>
+<!-- insights -->
+<div
+  class="container3 mt-3 mb-5 mx-5"
+  style="background-color: aliceblue; padding: 1rem; border: 1px solid #ccc"
+>
+  <h1>Insights</h1>
+  <div class="smart_insights">
+    <p
+      class=""
+      style="
+        font-weight: bold;
+        font-size: 18px;
+        font-display: block;
+        margin-bottom: 0.3rem;
+      "
+    >
+      You spent most on {{top_category}} this month.
+    </p>
+    {% if "Food & Dining" in labels %}
+    <p>Consider reducing expenses in this category.</p>
+    {% endif %}
+  </div>
 </div>
-                <!-- insights -->
-                <div class="container3 mt-3 mb-5 mx-5" style
-                ="background-color: aliceblue; padding: 1rem; border: 1px solid #ccc;" >
-                <h1>Insights</h1>
-                <div class="smart_insights">
-                    <p class="" style="font-weight: bold; font-size: 18px; font-display: block; margin-bottom: 0.3rem;">You spent most on {{top_category}} this month.</p>
-                    {% if "Food & Dining" in labels %}
-                    <p>Consider reducing expenses in this category.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            
 
 <script>
-     window.curr_month = "{{curr_month}}"; 
+  window.curr_month = "{{curr_month}}";
 
-        // window.monthlySpending = '{{month_spending}}';
-        // window.trend_labels = '{{ trend_labels | safe }}';
-        // window.trend_values = '{{ trend_values | safe }}';
-     
-     
+  // window.monthlySpending = '{{month_spending}}';
+  // window.trend_labels = '{{ trend_labels | safe }}';
+  // window.trend_values = '{{ trend_values | safe }}';
 </script>
-
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 
-
-    
 {% endblock body %}
