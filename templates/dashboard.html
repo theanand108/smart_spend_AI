@@ -24,12 +24,12 @@ block body %}
   <h2>Expense Summary of the month</h2>
   <div class="card" style="width: 20rem">
     <ul class="list-group list-group-flush">
-      <li class="list-group-item">Total Expanse = {{month_spending}}</li>
+      <li class="list-group-item">Total Expanse = ₹{{month_spending}}</li>
       <li class="list-group-item">Top Category = {{top_category}}</li>
       <li class="list-group-item">
         Total Transactions = {{total_transactions}}
       </li>
-      <li class="list-group-item">Average Expense = {{average_expense}}</li>
+      <li class="list-group-item">Average Expense = ₹{{average_expense}}</li>
     </ul>
   </div>
 </div>
@@ -132,9 +132,36 @@ block body %}
 
 <div
   id="myBarChart"
-  data-labels='{{ trend_labels | tojson | safe }}'
-  data-values='{{ trend_values | tojson | safe }}'
+  data-labels="{{ trend_labels | tojson | safe }}"
+  data-values="{{ trend_values | tojson | safe }}"
 ></div>
+
+<div
+  class="Spending_Analytics mt-3 mb-5 mx-5"
+  style="background-color: aliceblue; padding: 1rem; border: 1px solid #ccc"
+>
+  <h1>Spending Analytics</h1>
+  <p>-----------------------------------------</p>
+  <p>-----------------------------------------</p>
+  <p>💰 Highest Spending Merchant</p>
+  <p>{{analytics.top_merchant}}</p>
+  <p>₹{{analytics.top_merchant_amount}}</p>
+    <p>-----------------------------------------</p>
+  <p>🏪 Most Frequent Merchant</p>
+  <p>{{analytics.most_frequent_merchant}}</p>
+  <!-- <p>{{top_merchant_amount}}</p> -->
+  <p>-----------------------------------------</p>
+  <p>Largest Transaction</p>
+  <p>₹{{analytics.largest_transaction}}</p>
+  <p>-----------------------------------------</p>
+  <p>Smallest Transaction</p>
+  <p>₹{{analytics.smallest_transaction}}</p>
+  <p>-----------------------------------------</p>
+  <p>Avg Daily Spend</p>
+  <p>{{analytics.avg_daily_spend}}/day</p>
+  <p>-----------------------------------------</p>
+</div>
+
 <!-- insights -->
 <div
   class="container3 mt-3 mb-5 mx-5"
@@ -160,7 +187,39 @@ block body %}
 </div>
 
 <script>
-  window.curr_month = "{{curr_month}}";
+  window.curr_month = '{{curr_month}}';
+
+  // console.log("month_spending", '{{month_spending}}')
+  // console.log('{{prev_month_Transaction_amount}}')
+        curr_monthhtml = '{{month_spending}}'
+      prev_monthhtml = '{{prev_month_Transaction_amount}}'
+   
+      current = parseInt(curr_monthhtml, 10)
+      previous = parseInt(prev_monthhtml, 10)
+      //    console.log("Month spending", current)
+      // console.log("Prev Month spenig", previous)
+  if ('{{prev_month_Transaction_amount}}' > 0) {
+    if (current > previous) {
+      increased_percentage = ((current - previous)/previous)*10
+      console.log(increased_percentage)
+      document.querySelector(
+        ".Spending_Analytics"
+      ).innerHTML += `<p style="color: red; font-weight: bold;">Your spending has increased by ${increased_percentage.toFixed(2)}% compared to last month. Consider reviewing your expenses.</p>`;
+    } else if (current < previous) {
+         decreased_percentage = ((previous - current)/current)*10
+      document.querySelector(
+        ".Spending_Analytics"
+      ).innerHTML += `<p style="color: green; font-weight: bold;">Great job! Your spending has decreased by ${decreased_percentage.toFixed(2)}% compared to last month.</p>`;
+    } else {
+      document.querySelector(
+        ".Spending_Analytics"
+      ).innerHTML += `<p style="font-weight: bold;">Your spending is the same as last month.</p>`;
+    }
+  } else {
+    document.querySelector(
+      ".Spending_Analytics"
+    ).innerHTML += `<p style="font-weight: bold;">No data for the previous month to compare.</p>`;
+  }
 
   // window.monthlySpending = '{{month_spending}}';
   // window.trend_labels = '{{ trend_labels | safe }}';

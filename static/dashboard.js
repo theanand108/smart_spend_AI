@@ -32,6 +32,9 @@ function navigateToMonth(selectedMonth) {
     window.location.href = `/dashboard/${selectedMonth}`;
 }
 
+// console.log(month_spending)
+// console.log(prev_month_Transaction_amount)
+
 
     
 const expense = document.querySelector(".expense");

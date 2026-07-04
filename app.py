@@ -69,7 +69,7 @@ def build_transaction_query(month, year, search_query=""):
         db.extract("month", Transaction.date) == month,
         db.extract("year", Transaction.date) == year,
     ]
-
+    
     query = Transaction.query.filter(*month_filters)
 
     if search_query:
@@ -84,6 +84,62 @@ def build_transaction_query(month, year, search_query=""):
 
     return query
 
+def get_spending_analytics(transaction_query):
+    top_merchant_query = (
+        transaction_query.with_entities(
+            Transaction.merchant_name, db.func.sum(Transaction.amount).label("total")
+        )
+        .group_by(Transaction.merchant_name)
+        .order_by(db.text("total DESC"))
+        .first()
+    )
+    most_freqMerchant_query = (
+        transaction_query.with_entities(
+            Transaction.merchant_name, db.func.count(Transaction.id).label("total")
+        )
+        .group_by(Transaction.merchant_name)
+        .order_by(db.text("total DESC"))
+        .first()
+    )
+    largest_transaction = (
+    transaction_query
+    .with_entities(db.func.max(Transaction.amount))
+    .scalar()
+    )
+    smallest_transaction = (
+    transaction_query
+    .with_entities(db.func.min(Transaction.amount))
+    .scalar()
+    )
+    
+    daily_spend = (
+        transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
+    )
+    days = (
+        transaction_query.with_entities(db.func.count(Transaction.id)).scalar()
+    )
+    avg_daily_spend = daily_spend / days if days else 1
+    
+    most_freqMerchant = most_freqMerchant_query[0] if most_freqMerchant_query else "N/A"
+    
+    if top_merchant_query:
+        top_merchant = top_merchant_query[0]
+        top_merchant_amount = top_merchant_query[1]
+    else:
+        top_merchant = "N/A"
+        top_merchant_amount = 0
+    
+    
+    
+    
+    return {
+        "top_merchant": top_merchant,
+        "top_merchant_amount": top_merchant_amount,
+        "most_frequent_merchant": most_freqMerchant,
+        "largest_transaction": largest_transaction,
+        "smallest_transaction": smallest_transaction,
+        "avg_daily_spend": round(avg_daily_spend, 2)
+    }
 
 @app.route("/submit_expense", methods=["POST"])
 def submit():
@@ -103,13 +159,18 @@ def submit():
     db.session.add(transaction)
     db.session.commit()
 
-    return redirect("/")
+    return redirect("/simulateATransaction")
 
 
 @app.route("/")
 def home():
     allTransactions = Transaction.query.all()
     return render_template("index.html", allTransactions=allTransactions)
+
+@app.route("/simulateATransaction", methods=["POST", "GET"])
+def simulate_transaction():
+    allTransactions = Transaction.query.all()
+    return render_template("index2.html", allTransactions=allTransactions)
 
 
 @app.route("/dashboard")
@@ -148,6 +209,18 @@ def dashboard1(month=None):
     )
 
     transactions = transaction_query.order_by(Transaction.date.desc()).all()
+    analytics = get_spending_analytics(transaction_query)
+    # print("Analytics = ", analytics)
+    
+    prev_month_Transaction_amount = (
+        db.session.query(db.func.sum(Transaction.amount))
+        .filter(
+            db.extract("month", Transaction.date) == (curr_month - 1),
+            db.extract("year", Transaction.date) == curr_year,
+        )
+        .scalar()
+    )
+    
 
     # Split the query tuple results into distinct arrays
     labels = [row[0] for row in category_data]
@@ -163,6 +236,7 @@ def dashboard1(month=None):
         .all()
     )
 
+
     # 2. Split the results into parallel arrays for JavaScript
     trend_labels = [row[0] for row in trend_data]  # e.g., ['2026-05', '2026-06']
     trend_values = [float(row[1]) for row in trend_data]  # e.g., [1520.0, 4680.0]
@@ -174,7 +248,7 @@ def dashboard1(month=None):
         total_transactions=total_transactions,
         month_spending=total_expense,
         top_category=top_category,
-        average_expense=average_expense,
+        average_expense=round(average_expense,2),
         chart_labels=labels,
         chart_values=values,
         transactions=transactions,
@@ -183,6 +257,9 @@ def dashboard1(month=None):
         curr_month_name=curr_month_name,
         trend_labels=trend_labels,
         trend_values=trend_values,
+        analytics=analytics,
+        prev_month_Transaction_amount = prev_month_Transaction_amount
+
     )
 
 
@@ -191,7 +268,7 @@ def delete_transaction(id):
     transaction = Transaction.query.filter_by(id=id).first()
     db.session.delete(transaction)
     db.session.commit()
-    return redirect("/")
+    return redirect("/simulateATransaction")
 
 
 @app.route("/update/<int:id>", methods=["GET", "POST"])
@@ -205,7 +282,7 @@ def update_transaction(id):
         transaction.category = categorize(transaction.merchant_name)
 
         db.session.commit()
-        return redirect("/")
+        return redirect("/simulateATransaction")
     return render_template("update.html", transaction=transaction)
 
 
