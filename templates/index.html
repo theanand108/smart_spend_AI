@@ -3,15 +3,92 @@
     Home
 {% endblock title %}
 {% block body %}
-<h1>Smart Spend AI</h1>
+<section class="hero-section">
+    <div class="container-fluid hero-container">
+        <div class="hero-layout">
+            <div class="hero-copy">
+                <p class="text-muted hero-tagline mb-4">Every payment tells a story.</p>
+                <h1 class="hero-title mb-4">Where did my money actually go?</h1>
+                <p class="lead hero-subtitle mb-5 text-muted">
+                    Most UPI apps only record your payments. Smart Spend AI helps you understand them through analytics today, and AI-powered financial intelligence tomorrow.
+                </p>
+                <div class="d-grid gap-3 d-md-flex justify-content-md-start">
+                    <a href="/dashboard" class="btn btn-primary btn-lg px-4 py-3 me-2">Explore Dashboard</a>
+                    <a href="/simulateATransaction" class="btn btn-outline-primary btn-lg px-4 py-3">Simulate Transaction</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="phone-mockup">
+                    <div class="phone-frame">
+                        <div class="phone-screen">
+                            <!-- App Bar -->
+                            <div class="app-bar">
+                                <span>Smart Spend</span>
+                            </div>
+                            <!-- Insights -->
+                            <div class="insights">
+                                <div class="insight-card">
+                                    <h6 class="insight-title">Food Delivery Spikes</h6>
+                                    <p class="insight-text">You spent 30% more on food delivery this week vs last week.</p>
+                                </div>
+                                <div class="insight-card">
+                                    <h6 class="insight-title">Recurring Subscription</h6>
+                                    <p class="insight-text">You have 4 active subscriptions totaling ₹1,200/month.</p>
+                                </div>
+                                <div class="insight-card">
+                                    <h6 class="insight-title">Weekend Splurge</h6>
+                                    <p class="insight-text">Sunday brunch and shopping accounted for 40% of weekend spending.</p>
+                                </div>
+                                <div class="insight-card">
+                                    <h6 class="insight-title">Bill Payment Reminder</h6>
+                                    <p class="insight-text">Your electricity bill of ₹1,850 is due in 3 days.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="transformation-section py-5">
+    <div class="container transformation-container">
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-8 text-center">
+                <p class="text-muted transformation-kicker mb-3">The Problem → The Transformation</p>
+                <h2 class="transformation-title mb-3">From payment history to financial clarity.</h2>
+            </div>
+        </div>
 
+        <div class="row g-4 g-lg-5 align-items-stretch">
+            <div class="col-lg-6">
+                <div class="transformation-card h-100">
+                    <h3 class="transformation-card-title mb-4">Current Experience</h3>
+                    <div class="flow-steps">
+                        <div class="flow-step">Open UPI App</div>
+                        <div class="flow-arrow" aria-hidden="true">↓</div>
+                        <div class="flow-step">Make Payment</div>
+                        <div class="flow-arrow" aria-hidden="true">↓</div>
+                        <div class="flow-step">Close App</div>
+                    </div>
+                </div>
+            </div>
 
-<h3>AI Financial Intelligence Layer</h3>
-
-<h2>for UPI Platforms</h2>
-
-<a href="/simulateATransaction" class="btn btn-dark mt-3">Simulate a UPI Transaction</a>
-<a href="/dashboard" class="btn btn-dark mt-3">Dashboard</a>
-
-   <script src="{{ url_for('static', filename='indexPage.js') }}"></script>
+            <div class="col-lg-6">
+                <div class="transformation-card transformation-card-highlight h-100">
+                    <h3 class="transformation-card-title mb-4">With Smart Spend AI</h3>
+                    <div class="flow-steps">
+                        <div class="flow-step">Open UPI App</div>
+                        <div class="flow-arrow" aria-hidden="true">↓</div>
+                        <div class="flow-step">Make Payment</div>
+                        <div class="flow-arrow" aria-hidden="true">↓</div>
+                        <div class="flow-step">AI Insight</div>
+                        <div class="flow-arrow" aria-hidden="true">↓</div>
+                        <div class="flow-step">Better Financial Understanding</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock  %}

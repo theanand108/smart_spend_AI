@@ -6,3 +6,9 @@ instance/
 output/
 src/output/
 .DS_Store
+CLAUDE_CONTEXT.md
+FEATURE_BACKLOG.md
+INTERVIEW_STORY.md
+LAYOUT.md
+PRODUCT_DESIGN_DOCUMENT.md
+SPRINT_LOG.md
