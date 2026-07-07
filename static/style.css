@@ -496,6 +496,69 @@
     color: #0d6efd;
 }
 
+/* Final CTA and Footer */
+.final-cta-section {
+    background-color: #ffffff;
+    padding-top: 6rem !important;
+    padding-bottom: 6rem !important;
+}
+.final-cta-container {
+    max-width: 1180px;
+}
+.final-cta-panel {
+    background-color: #f8f9fa;
+    border: 1px solid rgba(33, 37, 41, 0.06);
+    border-radius: 32px;
+    box-shadow: 0 22px 60px rgba(33, 37, 41, 0.06);
+    padding: clamp(2.5rem, 6vw, 5rem);
+}
+.final-cta-title {
+    color: #212529;
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.08;
+}
+.final-cta-text {
+    color: #6c757d;
+    font-size: 1.18rem;
+    line-height: 1.75;
+}
+.site-footer {
+    background-color: #ffffff;
+    border-top: 1px solid rgba(33, 37, 41, 0.08);
+    padding: 3rem 0 2rem;
+}
+.footer-container {
+    max-width: 1180px;
+}
+.footer-brand {
+    color: #212529;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+.footer-subtitle,
+.footer-bottom {
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+.footer-links a {
+    color: #212529;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 180ms ease;
+}
+.footer-links a:hover {
+    color: #0d6efd;
+}
+.footer-bottom {
+    border-top: 1px solid rgba(33, 37, 41, 0.08);
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 991.98px) {
     .hero-section {
@@ -568,5 +631,12 @@
     .roadmap-card {
         min-height: auto;
         text-align: left;
+    }
+    .final-cta-section {
+        padding-top: 4rem !important;
+        padding-bottom: 4rem !important;
+    }
+    .final-cta-panel {
+        border-radius: 24px;
     }
 }
