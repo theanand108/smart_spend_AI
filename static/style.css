@@ -17,6 +17,102 @@
     margin-right: 1rem;
 }
 
+/* Dashboard Top Section */
+.dashboard-top-section {
+    background-color: #f8f9fa;
+    padding: 4.5rem 0 3rem;
+}
+.dashboard-top-container {
+    max-width: 1180px;
+}
+.dashboard-eyebrow {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.dashboard-page-title {
+    color: #212529;
+    font-size: clamp(2rem, 4vw, 3.25rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+}
+.dashboard-month-select {
+    min-width: min(100%, 240px);
+}
+.dashboard-month-select .form-select {
+    border-color: rgba(33, 37, 41, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 12px 28px rgba(33, 37, 41, 0.04);
+    color: #495057;
+    min-height: 3.25rem;
+}
+.dashboard-pulse-card {
+    background-color: #ffffff;
+    border: 1px solid rgba(13, 110, 253, 0.1);
+    border-radius: 32px;
+    box-shadow: 0 22px 60px rgba(33, 37, 41, 0.065);
+    padding: clamp(2rem, 5vw, 3.5rem);
+}
+.dashboard-pulse-badge {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-radius: 999px;
+    color: #0d6efd;
+    display: inline-flex;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 0.55rem 0.85rem;
+    text-transform: uppercase;
+}
+.dashboard-pulse-title {
+    color: #212529;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.08;
+}
+.dashboard-pulse-text {
+    color: #212529;
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
+    font-weight: 600;
+    line-height: 1.45;
+}
+.dashboard-pulse-note {
+    color: #6c757d;
+    font-size: 1.08rem;
+    line-height: 1.6;
+}
+.dashboard-pulse-button {
+    border-radius: 14px;
+    font-weight: 600;
+    padding: 0.85rem 1.15rem;
+}
+.dashboard-kpi-card {
+    background-color: #ffffff;
+    border: 1px solid rgba(33, 37, 41, 0.06);
+    border-radius: 24px;
+    box-shadow: 0 16px 38px rgba(33, 37, 41, 0.055);
+    padding: 1.5rem;
+}
+.dashboard-kpi-label {
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.dashboard-kpi-value {
+    color: #212529;
+    font-size: clamp(1.45rem, 2.5vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
 /* Hero Section Styles */
 .hero-section {
     background-color: #f8f9fa;
@@ -561,6 +657,15 @@
 
 /* Responsive adjustments */
 @media (max-width: 991.98px) {
+    .dashboard-top-section {
+        padding-top: 3.5rem;
+    }
+    .dashboard-pulse-card {
+        border-radius: 24px;
+    }
+    .dashboard-month-select {
+        width: 100%;
+    }
     .hero-section {
         padding-top: 4rem;
         padding-bottom: 4rem;

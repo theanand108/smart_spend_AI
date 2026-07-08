@@ -5,6 +5,7 @@ from flask import Flask, request, render_template, redirect
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
 from datetime import datetime
+from src.analytics.financial_pulse import generate_financial_pulse
 
 app = Flask(__name__)
 
@@ -198,6 +199,7 @@ def dashboard1(month=None):
     )
 
     top_category = top_category_query[0] if top_category_query else "N/A"
+    top_category_amount = top_category_query[1] if top_category_query else 0
     average_expense = total_expense / total_transactions if total_transactions else 0
 
     category_data = (
@@ -219,6 +221,15 @@ def dashboard1(month=None):
             db.extract("year", Transaction.date) == curr_year,
         )
         .scalar()
+    )
+
+    financial_pulse = generate_financial_pulse(
+        current_month_spending=total_expense,
+        last_month_spending=prev_month_Transaction_amount,
+        top_category=top_category,
+        top_category_spending=top_category_amount,
+        largest_transaction=analytics["largest_transaction"],
+        total_transactions=total_transactions,
     )
     
 
@@ -258,6 +269,7 @@ def dashboard1(month=None):
         trend_labels=trend_labels,
         trend_values=trend_values,
         analytics=analytics,
+        financial_pulse=financial_pulse,
         prev_month_Transaction_amount = prev_month_Transaction_amount
 
     )
