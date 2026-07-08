@@ -223,6 +223,27 @@ def dashboard1(month=None):
         .scalar()
     )
 
+    # Compute lightweight signals from the already-loaded `transactions` list
+    merchant_counts: dict[str, int] = {}
+    weekend_spend = 0.0
+    weekday_spend = 0.0
+
+    for t in transactions:
+        name = t.merchant_name or "N/A"
+        merchant_counts[name] = merchant_counts.get(name, 0) + 1
+        amt = float(t.amount or 0)
+        if getattr(t, "date", None) and getattr(t, "date").weekday() >= 5:
+            weekend_spend += amt
+        else:
+            weekday_spend += amt
+
+    most_frequent_merchant_count = max(merchant_counts.values()) if merchant_counts else 0
+    most_frequent_merchant_ratio = (
+        (most_frequent_merchant_count / total_transactions) if total_transactions else 0
+    )
+
+    weekend_spending_ratio = (weekend_spend / total_expense) if total_expense else 0
+
     financial_pulse = generate_financial_pulse(
         current_month_spending=total_expense,
         last_month_spending=prev_month_Transaction_amount,
@@ -230,6 +251,10 @@ def dashboard1(month=None):
         top_category_spending=top_category_amount,
         largest_transaction=analytics["largest_transaction"],
         total_transactions=total_transactions,
+        most_frequent_merchant_count=most_frequent_merchant_count,
+        most_frequent_merchant_ratio=most_frequent_merchant_ratio,
+        weekend_spending_ratio=weekend_spending_ratio,
+        avg_daily_spend=analytics.get("avg_daily_spend"),
     )
     
 

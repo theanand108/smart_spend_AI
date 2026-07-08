@@ -30,12 +30,14 @@ block body %}
     </div>
 
     <div class="dashboard-pulse-card mb-4">
-      <span class="dashboard-pulse-badge">Healthy</span>
-      <h2 class="dashboard-pulse-title mt-3 mb-3">Financial Pulse</h2>
-      <p class="dashboard-pulse-text mb-2">You're spending 12% less than this point last month.</p>
-      <p class="dashboard-pulse-note mb-4">Keep it up.</p>
+      <span class="dashboard-pulse-badge">{{ financial_pulse.status }}</span>
+      <h2 class="dashboard-pulse-title mt-3 mb-3">{{ financial_pulse.title }}</h2>
+      <p class="dashboard-pulse-text mb-2">{{ financial_pulse.message }}</p>
+      {% if financial_pulse.rule %}
+      <p class="dashboard-pulse-note mb-4">Rule: {{ financial_pulse.rule }}</p>
+      {% endif %}
       <button type="button" class="btn btn-outline-primary dashboard-pulse-button">
-        See What’s Driving This
+        {{ financial_pulse.action_text }}
       </button>
     </div>
 
