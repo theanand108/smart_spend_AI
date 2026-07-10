@@ -30,15 +30,51 @@ block body %}
     </div>
 
     <div class="dashboard-pulse-card mb-4">
-      <span class="dashboard-pulse-badge">{{ financial_pulse.status }}</span>
-      <h2 class="dashboard-pulse-title mt-3 mb-3">{{ financial_pulse.title }}</h2>
-      <p class="dashboard-pulse-text mb-2">{{ financial_pulse.message }}</p>
-      {% if financial_pulse.rule %}
-      <p class="dashboard-pulse-note mb-4">Rule: {{ financial_pulse.rule }}</p>
-      {% endif %}
-      <button type="button" class="btn btn-outline-primary dashboard-pulse-button">
-        {{ financial_pulse.action_text }}
-      </button>
+      <div class="row g-4 align-items-stretch">
+        <div class="col-12 col-xl-4">
+          <p class="dashboard-eyebrow mb-2">Financial Health</p>
+          <h2 class="dashboard-pulse-title mt-0 mb-3">
+            {{ financial_pulse_summary.health }}
+          </h2>
+          <p class="dashboard-pulse-text mb-4">
+            {{ financial_pulse_summary.recommendation }}
+          </p>
+          <button type="button" class="btn btn-outline-primary dashboard-pulse-button">
+            {{ financial_pulse_summary.cta_text }}
+          </button>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-4">
+          <div class="bg-light rounded-4 h-100 p-4">
+            <p class="dashboard-eyebrow mb-2">Main Change</p>
+            <p class="display-4 fw-bold mb-1">
+              {{ financial_pulse_summary.main_change_value }}
+            </p>
+            <p class="fs-5 fw-semibold mb-3">
+              {{ financial_pulse_summary.main_change_label }}
+            </p>
+            <p class="mb-1">{{ financial_pulse_summary.current_total }} this month</p>
+            <p class="text-muted mb-0">
+              vs {{ financial_pulse_summary.previous_total }} last month
+            </p>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-4">
+          <div class="bg-light rounded-4 h-100 p-4">
+            <p class="dashboard-eyebrow mb-2">Biggest Driver</p>
+            <h3 class="fw-bold mb-2">
+              {{ financial_pulse_summary.biggest_driver.category }}
+            </h3>
+            <p class="fs-4 fw-semibold mb-1">
+              {{ financial_pulse_summary.biggest_driver.amount_change }}
+            </p>
+            <p class="text-muted mb-0">
+              {{ financial_pulse_summary.biggest_driver.share_text }}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="row g-4">
@@ -70,45 +106,63 @@ block body %}
   </div>
 </section>
 
-<!-- Spending Highlights -->
+<!-- Key Insights -->
+{% if key_insights %}
 <div class="container dashboard-highlights-container mt-4">
   <div class="mb-3">
-    <h5 class="dashboard-section-title">Spending Highlights</h5>
+    <h5 class="dashboard-section-title">Key Insights</h5>
   </div>
 
   <div class="row g-3">
+    {% for insight in key_insights %}
     <div class="col-12 col-md-4">
       <div class="card h-100">
         <div class="card-body">
-          <h6 class="card-title">Biggest Money Destination</h6>
-          <p class="mb-1"><strong>{{ biggest_money_destination.merchant }}</strong></p>
-          <p class="mb-1">₹{{ biggest_money_destination.amount }} • {{ biggest_money_destination.percent }}%</p>
-          <p class="text-muted small mb-0">{{ biggest_money_destination.note }}</p>
+          <h6 class="card-title">{{ insight.title }}</h6>
+          <p class="mb-1"><strong>{{ insight.value }}</strong></p>
+          <p class="text-muted small mb-0">{{ insight.supporting_text }}</p>
         </div>
       </div>
     </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
-    <div class="col-12 col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <h6 class="card-title">Biggest Change</h6>
-          <p class="mb-1"><strong>{{ biggest_change.category }}</strong></p>
-          <p class="mb-1">₹{{ biggest_change.amount }}</p>
-          <p class="text-muted small mb-0">{{ biggest_change.note }}</p>
-        </div>
-      </div>
-    </div>
+{% if month_comparison_summary %}
+<div class="container mt-4">
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <h5 class="card-title mb-1">What's Changed</h5>
+      <p class="text-muted small mb-4">Compared with the previous month</p>
 
-    <div class="col-12 col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <h6 class="card-title">Spending Pattern</h6>
-          <p class="mb-1">{{ spending_pattern }}</p>
+      <div class="row g-0">
+        {% for row in month_comparison_summary.rows %}
+        <div class="col-12 py-3 {% if not loop.last %}border-bottom{% endif %}">
+          <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+            <div>
+              <p class="fw-semibold mb-1">{{ row.metric_title }}</p>
+              <p class="mb-1">
+                {{ row.current_value }} → {{ row.previous_value }}
+              </p>
+              <p class="text-muted small mb-0">{{ row.helper_text }}</p>
+            </div>
+            <div class="text-md-end">
+              <span class="fw-bold {{ row.trend_class }}">
+                {{ row.trend_indicator }}
+              </span>
+              {% if row.difference_text %}
+              <span class="fw-semibold ms-1 {{ row.trend_class }}">{{ row.difference_text }}</span>
+              {% endif %}
+            </div>
+          </div>
         </div>
+        {% endfor %}
       </div>
     </div>
   </div>
 </div>
+{% endif %}
 
 <div class="page_wrapper">
   <div class="pieContainer">
