@@ -1,4 +1,4 @@
-from calendar import month
+from calendar import monthrange
 
 # pyright: reportMissingImports=false
 from flask import Flask, request, render_template, redirect
@@ -225,13 +225,15 @@ def dashboard1(month=None):
 
     # Compute lightweight signals from the already-loaded `transactions` list
     merchant_counts: dict[str, int] = {}
+    merchant_amounts: dict[str, float] = {}
     weekend_spend = 0.0
     weekday_spend = 0.0
 
     for t in transactions:
         name = t.merchant_name or "N/A"
-        merchant_counts[name] = merchant_counts.get(name, 0) + 1
         amt = float(t.amount or 0)
+        merchant_counts[name] = merchant_counts.get(name, 0) + 1
+        merchant_amounts[name] = merchant_amounts.get(name, 0.0) + amt
         if getattr(t, "date", None) and getattr(t, "date").weekday() >= 5:
             weekend_spend += amt
         else:
@@ -243,6 +245,56 @@ def dashboard1(month=None):
     )
 
     weekend_spending_ratio = (weekend_spend / total_expense) if total_expense else 0
+
+    # Biggest Money Destination (by amount)
+    if merchant_amounts:
+        top_merchant_by_amount, top_merchant_amount = max(merchant_amounts.items(), key=lambda x: x[1])
+        top_merchant_pct = (top_merchant_amount / total_expense * 100) if total_expense else 0
+    else:
+        top_merchant_by_amount, top_merchant_amount, top_merchant_pct = "N/A", 0.0, 0
+
+    # Biggest Change: previous-month category change unavailable -> fallback to top category
+    biggest_change_category = top_category
+    biggest_change_amount = top_category_amount
+
+    # Spending Pattern: simple heuristics
+    unique_merchants = len(merchant_counts)
+    small_tx_count = sum(1 for t in transactions if float(t.amount or 0) < 100)
+    small_tx_ratio = (small_tx_count / total_transactions) if total_transactions else 0
+    largest_tx = float(analytics.get("largest_transaction") or 0)
+
+    if weekend_spend > weekday_spend and weekend_spend > 0:
+        spending_pattern = "Most spending happens on weekends."
+    elif small_tx_ratio >= 0.6 and total_transactions > 0:
+        spending_pattern = "Most purchases are small transactions."
+    elif total_expense and largest_tx / total_expense > 0.4:
+        spending_pattern = "Spending is concentrated in a few large purchases."
+    elif unique_merchants and (unique_merchants / total_transactions) > 0.7:
+        spending_pattern = "Activity is evenly distributed this month."
+    else:
+        spending_pattern = "No clear pattern detected; activity is mixed."
+
+    # Weekly spending totals for the selected month
+    days_in_month = monthrange(curr_year, curr_month)[1]
+    number_of_weeks = (days_in_month + 6) // 7
+    weekly_totals = [0.0] * number_of_weeks
+    for t in transactions:
+        if getattr(t, "date", None):
+            day = getattr(t, "date").day
+            week_index = min((day - 1) // 7, number_of_weeks - 1)
+            weekly_totals[week_index] += float(t.amount or 0)
+
+    weekly_labels = [f"Week {i + 1}" for i in range(number_of_weeks)]
+    weekly_values = [round(value, 2) for value in weekly_totals]
+
+    weekly_spending_data = [
+        {
+            "week": weekly_labels[i],
+            "total": weekly_values[i],
+            "range": f"{i*7+1}-{min((i+1)*7, days_in_month)}",
+        }
+        for i in range(number_of_weeks)
+    ]
 
     financial_pulse = generate_financial_pulse(
         current_month_spending=total_expense,
@@ -257,6 +309,20 @@ def dashboard1(month=None):
         avg_daily_spend=analytics.get("avg_daily_spend"),
     )
     
+    # Prepare spending highlights for the template
+    biggest_money_destination = {
+        "merchant": top_merchant_by_amount,
+        "amount": round(top_merchant_amount, 2),
+        "percent": round(top_merchant_pct, 1),
+        "note": (f"Most of your {top_category.lower()} spending happened here." if top_category and top_category != "N/A" else "This merchant accounts for a notable share of your spending."),
+    }
+
+    biggest_change = {
+        "category": biggest_change_category,
+        "amount": round(biggest_change_amount, 2),
+        "note": ("Previous-month category comparison not available; showing highest spending category." if True else ""),
+    }
+
 
     # Split the query tuple results into distinct arrays
     labels = [row[0] for row in category_data]
@@ -295,8 +361,13 @@ def dashboard1(month=None):
         trend_values=trend_values,
         analytics=analytics,
         financial_pulse=financial_pulse,
-        prev_month_Transaction_amount = prev_month_Transaction_amount
-
+        prev_month_Transaction_amount = prev_month_Transaction_amount,
+        biggest_money_destination=biggest_money_destination,
+        biggest_change=biggest_change,
+        spending_pattern=spending_pattern,
+        weekly_labels=weekly_labels,
+        weekly_values=weekly_values,
+        weekly_spending_data=weekly_spending_data,
     )
 
 

@@ -73,6 +73,8 @@ const smart_insights = document.querySelector(".smart_insights");
 const monthlySpending = values.reduce((a, b) => a + b, 0);
 
 function getSmartInsights(label, value) {
+    if (!smart_insights) return;
+
     const elm = document.createElement("p");
     if(label === "Food & Dining" && value > 3000){
         elm.textContent = `${label} accounts for ${((value/monthlySpending * 100).toFixed(2))}%(₹${value}) of your monthly spending.`;
@@ -257,6 +259,25 @@ document.addEventListener("DOMContentLoaded", () => {
   if (barCanvas) {
     const barLabels = JSON.parse(barCanvas.dataset.labels || "[]");
     const barValues = JSON.parse(barCanvas.dataset.values || "[]");
+    const monthlyTotal = barValues.reduce((sum, value) => sum + value, 0);
+
+    function getNiceStep(value) {
+      if (!value || value <= 0) return 1;
+      const raw = value / 10;
+      const exponent = Math.floor(Math.log10(raw));
+      const base = Math.pow(10, exponent);
+      const normalized = raw / base;
+      let nice = 1;
+      if (normalized <= 1) nice = 1;
+      else if (normalized <= 2) nice = 2;
+      else if (normalized <= 5) nice = 5;
+      else nice = 10;
+      return nice * base;
+    }
+
+    const stepSize = getNiceStep(monthlyTotal);
+    const maxValue = barValues.length ? Math.max(...barValues) : 0;
+    const suggestedMax = stepSize ? Math.ceil(maxValue / stepSize) * stepSize : undefined;
 
     new Chart(barCanvas.getContext('2d'), {
       type: 'bar',
@@ -275,15 +296,17 @@ document.addEventListener("DOMContentLoaded", () => {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          title: { display: true, text: 'Expenses by Category' }
+          title: { display: true, text: 'Monthly Spending Trend' }
         },
         scales: {
           y: {
             beginAtZero: true,
+            suggestedMax: suggestedMax,
+            ticks: { stepSize: stepSize },
             title: { display: true, text: 'Amount (₹)' }
           },
           x: {
-            title: { display: true, text: 'Category' }
+            title: { display: true, text: 'Week' }
           }
         }
       }

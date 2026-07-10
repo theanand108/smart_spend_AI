@@ -70,7 +70,76 @@ block body %}
   </div>
 </section>
 
-<div class="container1 mx-5 mt-4 d-none">
+<!-- Spending Highlights -->
+<div class="container dashboard-highlights-container mt-4">
+  <div class="mb-3">
+    <h5 class="dashboard-section-title">Spending Highlights</h5>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title">Biggest Money Destination</h6>
+          <p class="mb-1"><strong>{{ biggest_money_destination.merchant }}</strong></p>
+          <p class="mb-1">₹{{ biggest_money_destination.amount }} • {{ biggest_money_destination.percent }}%</p>
+          <p class="text-muted small mb-0">{{ biggest_money_destination.note }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title">Biggest Change</h6>
+          <p class="mb-1"><strong>{{ biggest_change.category }}</strong></p>
+          <p class="mb-1">₹{{ biggest_change.amount }}</p>
+          <p class="text-muted small mb-0">{{ biggest_change.note }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="card-title">Spending Pattern</h6>
+          <p class="mb-1">{{ spending_pattern }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page_wrapper">
+  <div class="pieContainer">
+  <div id="pieChart" class="card mt-2 mx-5" style="width: 24rem">
+    <div class="card-body">
+      <h5>Category Distribution</h5>
+      <canvas
+        id="myPieChart"
+        data-labels='{{ chart_labels | tojson }}'
+        data-values='{{ chart_values | tojson }}'
+      ></canvas>
+    </div>
+  </div>
+  <div class="expense mt-3"></div>
+  </div>
+
+
+  <div class="barChart card mt-2 mx-5" style="width: 32rem;">
+    <div class="card-body">
+      <h5>Monthly Spending Trend</h5>
+      <canvas
+        id="myChart"
+        data-labels='{{ weekly_labels | tojson }}'
+        data-values='{{ weekly_values | tojson }}'
+      ></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Search / Export controls (visible, placed above Transactions) -->
+<div class="container1 mx-5 mt-4">
   <div class="card">
     <div class="card-body">
       <h5 class="card-title">Search Transactions for {{ curr_month_name }}</h5>
@@ -87,22 +156,15 @@ block body %}
         </div>
         <div class="col-md-4 d-flex gap-2">
           <button type="submit" class="btn btn-dark">Search</button>
-          <a
-            href="{{ url_for('dashboard1', month=curr_month) }}"
-            class="btn btn-outline-secondary"
-            >Clear</a
-          >
-          <a
-            href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}"
-            class="btn btn-outline-success"
-            >Export CSV</a
-          >
+          <a href="{{ url_for('dashboard1', month=curr_month) }}" class="btn btn-outline-secondary">Clear</a>
+          <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="btn btn-outline-success">Export CSV</a>
         </div>
       </form>
     </div>
   </div>
 </div>
 
+<!-- Transactions -->
 <div class="container1 mx-5 mt-4">
   <div class="card">
     <div class="card-body">
@@ -144,84 +206,6 @@ block body %}
   </div>
 </div>
 
-<div class="page_wrapper">
-  <div id="pieChart" class="card mt-2 mx-5" style="width: 24rem">
-    <div class="card-body">
-      <h5>Expense Summary Chart</h5>
-      <canvas
-        id="myPieChart"
-        data-labels='{{ chart_labels | tojson }}'
-        data-values='{{ chart_values | tojson }}'
-      ></canvas>
-      <div class="expense mt-3"></div>
-    </div>
-  </div>
-
-  <div class="barChart">
-    <canvas
-      id="myChart"
-      data-labels='{{ chart_labels | tojson }}'
-      data-values='{{ chart_values | tojson }}'
-    ></canvas>
-  </div>
-</div>
-
-<div
-  id="myBarChart"
-  data-labels="{{ trend_labels | tojson | safe }}"
-  data-values="{{ trend_values | tojson | safe }}"
-></div>
-
-<div
-  class="Spending_Analytics mt-3 mb-5 mx-5"
-  style="background-color: aliceblue; padding: 1rem; border: 1px solid #ccc"
->
-  <h1>Spending Analytics</h1>
-  <p>-----------------------------------------</p>
-  <p>-----------------------------------------</p>
-  <p>💰 Highest Spending Merchant</p>
-  <p>{{analytics.top_merchant}}</p>
-  <p>₹{{analytics.top_merchant_amount}}</p>
-    <p>-----------------------------------------</p>
-  <p>🏪 Most Frequent Merchant</p>
-  <p>{{analytics.most_frequent_merchant}}</p>
-  <!-- <p>{{top_merchant_amount}}</p> -->
-  <p>-----------------------------------------</p>
-  <p>Largest Transaction</p>
-  <p>₹{{analytics.largest_transaction}}</p>
-  <p>-----------------------------------------</p>
-  <p>Smallest Transaction</p>
-  <p>₹{{analytics.smallest_transaction}}</p>
-  <p>-----------------------------------------</p>
-  <p>Avg Daily Spend</p>
-  <p>{{analytics.avg_daily_spend}}/day</p>
-  <p>-----------------------------------------</p>
-</div>
-
-<!-- insights -->
-<div
-  class="container3 mt-3 mb-5 mx-5"
-  style="background-color: aliceblue; padding: 1rem; border: 1px solid #ccc"
->
-  <h1>Insights</h1>
-  <div class="smart_insights">
-    <p
-      class=""
-      style="
-        font-weight: bold;
-        font-size: 18px;
-        font-display: block;
-        margin-bottom: 0.3rem;
-      "
-    >
-      You spent most on {{top_category}} this month.
-    </p>
-    {% if "Food & Dining" in labels %}
-    <p>Consider reducing expenses in this category.</p>
-    {% endif %}
-  </div>
-</div>
-
 <script>
   window.curr_month = '{{curr_month}}';
 
@@ -238,23 +222,9 @@ block body %}
     if (current > previous) {
       increased_percentage = ((current - previous)/previous)*10
       console.log(increased_percentage)
-      document.querySelector(
-        ".Spending_Analytics"
-      ).innerHTML += `<p style="color: red; font-weight: bold;">Your spending has increased by ${increased_percentage.toFixed(2)}% compared to last month. Consider reviewing your expenses.</p>`;
     } else if (current < previous) {
          decreased_percentage = ((previous - current)/current)*10
-      document.querySelector(
-        ".Spending_Analytics"
-      ).innerHTML += `<p style="color: green; font-weight: bold;">Great job! Your spending has decreased by ${decreased_percentage.toFixed(2)}% compared to last month.</p>`;
-    } else {
-      document.querySelector(
-        ".Spending_Analytics"
-      ).innerHTML += `<p style="font-weight: bold;">Your spending is the same as last month.</p>`;
     }
-  } else {
-    document.querySelector(
-      ".Spending_Analytics"
-    ).innerHTML += `<p style="font-weight: bold;">No data for the previous month to compare.</p>`;
   }
 
   // window.monthlySpending = '{{month_spending}}';
