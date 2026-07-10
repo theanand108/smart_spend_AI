@@ -260,6 +260,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const barLabels = JSON.parse(barCanvas.dataset.labels || "[]");
     const barValues = JSON.parse(barCanvas.dataset.values || "[]");
     const monthlyTotal = barValues.reduce((sum, value) => sum + value, 0);
+    const formatAmount = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
     function getNiceStep(value) {
       if (!value || value <= 0) return 1;
@@ -296,13 +297,22 @@ document.addEventListener("DOMContentLoaded", () => {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          title: { display: true, text: 'Monthly Spending Trend' }
+          title: { display: true, text: 'Weekly Spending Trend' },
+          subtitle: { display: true, text: 'Current Month' },
+          tooltip: {
+            callbacks: {
+              label: (context) => `Total spending: ${formatAmount(context.parsed.y)}`
+            }
+          }
         },
         scales: {
           y: {
             beginAtZero: true,
             suggestedMax: suggestedMax,
-            ticks: { stepSize: stepSize },
+            ticks: {
+              stepSize: stepSize,
+              callback: (value) => formatAmount(value)
+            },
             title: { display: true, text: 'Amount (₹)' }
           },
           x: {
@@ -313,6 +323,54 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const exploreSection = document.getElementById('explore-your-spending');
+  const searchForm = document.getElementById('spend-search-form');
+  const searchInput = document.getElementById('spend-search-input');
 
+  function submitExploreSearch(value) {
+    if (!searchForm || !searchInput) return;
+
+    const currentUrl = new URL(window.location.href);
+    const targetUrl = new URL(searchForm.getAttribute('action') || currentUrl.pathname, currentUrl.origin);
+
+    targetUrl.search = currentUrl.search;
+
+    if (value && value.trim()) {
+      targetUrl.searchParams.set('q', value.trim());
+    } else {
+      targetUrl.searchParams.delete('q');
+    }
+
+    targetUrl.hash = 'explore-your-spending';
+    window.location.href = targetUrl.toString();
+  }
+
+  if (searchForm && searchInput) {
+    searchForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      submitExploreSearch(searchInput.value);
+    });
+
+    document.querySelectorAll('.dashboard-chip').forEach(function (chip) {
+      chip.addEventListener('click', function (event) {
+        event.preventDefault();
+        searchInput.value = this.getAttribute('data-chip') || '';
+        searchForm.requestSubmit();
+      });
+    });
+
+    const clearLink = searchForm.querySelector('a.btn-outline-secondary');
+    if (clearLink) {
+      clearLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        searchInput.value = '';
+        submitExploreSearch('');
+      });
+    }
+  }
+
+  if (exploreSection && window.location.hash === '#explore-your-spending') {
+    exploreSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
 });

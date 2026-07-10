@@ -4,8 +4,9 @@
 {% endblock title %}
 {% block body %}
 <div class="container2">
-      <form action="/update/{{transaction.id}}" method="POST" class="w-75 mx-auto">
+      <form action="{{ url_for('update_transaction', id=transaction.id, next=next) }}" method="POST" class="w-75 mx-auto">
         <h1 class="mb-5 mt-2">Update your Expenses</h1>
+        <input type="hidden" name="next" value="{{ next or '' }}">
   <div class="mb-3 ">
     <label for="merchant_name" class="form-label">Merchant's name</label>
     <input type="text" class="form-control" name="merchant_name" id="merchant_name" value="{{ transaction.merchant_name }}" aria-describedby="merchant" required>

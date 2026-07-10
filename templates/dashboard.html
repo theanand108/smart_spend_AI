@@ -29,7 +29,7 @@ block body %}
       </div>
     </div>
 
-    <div class="dashboard-pulse-card mb-4">
+    <div class="dashboard-card dashboard-pulse-card mb-4">
       <div class="row g-4 align-items-stretch">
         <div class="col-12 col-xl-4">
           <p class="dashboard-eyebrow mb-2">Financial Health</p>
@@ -45,7 +45,7 @@ block body %}
         </div>
 
         <div class="col-12 col-md-6 col-xl-4">
-          <div class="bg-light rounded-4 h-100 p-4">
+          <div class="dashboard-card-surface h-100">
             <p class="dashboard-eyebrow mb-2">Main Change</p>
             <p class="display-4 fw-bold mb-1">
               {{ financial_pulse_summary.main_change_value }}
@@ -61,7 +61,7 @@ block body %}
         </div>
 
         <div class="col-12 col-md-6 col-xl-4">
-          <div class="bg-light rounded-4 h-100 p-4">
+          <div class="dashboard-card-surface h-100">
             <p class="dashboard-eyebrow mb-2">Biggest Driver</p>
             <h3 class="fw-bold mb-2">
               {{ financial_pulse_summary.biggest_driver.category }}
@@ -103,12 +103,62 @@ block body %}
         </div>
       </div>
     </div>
+
+    <div class="card dashboard-card mt-4 dashboard-explore-card" id="explore-your-spending">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mb-4">
+          <div>
+            <p class="dashboard-eyebrow mb-2">Explore Your Spending</p>
+            <h5 class="dashboard-section-title mb-1">Start with a search or a category filter</h5>
+            <p class="dashboard-section-copy mb-0">Find the transactions that matter most in a few quick steps.</p>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% if search_query %}
+            <a
+              href="{{ url_for('dashboard1', month=curr_month) }}"
+              class="dashboard-filter-pill badge rounded-pill text-decoration-none"
+            >
+              Viewing: {{ search_query }} <span aria-hidden="true">×</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="btn btn-outline-success dashboard-export-btn">Export</a>
+          </div>
+        </div>
+
+        <form id="spend-search-form" class="dashboard-search-form" action="{{ request.path }}" method="get">
+          <div class="dashboard-search-row">
+            <div class="dashboard-search-input-group">
+              <input
+                id="spend-search-input"
+                type="search"
+                class="form-control form-control-lg"
+                name="q"
+                placeholder="Search merchant, notes, or category"
+                value="{{ search_query }}"
+                aria-label="Search merchant, notes, or category"
+              />
+              {% if search_query %}
+              <a href="{{ url_for('dashboard1', month=curr_month) }}" class="btn btn-outline-secondary">Clear</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="dashboard-chip-row mt-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Food">Food</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Shopping">Shopping</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Health">Health</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Transport">Transport</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </section>
 
 <!-- Key Insights -->
 {% if key_insights %}
-<div class="container dashboard-highlights-container mt-4">
+<div class="container dashboard-highlights-container dashboard-section-block mt-5">
   <div class="mb-3">
     <h5 class="dashboard-section-title">Key Insights</h5>
   </div>
@@ -116,7 +166,7 @@ block body %}
   <div class="row g-3">
     {% for insight in key_insights %}
     <div class="col-12 col-md-4">
-      <div class="card h-100">
+      <div class="card dashboard-card dashboard-insight-card h-100">
         <div class="card-body">
           <h6 class="card-title">{{ insight.title }}</h6>
           <p class="mb-1"><strong>{{ insight.value }}</strong></p>
@@ -130,8 +180,8 @@ block body %}
 {% endif %}
 
 {% if month_comparison_summary %}
-<div class="container mt-4">
-  <div class="card shadow-sm border-0">
+<div class="container dashboard-section-block mt-5">
+  <div class="card dashboard-card dashboard-comparison-card border-0">
     <div class="card-body p-4">
       <h5 class="card-title mb-1">What's Changed</h5>
       <p class="text-muted small mb-4">Compared with the previous month</p>
@@ -164,9 +214,9 @@ block body %}
 </div>
 {% endif %}
 
-<div class="page_wrapper">
+<div class="page_wrapper dashboard-section-block mt-5">
   <div class="pieContainer">
-  <div id="pieChart" class="card mt-2 mx-5" style="width: 24rem">
+  <div id="pieChart" class="card dashboard-card dashboard-chart-card mt-2 mx-5" style="width: 24rem">
     <div class="card-body">
       <h5>Category Distribution</h5>
       <canvas
@@ -180,9 +230,10 @@ block body %}
   </div>
 
 
-  <div class="barChart card mt-2 mx-5" style="width: 32rem;">
+  <div class="barChart card dashboard-card dashboard-chart-card mt-2 mx-5" style="width: 32rem;">
     <div class="card-body">
-      <h5>Monthly Spending Trend</h5>
+      <h5 class="mb-1">Weekly Spending Trend</h5>
+      <p class="text-muted small mb-3">Current Month</p>
       <canvas
         id="myChart"
         data-labels='{{ weekly_labels | tojson }}'
@@ -192,68 +243,43 @@ block body %}
   </div>
 </div>
 
-<!-- Search / Export controls (visible, placed above Transactions) -->
-<div class="container1 mx-5 mt-4">
-  <div class="card">
-    <div class="card-body">
-      <h5 class="card-title">Search Transactions for {{ curr_month_name }}</h5>
-      <form class="row g-2" action="{{ request.path }}" method="get">
-        <div class="col-md-8">
-          <input
-            type="search"
-            class="form-control"
-            name="q"
-            placeholder="Search merchant, notes, or category"
-            value="{{ search_query }}"
-            aria-label="Search transactions"
-          />
-        </div>
-        <div class="col-md-4 d-flex gap-2">
-          <button type="submit" class="btn btn-dark">Search</button>
-          <a href="{{ url_for('dashboard1', month=curr_month) }}" class="btn btn-outline-secondary">Clear</a>
-          <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="btn btn-outline-success">Export CSV</a>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
 <!-- Transactions -->
-<div class="container1 mx-5 mt-4">
-  <div class="card">
+<div class="container1 mx-5 mt-5 dashboard-section-block">
+  <div class="card dashboard-card dashboard-transactions-card">
     <div class="card-body">
       <h5 class="card-title">Transactions</h5>
       {% if transactions|length == 0 %}
-      <div class="alert alert-warning" role="alert">
-        No transactions found for this month{% if search_query %} matching "{{
-        search_query }}"{% endif %}.
+      <div class="dashboard-empty-state" role="status">
+        <h6 class="dashboard-empty-title">No transactions match your current filter.</h6>
+        <p class="dashboard-empty-copy">Try another search or clear the current filter.</p>
       </div>
       {% else %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped">
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Date</th>
-              <th scope="col">Merchant</th>
-              <th scope="col">Category</th>
-              <th scope="col">Amount</th>
-              <th scope="col">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for transaction in transactions %}
-            <tr>
-              <th scope="row">{{ loop.index }}</th>
-              <td>{{ transaction.date }}</td>
-              <td>{{ transaction.merchant_name }}</td>
-              <td>{{ transaction.category }}</td>
-              <td>{{ transaction.amount }}</td>
-              <td>{{ transaction.notes }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="dashboard-transactions-feed">
+        {% for transaction in transactions %}
+        <div class="dashboard-transaction-item">
+          <div class="dashboard-transaction-main">
+            <div class="dashboard-transaction-title">{{ transaction.merchant_name }}</div>
+            <div class="dashboard-transaction-meta">
+              <span class="badge rounded-pill bg-light text-dark dashboard-transaction-category">{{ transaction.category }}</span>
+              <span class="dashboard-transaction-date">{{ transaction.date.strftime('%Y-%m-%d %H:%M:%S') if transaction.date else '' }}</span>
+            </div>
+            {% if transaction.notes %}
+            <div class="dashboard-transaction-notes">{{ transaction.notes }}</div>
+            {% endif %}
+          </div>
+          <div class="dashboard-transaction-actions">
+            <div class="dashboard-transaction-amount">₹{{ transaction.amount }}</div>
+            <div class="dashboard-transaction-icons">
+              <a href="{{ url_for('update_transaction', id=transaction.id, next=request.full_path) }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit transaction">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{{ url_for('delete_transaction', id=transaction.id, next=request.full_path) }}" class="btn btn-outline-secondary btn-sm" aria-label="Delete transaction">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
       </div>
       {% endif %}
     </div>

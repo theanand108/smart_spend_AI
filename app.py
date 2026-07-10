@@ -665,14 +665,17 @@ def dashboard1(month=None):
         curr_month = month
 
     search_query = request.args.get("q", "").strip()
+    month_transaction_query = build_transaction_query(curr_month, curr_year)
     transaction_query = build_transaction_query(curr_month, curr_year, search_query)
 
     total_expense = (
-        transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar() or 0
+        month_transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
+        or 0
     )
-    total_transactions = transaction_query.count()
-    top_category, top_category_amount = get_top_category_for_query(transaction_query)
+    total_transactions = month_transaction_query.count()
+    top_category, top_category_amount = get_top_category_for_query(month_transaction_query)
     average_expense = total_expense / total_transactions if total_transactions else 0
+    analytics = get_spending_analytics(month_transaction_query)
 
     category_data = (
         transaction_query.with_entities(
@@ -681,25 +684,43 @@ def dashboard1(month=None):
         .group_by(Transaction.category)
         .all()
     )
-    current_category_totals = get_category_totals_for_query(transaction_query)
+    month_category_totals = get_category_totals_for_query(month_transaction_query)
 
     transactions = transaction_query.order_by(Transaction.date.desc()).all()
-    analytics = get_spending_analytics(transaction_query)
+    filtered_total_expense = (
+        transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar() or 0
+    )
+    filtered_total_transactions = transaction_query.count()
+    filtered_top_category, filtered_top_category_amount = get_top_category_for_query(
+        transaction_query
+    )
     # print("Analytics = ", analytics)
     
     prev_month, prev_year = get_previous_month(curr_month, curr_year)
+    previous_month_transaction_query = build_transaction_query(prev_month, prev_year)
     previous_transaction_query = build_transaction_query(
         prev_month,
         prev_year,
         search_query,
     )
+    previous_month_total_expense = (
+        previous_month_transaction_query.with_entities(
+            db.func.sum(Transaction.amount)
+        ).scalar()
+        or 0
+    )
     prev_month_Transaction_amount = (
+        previous_month_total_expense
+    )
+    filtered_previous_total_expense = (
         previous_transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
         or 0
     )
     previous_total_transactions = previous_transaction_query.count()
     previous_top_category, _ = get_top_category_for_query(previous_transaction_query)
-    previous_category_totals = get_category_totals_for_query(previous_transaction_query)
+    previous_month_category_totals = get_category_totals_for_query(
+        previous_month_transaction_query
+    )
 
     # Compute lightweight signals from the already-loaded `transactions` list
     merchant_counts: dict[str, int] = {}
@@ -717,14 +738,35 @@ def dashboard1(month=None):
         else:
             weekday_spend += amt
 
-    most_frequent_merchant_count = max(merchant_counts.values()) if merchant_counts else 0
+    month_merchant_counts: dict[str, int] = {}
+    month_weekend_spend = 0.0
+    month_transactions = month_transaction_query.order_by(Transaction.date.desc()).all()
+    for t in month_transactions:
+        name = t.merchant_name or "N/A"
+        amt = float(t.amount or 0)
+        month_merchant_counts[name] = month_merchant_counts.get(name, 0) + 1
+        if getattr(t, "date", None) and getattr(t, "date").weekday() >= 5:
+            month_weekend_spend += amt
+
+    most_frequent_merchant_count = (
+        max(month_merchant_counts.values()) if month_merchant_counts else 0
+    )
     most_frequent_merchant_ratio = (
         (most_frequent_merchant_count / total_transactions) if total_transactions else 0
     )
 
-    weekend_spending_ratio = (weekend_spend / total_expense) if total_expense else 0
+    month_weekend_spending_ratio = (
+        (month_weekend_spend / total_expense) if total_expense else 0
+    )
+    weekend_spending_ratio = (
+        (weekend_spend / filtered_total_expense) if filtered_total_expense else 0
+    )
     small_tx_count = sum(1 for t in transactions if float(t.amount or 0) < 100)
-    small_tx_ratio = (small_tx_count / total_transactions) if total_transactions else 0
+    small_tx_ratio = (
+        (small_tx_count / filtered_total_transactions)
+        if filtered_total_transactions
+        else 0
+    )
     largest_transaction = max(
         transactions,
         key=lambda transaction: float(transaction.amount or 0),
@@ -756,25 +798,25 @@ def dashboard1(month=None):
 
     insight_context = {
         "transactions": transactions,
-        "total_expense": float(total_expense or 0),
-        "total_transactions": total_transactions,
-        "top_category": top_category,
-        "top_category_amount": float(top_category_amount or 0),
+        "total_expense": float(filtered_total_expense or 0),
+        "total_transactions": filtered_total_transactions,
+        "top_category": filtered_top_category,
+        "top_category_amount": float(filtered_top_category_amount or 0),
         "merchant_counts": merchant_counts,
         "merchant_amounts": merchant_amounts,
         "largest_transaction": largest_transaction,
         "weekend_spending_ratio": weekend_spending_ratio,
         "small_tx_count": small_tx_count,
         "small_tx_ratio": small_tx_ratio,
-        "calendar_avg_daily_spend": (float(total_expense or 0) / days_in_month),
+        "calendar_avg_daily_spend": (float(filtered_total_expense or 0) / days_in_month),
     }
     key_insights = build_key_insights(insight_context)
     month_comparison_summary = build_month_comparison_summary(
-        current_total_expense=float(total_expense or 0),
-        current_total_transactions=total_transactions,
-        current_top_category=top_category,
+        current_total_expense=float(filtered_total_expense or 0),
+        current_total_transactions=filtered_total_transactions,
+        current_top_category=filtered_top_category,
         current_days_in_month=days_in_month,
-        previous_total_expense=float(prev_month_Transaction_amount or 0),
+        previous_total_expense=float(filtered_previous_total_expense or 0),
         previous_total_transactions=previous_total_transactions,
         previous_top_category=previous_top_category,
         previous_days_in_month=previous_days_in_month,
@@ -789,15 +831,15 @@ def dashboard1(month=None):
         total_transactions=total_transactions,
         most_frequent_merchant_count=most_frequent_merchant_count,
         most_frequent_merchant_ratio=most_frequent_merchant_ratio,
-        weekend_spending_ratio=weekend_spending_ratio,
+        weekend_spending_ratio=month_weekend_spending_ratio,
         avg_daily_spend=analytics.get("avg_daily_spend"),
     )
     financial_pulse_summary = build_financial_pulse_summary(
         financial_pulse=financial_pulse,
         current_total=float(total_expense or 0),
         previous_total=float(prev_month_Transaction_amount or 0),
-        current_category_totals=current_category_totals,
-        previous_category_totals=previous_category_totals,
+        current_category_totals=month_category_totals,
+        previous_category_totals=previous_month_category_totals,
     )
 
 
@@ -853,12 +895,21 @@ def delete_transaction(id):
     transaction = Transaction.query.filter_by(id=id).first()
     db.session.delete(transaction)
     db.session.commit()
-    return redirect("/simulateATransaction")
+
+    next_url = request.args.get("next") or request.form.get("next") or "/simulateATransaction"
+    if not next_url.startswith("/"):
+        next_url = f"/{next_url}"
+
+    return redirect(next_url)
 
 
 @app.route("/update/<int:id>", methods=["GET", "POST"])
 def update_transaction(id):
     transaction = Transaction.query.filter_by(id=id).first()
+    next_url = request.args.get("next") or request.form.get("next") or "/simulateATransaction"
+    if not next_url.startswith("/"):
+        next_url = f"/{next_url}"
+
     if request.method == "POST":
         transaction.merchant_name = request.form.get("merchant_name")
         transaction.amount = float(request.form.get("amount"))
@@ -867,8 +918,8 @@ def update_transaction(id):
         transaction.category = categorize(transaction.merchant_name)
 
         db.session.commit()
-        return redirect("/simulateATransaction")
-    return render_template("update.html", transaction=transaction)
+        return redirect(next_url)
+    return render_template("update.html", transaction=transaction, next=next_url)
 
 
 @app.route("/export/<int:month>")
