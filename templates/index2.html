@@ -3,67 +3,111 @@
   Simulate a UPI Transaction
 {% endblock title %}
 {% block body %}
-<div class="container2">
-      <form action="/submit_expense" method="POST" class="w-75 mx-auto">
-        <h1 class="mb-5 mt-2">Simulate a UPI Transaction</h1>
-  <div class="mb-3 ">
-    <label for="merchant_name" class="form-label">Enter merchant's name</label>
-    <input type="text" class="form-control" name="merchant_name" id="merchant_name" aria-describedby="merchant" required>
-  </div>
-  <div class="mb-3 ">
-    <label for="amount" class="form-label">Enter amount paid</label>
-    <input type="number" class="form-control" name="amount" id="amount" aria-describedby="amount" required>
-  </div>
-  <div class="mb-3 ">
-    <label for="notes" class="form-label">Enter a note (optional)</label>
-    <input type="text" class="form-control" name="notes" id="notes" aria-describedby="notes">
-  </div>
-<div class="dropdown mb-3">
-  <select class="form-select" name="payment_method" aria-label="Default select example">
-  <option selected>Select payment method</option>
-  <option value="upi" selected>UPI</option>
-  <option value="credit">Credit Card</option>
-  <option value="debit">Debit Card</option>
-  <option value="netbanking">Net Banking</option>
-</select>
+<div class="container2 simulate-hero">
+  <div class="w-75 mx-auto simulate-card">
+    <div class="mb-4">
+      <h1 class="simulate-heading">Add a Transaction</h1>
+      <p class="simulate-subtitle">Simulate a payment and instantly update your financial insights.</p>
+    </div>
 
-</div>
-  <button type="submit" class="btn btn-dark">Submit</button>
-</form>
+    <form action="/submit_expense" method="POST" class="simulate-form">
+      <div class="mb-3">
+        <label for="merchant_name" class="form-label">Enter merchant's name</label>
+        <input type="text" class="form-control" name="merchant_name" id="merchant_name" aria-describedby="merchant" required>
+      </div>
+      <div class="mb-3">
+        <label for="amount" class="form-label">Enter amount paid</label>
+        <input type="number" class="form-control" name="amount" id="amount" aria-describedby="amount" required>
+      </div>
+      <div class="mb-3">
+        <label for="notes" class="form-label">Enter a note (optional)</label>
+        <input type="text" class="form-control" name="notes" id="notes" aria-describedby="notes">
+      </div>
+      <div class="dropdown mb-3">
+        <select class="form-select" name="payment_method" aria-label="Default select example">
+          <option selected>Select payment method</option>
+          <option value="upi" selected>UPI</option>
+          <option value="credit">Credit Card</option>
+          <option value="debit">Debit Card</option>
+          <option value="netbanking">Net Banking</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-dark simulate-submit">Add Transaction</button>
+    </form>
+  </div>
 
   <div class="container2 w-75 mx-auto mt-5 mh-5">
+    <div class="mb-3">
+      <h3 class="dashboard-section-title mb-1">Recent Transactions</h3>
+      <p class="dashboard-section-copy mb-0">Your latest activity.</p>
+    </div>
+
     {% if allTransactions|length == 0 %}
-    <div class="alert alert-dark" role="alert">
-      No records found. Add an expense now!
-</div>
+    <div class="dashboard-empty-state" role="status">
+      <h6 class="dashboard-empty-title">No transactions yet.</h6>
+      <p class="dashboard-empty-copy">Add your first simulated payment to see it here.</p>
+    </div>
     {% else %}
-    <table class="table">
-      <h3>Your Expenses</h3>
-      <thead>
-        <tr>
-          <th scope="col">SNo</th>
-          <th scope="col">Category</th>
-          <th scope="col">Amount</th>
-          <th scope="col">Notes</th>
-          <th scope="col">Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for transaction in allTransactions %}
-        <tr>
-          <th scope="row">{{ loop.index }}</th>
-          <td>{{transaction.category}}</td>
-          <td>{{transaction.amount}}</td>
-          <td>{{transaction.notes}}</td>
-          <td>{{transaction.date}}</td>
-          <td>   <a href="/update/{{transaction.id}}" type="button" class="btn btn-outline-dark ">Update</a>
-          <td>   <a href="/delete/{{transaction.id}}" type="button" class="btn btn-outline-dark ">Delete</a>
-                   </tr>
+    <div class="dashboard-transactions-feed">
+      {% for transaction in allTransactions %}
+      <div class="dashboard-transaction-item" id="transaction-{{ transaction.id }}">
+        <div class="dashboard-transaction-main">
+          <div class="dashboard-transaction-title">{{ transaction.merchant_name }}</div>
+          <div class="dashboard-transaction-meta">
+            <span class="badge rounded-pill bg-light text-dark dashboard-transaction-category">{{ transaction.category }}</span>
+            <span class="dashboard-transaction-date">{{ transaction.date.strftime('%Y-%m-%d %H:%M:%S') if transaction.date else '' }}</span>
+          </div>
+          {% if transaction.notes %}
+          <div class="dashboard-transaction-notes">{{ transaction.notes }}</div>
+          {% endif %}
+        </div>
+        <div class="dashboard-transaction-actions">
+          <div class="dashboard-transaction-amount">₹{{ transaction.amount }}</div>
+          <div class="dashboard-transaction-icons">
+            <a href="/update/{{ transaction.id }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit transaction">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a href="/delete/{{ transaction.id }}" class="btn btn-outline-secondary btn-sm" aria-label="Delete transaction">
+              <i class="bi bi-trash"></i>
+            </a>
+          </div>
+        </div>
+      </div>
       {% endfor %}
-      </tbody>
-    </table>
+    </div>
     {% endif %}
   </div>
 
-   <script src="{{ url_for('static', filename='indexPage.js') }}"></script>
+  <style>
+    /* Temporary highlight animation for newly added transaction */
+    .recent-highlight {
+      animation: recentHighlightFade 1.5s ease-in-out;
+    }
+
+    @keyframes recentHighlightFade {
+      0% { background-color: rgba(173, 216, 230, 0.7); }
+      100% { background-color: transparent; }
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const newId = {{ new_id|tojson if new_id is defined else 'null' }};
+      if (newId) {
+        // locate the transaction element
+        const el = document.getElementById(`transaction-${newId}`);
+        if (el) {
+          try {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('recent-highlight');
+            setTimeout(() => el.classList.remove('recent-highlight'), 1500);
+          } catch (err) {
+            console.error('Scroll/highlight failed', err);
+          }
+        }
+      }
+    });
+  </script>
+
+  <script src="{{ url_for('static', filename='indexPage.js') }}"></script>
 {% endblock  %}

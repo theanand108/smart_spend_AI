@@ -9,14 +9,6 @@ block body %}
         <h1 class="dashboard-page-title mb-0">How am I doing financially?</h1>
       </div>
       <div class="monthDropdownCntr dropdown dashboard-month-select">
-        <select
-          id="monthDropdown"
-          class="form-select"
-          name="month"
-          aria-label="Default select example"
-          onchange="navigateToMonth(this.value)"
-        >
-          <option selected>Select a month</option>
           <!-- <option value="{{curr_month}}" selected>{{curr_month}}</option>
         <option value="credit"></option>
         <option value="debit">Debit Card</option>
@@ -25,6 +17,16 @@ block body %}
           <!-- {% for month in months %}
 
           {% endfor %} -->
+        <select
+          id="monthDropdown"
+          class="form-select"
+          name="month"
+          aria-label="Default select example"
+          onchange="navigateToMonth(this.value)"
+        >
+          {% for m in months %}
+          <option value="{{ m.num }}" {% if m.num == curr_month %}selected{% endif %}>{{ m.name }}</option>
+          {% endfor %}
         </select>
       </div>
     </div>
@@ -314,5 +316,53 @@ block body %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const exportBtn = document.querySelector('.dashboard-export-btn');
+  if (!exportBtn) return;
+
+  exportBtn.addEventListener('click', async function (e) {
+    e.preventDefault();
+    const href = this.href;
+
+    // Immediately show success toast on dashboard
+    try {
+      showToast('CSV exported successfully.', 'success');
+    } catch (err) {
+      // ignore toast errors
+    }
+
+    // Fetch the CSV and trigger download without leaving the page
+    try {
+      const resp = await fetch(href, { credentials: 'same-origin' });
+      if (!resp.ok) throw new Error('Network response was not ok');
+      const blob = await resp.blob();
+      // Try to parse filename from Content-Disposition
+      let filename = '';
+      const cd = resp.headers.get('Content-Disposition') || '';
+      const match = /filename\s*=\s*"?([^";]+)"?/.exec(cd);
+      if (match && match[1]) filename = match[1];
+      if (!filename) {
+        // fallback filename
+        filename = 'export.csv';
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (err) {
+      showToast('CSV export failed.', 'danger');
+      console.error('CSV export error', err);
+    }
+  });
+});
+</script>
 
 {% endblock body %}

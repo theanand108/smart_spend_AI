@@ -3,39 +3,48 @@
   Update
 {% endblock title %}
 {% block body %}
-<div class="container2">
-      <form action="{{ url_for('update_transaction', id=transaction.id, next=next) }}" method="POST" class="w-75 mx-auto">
-        <h1 class="mb-5 mt-2">Update your Expenses</h1>
-        <input type="hidden" name="next" value="{{ next or '' }}">
-  <div class="mb-3 ">
-    <label for="merchant_name" class="form-label">Merchant's name</label>
-    <input type="text" class="form-control" name="merchant_name" id="merchant_name" value="{{ transaction.merchant_name }}" aria-describedby="merchant" required>
-  </div>
-  <div class="mb-3 ">
-    <label for="amount" class="form-label">Amount paid</label>
-    <input type="number" class="form-control" name="amount" id="amount" value="{{ transaction.amount }}" aria-describedby="amount" required>
-  </div>
-  <div class="mb-3 ">
-    <label for="notes" class="form-label">Note (optional)</label>
-    <input type="text" class="form-control" name="notes" id="notes" value="{{ transaction.notes }}" aria-describedby="notes">
-  </div>
-<div class="dropdown mb-3">
-  <select class="form-select" name="payment_method" id="payment_method" value="{{ transaction.payment_method }}" aria-label="Default select example">
-  <option selected>Select payment method</option>
-  <option value="upi" >UPI</option>
-  <option value="credit">Credit Card</option>
-  <option value="debit">Debit Card</option>
-  <option value="netbanking">Net Banking</option>
-</select>
+<div class="container2 simulate-hero">
+  <div class="w-75 mx-auto simulate-card">
+    <div class="mb-4">
+      <h1 class="simulate-heading">Update Transaction</h1>
+      <p class="simulate-subtitle">Adjust the details of an existing transaction and keep your insights current.</p>
+    </div>
 
-<script>
-    // Let JavaScript set the value dynamically on page load
-    document.getElementById('payment_method').value = "{{ transaction.payment_method }}";
-</script>
+    <form action="{{ url_for('update_transaction', id=transaction.id, next=next) }}" method="POST" class="simulate-form">
+      <input type="hidden" name="next" value="{{ next or '' }}">
+      <div class="mb-3">
+        <label for="merchant_name" class="form-label">Merchant's name</label>
+        <input type="text" class="form-control" name="merchant_name" id="merchant_name" value="{{ transaction.merchant_name }}" aria-describedby="merchant" required>
+      </div>
+      <div class="mb-3">
+        <label for="amount" class="form-label">Amount paid</label>
+        <input type="number" class="form-control" name="amount" id="amount" value="{{ transaction.amount }}" aria-describedby="amount" required>
+      </div>
+      <div class="mb-3">
+        <label for="notes" class="form-label">Note (optional)</label>
+        <input type="text" class="form-control" name="notes" id="notes" value="{{ transaction.notes }}" aria-describedby="notes">
+      </div>
+      <div class="dropdown mb-3">
+        <select class="form-select" name="payment_method" id="payment_method" value="{{ transaction.payment_method }}" aria-label="Default select example">
+          <option selected>Select payment method</option>
+          <option value="upi">UPI</option>
+          <option value="credit">Credit Card</option>
+          <option value="debit">Debit Card</option>
+          <option value="netbanking">Net Banking</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-dark simulate-submit">Update Transaction</button>
+    </form>
+  </div>
 
-</div>
-  <button type="submit" class="btn btn-dark">Submit</button>
-</form>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const paymentMethod = document.getElementById('payment_method');
+      if (paymentMethod) {
+        paymentMethod.value = "{{ transaction.payment_method }}";
+      }
+    });
+  </script>
 
-   <script src="{{ url_for('static', filename='update.js') }}"></script>
+  <script src="{{ url_for('static', filename='update.js') }}"></script>
 {% endblock  %}

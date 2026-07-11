@@ -1,13 +1,14 @@
-from calendar import monthrange
+from calendar import monthrange, month_name
 
 # pyright: reportMissingImports=false
-from flask import Flask, request, render_template, redirect
+from flask import Flask, request, render_template, redirect, flash, get_flashed_messages
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
 from datetime import datetime
 from src.analytics.financial_pulse import generate_financial_pulse
 
 app = Flask(__name__)
+app.secret_key = "smart-spend-toast-secret"
 
 # Database configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///smart_spend.db"
@@ -626,21 +627,28 @@ def build_month_comparison_summary(
 
 @app.route("/submit_expense", methods=["POST"])
 def submit():
-    merchant_name = request.form.get("merchant_name")
-    amount = request.form.get("amount")
-    notes = request.form.get("notes")
-    payment_method = request.form.get("payment_method")
+    try:
+        merchant_name = request.form.get("merchant_name")
+        amount = request.form.get("amount")
+        notes = request.form.get("notes")
+        payment_method = request.form.get("payment_method")
 
-    transaction = Transaction(
-        merchant_name=merchant_name,
-        amount=float(amount),
-        category=categorize(merchant_name),
-        notes=notes,
-        payment_method=payment_method,
-    )
+        transaction = Transaction(
+            merchant_name=merchant_name,
+            amount=float(amount),
+            category=categorize(merchant_name),
+            notes=notes,
+            payment_method=payment_method,
+        )
 
-    db.session.add(transaction)
-    db.session.commit()
+        db.session.add(transaction)
+        db.session.commit()
+
+        flash("Transaction added successfully.", "success")
+        # redirect back to simulate page and indicate the newly created transaction id
+        return redirect(f"/simulateATransaction?new_id={transaction.id}")
+    except Exception:
+        flash("Something went wrong.", "danger")
 
     return redirect("/simulateATransaction")
 
@@ -652,8 +660,19 @@ def home():
 
 @app.route("/simulateATransaction", methods=["POST", "GET"])
 def simulate_transaction():
-    allTransactions = Transaction.query.all()
-    return render_template("index2.html", allTransactions=allTransactions)
+    # Show only the latest 10 transactions (newest first) on the simulate page
+    allTransactions = (
+        Transaction.query.order_by(Transaction.date.desc()).limit(10).all()
+    )
+    flash_messages = get_flashed_messages(with_categories=True)
+    # Pass through any new_id query param so the template can scroll/highlight
+    new_id = request.args.get('new_id')
+    return render_template(
+        "index2.html",
+        allTransactions=allTransactions,
+        flash_messages=flash_messages,
+        new_id=new_id,
+    )
 
 
 @app.route("/dashboard")
@@ -663,6 +682,22 @@ def dashboard1(month=None):
     curr_year = datetime.now().year
     if month is not None:
         curr_month = month
+
+    # Build months dropdown up to the latest month that has transaction data for the current year.
+    # If there are no transactions for the current year, fall back to current month.
+    latest_tx_current_year = (
+        Transaction.query.filter(db.extract('year', Transaction.date) == curr_year)
+        .order_by(Transaction.date.desc())
+        .first()
+    )
+    if latest_tx_current_year and getattr(latest_tx_current_year, 'date', None):
+        latest_month_for_dropdown = latest_tx_current_year.date.month
+    else:
+        latest_month_for_dropdown = curr_month
+
+    months = [
+        {"num": i, "name": month_name[i]} for i in range(1, latest_month_for_dropdown + 1)
+    ]
 
     search_query = request.args.get("q", "").strip()
     month_transaction_query = build_transaction_query(curr_month, curr_year)
@@ -863,6 +898,7 @@ def dashboard1(month=None):
     trend_values = [float(row[1]) for row in trend_data]  # e.g., [1520.0, 4680.0]
 
     curr_month_name = datetime(curr_year, curr_month, 1).strftime("%B")
+    flash_messages = get_flashed_messages(with_categories=True)
     return render_template(
         "dashboard.html",
         total_expense=total_expense,
@@ -887,39 +923,59 @@ def dashboard1(month=None):
         weekly_labels=weekly_labels,
         weekly_values=weekly_values,
         weekly_spending_data=weekly_spending_data,
+        flash_messages=flash_messages,
+        months=months,
     )
 
 
 @app.route("/delete/<int:id>", methods=["GET", "POST"])
 def delete_transaction(id):
-    transaction = Transaction.query.filter_by(id=id).first()
-    db.session.delete(transaction)
-    db.session.commit()
-
     next_url = request.args.get("next") or request.form.get("next") or "/simulateATransaction"
     if not next_url.startswith("/"):
         next_url = f"/{next_url}"
+
+    transaction = Transaction.query.filter_by(id=id).first()
+    if not transaction:
+        flash("Unable to delete transaction.", "danger")
+        return redirect(next_url)
+
+    try:
+        db.session.delete(transaction)
+        db.session.commit()
+        flash("Transaction deleted successfully.", "success")
+    except Exception:
+        flash("Unable to delete transaction.", "danger")
 
     return redirect(next_url)
 
 
 @app.route("/update/<int:id>", methods=["GET", "POST"])
 def update_transaction(id):
-    transaction = Transaction.query.filter_by(id=id).first()
     next_url = request.args.get("next") or request.form.get("next") or "/simulateATransaction"
     if not next_url.startswith("/"):
         next_url = f"/{next_url}"
 
-    if request.method == "POST":
-        transaction.merchant_name = request.form.get("merchant_name")
-        transaction.amount = float(request.form.get("amount"))
-        transaction.notes = request.form.get("notes")
-        transaction.payment_method = request.form.get("payment_method")
-        transaction.category = categorize(transaction.merchant_name)
-
-        db.session.commit()
+    transaction = Transaction.query.filter_by(id=id).first()
+    if not transaction:
+        flash("Unable to update transaction.", "danger")
         return redirect(next_url)
-    return render_template("update.html", transaction=transaction, next=next_url)
+
+    if request.method == "POST":
+        try:
+            transaction.merchant_name = request.form.get("merchant_name")
+            transaction.amount = float(request.form.get("amount"))
+            transaction.notes = request.form.get("notes")
+            transaction.payment_method = request.form.get("payment_method")
+            transaction.category = categorize(transaction.merchant_name)
+
+            db.session.commit()
+            flash("Transaction updated successfully.", "success")
+        except Exception:
+            flash("Unable to update transaction.", "danger")
+        return redirect(next_url)
+
+    flash_messages = get_flashed_messages(with_categories=True)
+    return render_template("update.html", transaction=transaction, next=next_url, flash_messages=flash_messages)
 
 
 @app.route("/export/<int:month>")

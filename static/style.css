@@ -403,6 +403,27 @@
     }
 }
 
+/* Toasts */
+.toast-container .toast {
+    background-color: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    color: #111827;
+    min-width: min(320px, calc(100vw - 2rem));
+}
+.toast-container .toast-body {
+    color: #111827;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+.toast-container .toast-body .bi {
+    font-size: 1rem;
+}
+.toast-container .btn-close-dark {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
 /* Hero Section Styles */
 .hero-section {
     background-color: #f8f9fa;

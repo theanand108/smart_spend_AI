@@ -16,20 +16,28 @@ const months = Array.from({ length: 12 }, (_, i) => {
 const monthDropdown = document.getElementById("monthDropdown");
 
 window.addEventListener("DOMContentLoaded", ()=>{
+  if (!monthDropdown) return;
+  // If server rendered options exist, don't repopulate; just ensure selected value is numeric month
+  if (monthDropdown.options.length === 0) {
     months.forEach(month =>{
-        const option = document.createElement("option")
-        option.text = month
-        monthDropdown.appendChild(option);
+      const option = document.createElement("option")
+      option.text = month
+      monthDropdown.appendChild(option);
     })
     monthDropdown.value = months[curr_month-1];
-    
+  } else {
+    // Server-rendered options use numeric values
+    monthDropdown.value = String(curr_month);
+  }
 })
 function navigateToMonth(selectedMonth) {
-    if (!selectedMonth) return;
+  if (!selectedMonth) return;
 
-    // Directs the browser to /dashboard/january, /dashboard/february, etc.
-    selectedMonth = months.indexOf(selectedMonth) + 1; // Convert month name to month number (1-12)
-    window.location.href = `/dashboard/${selectedMonth}`;
+  // If the selected value is numeric (server-rendered), use it directly
+  const asNum = parseInt(selectedMonth, 10);
+  let monthNumber = !isNaN(asNum) ? asNum : (months.indexOf(selectedMonth) + 1);
+  if (!monthNumber) return;
+  window.location.href = `/dashboard/${monthNumber}`;
 }
 
 // console.log(month_spending)
