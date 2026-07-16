@@ -10,52 +10,119 @@
                 <p class="text-muted hero-tagline mb-4">Every payment tells a story.</p>
                 <h1 class="hero-title mb-4">Where did my money actually go?</h1>
                 <p class="lead hero-subtitle mb-5 text-muted">
-                    Most UPI apps only record your payments. Smart Spend AI helps you understand them through analytics today, and AI-powered financial intelligence tomorrow.
+                    Most UPI apps only record your payments. Smart Spend AI helps you understand them — through analytics today, and financial intelligence tomorrow.
                 </p>
-                <div class="d-grid gap-3 d-md-flex justify-content-md-start">
-                    <a href="/dashboard" class="btn btn-primary btn-lg px-4 py-3 me-2">Explore Dashboard</a>
-                    <a href="/simulateATransaction" class="btn btn-outline-primary btn-lg px-4 py-3">Simulate Transaction</a>
+                <div class="hero-cta-row">
+                    <a href="/dashboard" class="btn btn-primary btn-lg rounded-pill px-4 py-3 hero-cta-primary">Explore Dashboard</a>
+                    <a href="/simulateATransaction" class="hero-cta-secondary">
+                        Simulate a transaction <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                    </a>
                 </div>
             </div>
             <div class="hero-visual">
                 <div class="phone-mockup">
                     <div class="phone-frame">
+                        <div class="phone-island" aria-hidden="true"></div>
                         <div class="phone-screen">
                             <!-- App Bar -->
                             <div class="app-bar">
                                 <span>Smart Spend</span>
                             </div>
-                            <!-- Insights -->
-                            <div class="insights">
-                                <div class="insight-card">
-                                    <h6 class="insight-title">Food Delivery Spikes</h6>
-                                    <p class="insight-text">You spent 30% more on food delivery this week vs last week.</p>
+                            <!-- Screen Content -->
+                            <div class="phone-dashboard">
+                                <div class="phone-status-row">
+                                    <span class="phone-status-text">Tuesday · Synced 2m ago</span>
                                 </div>
-                                <div class="insight-card">
-                                    <h6 class="insight-title">Recurring Subscription</h6>
-                                    <p class="insight-text">You have 4 active subscriptions totaling ₹1,200/month.</p>
+
+                                <div class="phone-metric-row">
+                                    <div>
+                                        <p class="phone-metric-eyebrow mb-1">This week</p>
+                                        <p class="phone-metric-value mb-0">₹4,320</p>
+                                    </div>
+                                    <span class="phone-delta phone-delta-down">
+                                        <i class="bi bi-arrow-down-short" aria-hidden="true"></i>12%
+                                    </span>
                                 </div>
-                                <div class="insight-card">
-                                    <h6 class="insight-title">Weekend Splurge</h6>
-                                    <p class="insight-text">Sunday brunch and shopping accounted for 40% of weekend spending.</p>
+
+                                <div class="phone-trend-inline">
+                                    <span class="phone-trend-label">7-day trend</span>
+                                    <svg class="phone-sparkline phone-sparkline-inline" viewBox="0 0 108 24" preserveAspectRatio="none" aria-hidden="true">
+                                        <polyline points="2,18 19,15 36,19 53,10 70,13 87,6 106,8" fill="none" stroke="#94a3c9" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                                    </svg>
                                 </div>
-                                <div class="insight-card">
-                                    <h6 class="insight-title">Bill Payment Reminder</h6>
-                                    <p class="insight-text">Your electricity bill of ₹1,850 is due in 3 days.</p>
+
+                                <div class="phone-panel">
+                                    <div class="phone-row">
+                                        <span class="phone-row-icon"><i class="bi bi-bag" aria-hidden="true"></i></span>
+                                        <div class="phone-row-body">
+                                            <p class="phone-row-label mb-0">Top category</p>
+                                            <p class="phone-row-value mb-0">Food &amp; Dining</p>
+                                        </div>
+                                        <span class="phone-row-tag">32%</span>
+                                    </div>
+
+                                    <div class="phone-divider"></div>
+
+                                    <div class="phone-panel-head">
+                                        <span class="phone-panel-label">Recurring</span>
+                                        <span class="phone-panel-action">View all</span>
+                                    </div>
+
+                                    <div class="phone-sub-row">
+                                        <span class="phone-sub-dot" aria-hidden="true">N</span>
+                                        <div class="phone-row-body">
+                                            <p class="phone-sub-name mb-0">Netflix</p>
+                                            <p class="phone-sub-category mb-0">Entertainment</p>
+                                        </div>
+                                        <div class="phone-sub-meta">
+                                            <p class="phone-row-value mb-0">₹649</p>
+                                            <p class="phone-sub-renewal phone-sub-renewal-soon mb-0">in 3 days</p>
+                                        </div>
+                                    </div>
+                                    <div class="phone-sub-row">
+                                        <span class="phone-sub-dot" aria-hidden="true">S</span>
+                                        <div class="phone-row-body">
+                                            <p class="phone-sub-name mb-0">Spotify</p>
+                                            <p class="phone-sub-category mb-0">Music</p>
+                                        </div>
+                                        <div class="phone-sub-meta">
+                                            <p class="phone-row-value mb-0">₹119</p>
+                                            <p class="phone-sub-renewal mb-0">in 12 days</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="phone-divider"></div>
+
+                                    <div class="phone-insight">
+                                        <div class="phone-insight-head">
+                                            <i class="bi bi-stars" aria-hidden="true"></i>
+                                            <span>Insight</span>
+                                        </div>
+                                        <p class="phone-insight-text mb-0">Food delivery spending is up 18% this month, mostly on weekends.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <div class="phone-home-indicator" aria-hidden="true"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+<section class="positioning-band">
+    <div class="container positioning-container">
+        <p class="positioning-text">
+            Smart Spend AI is an AI-powered Financial Intelligence Layer — built to embed inside UPI platforms like PhonePe, Google Pay, and Paytm, not to replace them.
+        </p>
+    </div>
+</section>
 <section class="transformation-section py-5">
     <div class="container transformation-container">
         <div class="row justify-content-center mb-5">
             <div class="col-lg-8 text-center">
-                <p class="text-muted transformation-kicker mb-3">The Problem → The Transformation</p>
+                <p class="text-muted transformation-kicker mb-3">The Shift</p>
                 <h2 class="transformation-title mb-3">From payment history to financial clarity.</h2>
             </div>
         </div>
@@ -63,13 +130,13 @@
         <div class="row g-4 g-lg-5 align-items-stretch">
             <div class="col-lg-6">
                 <div class="transformation-card h-100">
-                    <h3 class="transformation-card-title mb-4">Current Experience</h3>
+                    <h3 class="transformation-card-title mb-4">Today</h3>
                     <div class="flow-steps">
-                        <div class="flow-step">Open UPI App</div>
-                        <div class="flow-arrow" aria-hidden="true">↓</div>
-                        <div class="flow-step">Make Payment</div>
-                        <div class="flow-arrow" aria-hidden="true">↓</div>
-                        <div class="flow-step">Close App</div>
+                        <div class="flow-step">Open UPI app</div>
+                        <div class="flow-arrow" aria-hidden="true"><i class="bi bi-chevron-down"></i></div>
+                        <div class="flow-step">Make payment</div>
+                        <div class="flow-arrow" aria-hidden="true"><i class="bi bi-chevron-down"></i></div>
+                        <div class="flow-step flow-step-end">App closes</div>
                     </div>
                 </div>
             </div>
@@ -78,13 +145,13 @@
                 <div class="transformation-card transformation-card-highlight h-100">
                     <h3 class="transformation-card-title mb-4">With Smart Spend AI</h3>
                     <div class="flow-steps">
-                        <div class="flow-step">Open UPI App</div>
-                        <div class="flow-arrow" aria-hidden="true">↓</div>
-                        <div class="flow-step">Make Payment</div>
-                        <div class="flow-arrow" aria-hidden="true">↓</div>
-                        <div class="flow-step">AI Insight</div>
-                        <div class="flow-arrow" aria-hidden="true">↓</div>
-                        <div class="flow-step">Better Financial Understanding</div>
+                        <div class="flow-step">Open UPI app</div>
+                        <div class="flow-arrow" aria-hidden="true"><i class="bi bi-chevron-down"></i></div>
+                        <div class="flow-step">Make payment</div>
+                        <div class="flow-arrow" aria-hidden="true"><i class="bi bi-chevron-down"></i></div>
+                        <div class="flow-step">Transaction becomes an insight</div>
+                        <div class="flow-arrow" aria-hidden="true"><i class="bi bi-chevron-down"></i></div>
+                        <div class="flow-step flow-step-end flow-step-highlight">User understands their money</div>
                     </div>
                 </div>
             </div>
@@ -95,7 +162,8 @@
     <div class="container benefits-container">
         <div class="row justify-content-center mb-5">
             <div class="col-lg-8 text-center">
-                <h2 class="benefits-title mb-0">Your Money Makes More Sense.</h2>
+                <p class="text-muted transformation-kicker mb-3">Three Angles</p>
+                <h2 class="benefits-title mb-0">Why this matters to everyone in the loop.</h2>
             </div>
         </div>
 
@@ -103,11 +171,12 @@
             <div class="col-md-6 col-lg-4">
                 <div class="benefit-card h-100">
                     <div class="benefit-icon mb-4">
-                        <i class="bi bi-cpu" aria-hidden="true"></i>
+                        <i class="bi bi-person" aria-hidden="true"></i>
                     </div>
-                    <h3 class="benefit-card-title mb-3">Understand Every Rupee</h3>
+                    <p class="benefit-card-eyebrow mb-2">For the user</p>
+                    <h3 class="benefit-card-title mb-3">Zero manual entry</h3>
                     <p class="benefit-card-text mb-0">
-                        Turn hundreds of UPI transactions into one clear financial picture.
+                        No bookkeeping, no data re-entry. Every insight is built from transactions that already exist inside the app.
                     </p>
                 </div>
             </div>
@@ -115,11 +184,12 @@
             <div class="col-md-6 col-lg-4">
                 <div class="benefit-card h-100">
                     <div class="benefit-icon mb-4">
-                        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+                        <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
                     </div>
-                    <h3 class="benefit-card-title mb-3">Discover Hidden Patterns</h3>
+                    <p class="benefit-card-eyebrow mb-2">For the platform</p>
+                    <h3 class="benefit-card-title mb-3">A reason to return</h3>
                     <p class="benefit-card-text mb-0">
-                        Automatically identify spending habits, recurring expenses, and categories you never noticed.
+                        Today, users open UPI apps only to pay. Financial intelligence gives them a reason to come back between payments.
                     </p>
                 </div>
             </div>
@@ -127,11 +197,12 @@
             <div class="col-md-6 col-lg-4">
                 <div class="benefit-card h-100">
                     <div class="benefit-icon mb-4">
-                        <i class="bi bi-robot" aria-hidden="true"></i>
+                        <i class="bi bi-arrow-up-right-circle" aria-hidden="true"></i>
                     </div>
-                    <h3 class="benefit-card-title mb-3">Ready for AI</h3>
+                    <p class="benefit-card-eyebrow mb-2">Over time</p>
+                    <h3 class="benefit-card-title mb-3">Gets smarter, not louder</h3>
                     <p class="benefit-card-text mb-0">
-                        Today's analytics become tomorrow's personalized financial guidance.
+                        Every new transaction sharpens the picture. The system becomes more personal, never more noisy.
                     </p>
                 </div>
             </div>
@@ -142,92 +213,72 @@
     <div class="container showcase-container">
         <div class="row justify-content-center mb-5">
             <div class="col-lg-8 text-center">
-                <h2 class="showcase-title mb-4">Built Today.<br>Ready for Tomorrow.</h2>
+                <p class="text-muted transformation-kicker mb-3">Current MVP</p>
+                <h2 class="showcase-title mb-4">Not a mockup. A working dashboard.</h2>
                 <p class="lead showcase-subtitle mb-0">
-                    The current MVP already delivers meaningful spending analytics.
-                    AI-powered intelligence is the next phase.
+                    Analytics, categorization, and insights are already live. AI-powered intelligence is the next phase.
                 </p>
             </div>
         </div>
 
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="showcase-card h-100">
-                    <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
-                        <h3 class="showcase-card-title mb-0">Dashboard Overview</h3>
-                        <span class="badge rounded-pill showcase-badge">Current MVP</span>
+        <div class="proof-panel">
+            <div class="proof-list">
+                <div class="proof-item">
+                    <i class="bi bi-pie-chart" aria-hidden="true"></i>
+                    <div>
+                        <h4>Category &amp; merchant analytics</h4>
+                        <p>Highest spender, most frequent merchant, largest transaction — computed automatically.</p>
                     </div>
-                    <div class="screenshot-frame mb-4">
-                        <div class="browser-bar">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
-                        <div class="screenshot-surface">
-                            <div class="placeholder-stat placeholder-wide"></div>
-                            <div class="placeholder-grid">
-                                <div></div>
-                                <div></div>
-                            </div>
-                            <div class="placeholder-line"></div>
-                            <div class="placeholder-line placeholder-short"></div>
-                        </div>
-                    </div>
-                    <p class="showcase-caption mb-0">Monthly spending overview, category analytics, and search.</p>
                 </div>
+                <div class="proof-item">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <div>
+                        <h4>Search, filter, and export</h4>
+                        <p>Find any transaction in seconds and export filtered history to CSV.</p>
+                    </div>
+                </div>
+                <div class="proof-item">
+                    <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+                    <div>
+                        <h4>Month-over-month comparison</h4>
+                        <p>See how spending shifts across months, not just within one.</p>
+                    </div>
+                </div>
+                <a href="/dashboard" class="proof-link">Open the live dashboard <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
             </div>
 
-            <div class="col-lg-4">
-                <div class="showcase-card h-100">
-                    <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
-                        <h3 class="showcase-card-title mb-0">Transaction Management</h3>
-                        <span class="badge rounded-pill showcase-badge">Current MVP</span>
-                    </div>
-                    <div class="screenshot-frame mb-4">
-                        <div class="browser-bar">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
-                        <div class="screenshot-surface">
-                            <div class="placeholder-line"></div>
-                            <div class="placeholder-table">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                            <div class="placeholder-line placeholder-short"></div>
-                        </div>
-                    </div>
-                    <p class="showcase-caption mb-0">Add, edit, search, and export transactions.</p>
+            <div class="proof-preview">
+                <div class="proof-preview-header">
+                    <span class="dashboard-eyebrow">This Month</span>
+                    <span class="badge rounded-pill showcase-badge">Live in MVP</span>
                 </div>
-            </div>
-
-            <div class="col-lg-4">
-                <div class="showcase-card h-100">
-                    <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
-                        <h3 class="showcase-card-title mb-0">Spending Analytics</h3>
-                        <span class="badge rounded-pill showcase-badge">Current MVP</span>
+                <div class="proof-kpi-row">
+                    <div class="proof-kpi">
+                        <span class="dashboard-kpi-label">Total spent</span>
+                        <span class="dashboard-kpi-value">₹18,420</span>
                     </div>
-                    <div class="screenshot-frame mb-4">
-                        <div class="browser-bar">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
-                        <div class="screenshot-surface">
-                            <div class="placeholder-chart">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                            <div class="placeholder-line"></div>
-                            <div class="placeholder-line placeholder-short"></div>
-                        </div>
+                    <div class="proof-kpi">
+                        <span class="dashboard-kpi-label">Top category</span>
+                        <span class="dashboard-kpi-value">Food</span>
                     </div>
-                    <p class="showcase-caption mb-0">Merchant insights, financial summaries, and spending patterns.</p>
+                </div>
+                <div class="proof-bars" role="img" aria-label="Spending by category bar chart">
+                    <div class="proof-bar-row">
+                        <span class="proof-bar-label">Food</span>
+                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:88%"></span></span>
+                    </div>
+                    <div class="proof-bar-row">
+                        <span class="proof-bar-label">Travel</span>
+                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:61%"></span></span>
+                    </div>
+                    <div class="proof-bar-row">
+                        <span class="proof-bar-label">Bills</span>
+                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:47%"></span></span>
+                    </div>
+                    <div class="proof-bar-row">
+                        <span class="proof-bar-label">Shopping</span>
+                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:33%"></span></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -292,15 +343,16 @@
         <div class="row justify-content-center">
             <div class="col-lg-9 text-center">
                 <div class="final-cta-panel">
-                    <h2 class="final-cta-title mb-4">Beyond Payments.</h2>
-                    <p class="lead final-cta-text mb-3">Every payment already creates data.</p>
+                    <h2 class="final-cta-title mb-4">Payment utilities can become financial companions.</h2>
                     <p class="lead final-cta-text mb-5">
-                        Smart Spend AI transforms that data into financial intelligence—helping people understand,
-                        improve, and eventually predict their financial habits.
+                        The transaction history already exists. Smart Spend AI is the layer that turns it into understanding —
+                        without asking a single user to type in a single expense.
                     </p>
-                    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
-                        <a href="/dashboard" class="btn btn-primary btn-lg px-4 py-3">Explore Dashboard</a>
-                        <a href="/simulateATransaction" class="btn btn-outline-primary btn-lg px-4 py-3">Simulate Transactions</a>
+                    <div class="final-cta-actions">
+                        <a href="/dashboard" class="btn btn-primary btn-lg rounded-pill px-4 py-3">Explore Dashboard</a>
+                        <a href="/simulateATransaction" class="hero-cta-secondary">
+                            Simulate a transaction <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </a>
                     </div>
                 </div>
             </div>
