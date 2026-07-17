@@ -946,65 +946,80 @@
     text-align: center;
 }
 
-/* Benefits Section */
-.benefits-section {
+/* Perspectives Section - one composition, three connected viewpoints */
+.perspectives-section {
     background-color: #f8f9fa;
     padding-top: 6rem !important;
     padding-bottom: 6rem !important;
 }
-.benefits-container {
-    max-width: 1180px;
+.perspectives-container {
+    max-width: 1100px;
 }
-.benefits-title {
+.perspectives-title {
     color: #212529;
-    font-size: clamp(2rem, 4vw, 3rem);
+    font-size: clamp(1.85rem, 3.4vw, 2.6rem);
     font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1.15;
+    letter-spacing: -0.035em;
+    line-height: 1.18;
 }
-.benefit-card {
-    background-color: #ffffff;
-    border: 1px solid rgba(33, 37, 41, 0.06);
-    border-radius: 28px;
-    box-shadow: 0 18px 45px rgba(33, 37, 41, 0.06);
-    padding: clamp(2rem, 4vw, 2.75rem);
-    transition: box-shadow 220ms ease, transform 220ms ease, border-color 220ms ease;
+.perspectives-grid {
+    display: grid;
+    gap: 0;
+    grid-template-columns: repeat(3, 1fr);
 }
-.benefit-card:hover {
-    border-color: rgba(13, 110, 253, 0.18);
-    box-shadow: 0 24px 60px rgba(13, 110, 253, 0.1);
-    transform: translateY(-6px);
+.perspective-col {
+    border-left: 1px solid rgba(15, 23, 42, 0.09);
+    padding: 0 2.25rem;
 }
-.benefit-icon {
-    align-items: center;
-    background-color: #f8f9fa;
-    border: 1px solid rgba(13, 110, 253, 0.1);
-    border-radius: 18px;
+.perspective-col:first-child {
+    border-left: 0;
+    padding-left: 0;
+}
+.perspective-col:last-child {
+    padding-right: 0;
+}
+.perspective-index {
+    color: rgba(13, 110, 253, 0.45);
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    margin-bottom: 1.5rem;
+}
+.perspective-label {
     color: #0d6efd;
-    display: inline-flex;
-    font-size: 1.75rem;
-    height: 4rem;
-    justify-content: center;
-    width: 4rem;
-}
-.benefit-card-eyebrow {
-    color: #0d6efd;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
-.benefit-card-title {
+.perspective-heading {
     color: #212529;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.25;
+    letter-spacing: -0.015em;
+    line-height: 1.35;
 }
-.benefit-card-text {
+.perspective-text {
     color: #6c757d;
-    font-size: 1rem;
+    font-size: 0.98rem;
     line-height: 1.65;
+}
+
+@media (max-width: 991.98px) {
+    .perspectives-grid {
+        gap: 2.5rem;
+        grid-template-columns: 1fr;
+    }
+    .perspective-col {
+        border-left: 0;
+        border-top: 1px solid rgba(15, 23, 42, 0.09);
+        padding: 2.5rem 0 0;
+    }
+    .perspective-col:first-child {
+        border-top: 0;
+        padding-top: 0;
+    }
 }
 
 /* Showcase Section */
