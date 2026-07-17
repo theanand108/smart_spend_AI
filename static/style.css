@@ -1043,14 +1043,6 @@
     font-size: 1.15rem;
     line-height: 1.7;
 }
-.showcase-badge {
-    background-color: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.55rem 0.8rem;
-    white-space: nowrap;
-}
 
 /* Proof Panel - one credible surface, built from the real dashboard tokens */
 .proof-panel {
@@ -1067,32 +1059,20 @@
 .proof-list {
     display: flex;
     flex-direction: column;
-    gap: 1.6rem;
+    gap: 1.75rem;
     padding: clamp(2rem, 4vw, 3rem);
 }
-.proof-item {
-    align-items: flex-start;
-    display: flex;
-    gap: 1rem;
-}
-.proof-item i {
+.proof-item-label {
     color: #0d6efd;
-    flex-shrink: 0;
-    font-size: 1.15rem;
-    margin-top: 0.2rem;
-}
-.proof-item h4 {
-    color: #212529;
-    font-size: 1.02rem;
+    font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: -0.015em;
-    margin-bottom: 0.3rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
-.proof-item p {
-    color: #6c757d;
+.proof-item-text {
+    color: #475569;
     font-size: 0.95rem;
-    line-height: 1.55;
-    margin-bottom: 0;
+    line-height: 1.6;
 }
 .proof-link {
     align-items: center;
@@ -1100,7 +1080,7 @@
     display: inline-flex;
     font-weight: 700;
     gap: 0.4rem;
-    margin-top: 0.25rem;
+    margin-top: 0.5rem;
     text-decoration: none;
     width: fit-content;
 }
@@ -1121,11 +1101,45 @@
     justify-content: space-between;
     margin-bottom: 1.5rem;
 }
+.proof-live-marker {
+    align-items: center;
+    color: #6c757d;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 600;
+    gap: 0.45rem;
+}
+.proof-live-dot {
+    background-color: #16a34a;
+    border-radius: 50%;
+    display: inline-block;
+    height: 0.45rem;
+    width: 0.45rem;
+}
+.proof-main-figure {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+.proof-figure-value {
+    color: #111827;
+    font-size: clamp(1.9rem, 3.2vw, 2.35rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+}
+.proof-figure-compare {
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
 .proof-kpi-row {
     display: grid;
     gap: 1rem;
     grid-template-columns: repeat(2, 1fr);
-    margin-bottom: 2rem;
 }
 .proof-kpi {
     background-color: var(--dashboard-surface);
@@ -1136,34 +1150,16 @@
     gap: 0.35rem;
     padding: 1rem 1.1rem;
 }
-.proof-bars {
-    display: flex;
-    flex-direction: column;
-    gap: 0.9rem;
+.proof-driver {
+    border-top: 1px solid rgba(15, 23, 42, 0.07);
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
 }
-.proof-bar-row {
-    align-items: center;
-    display: flex;
-    gap: 0.9rem;
-}
-.proof-bar-label {
-    color: #475569;
-    flex: 0 0 4.5rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-.proof-bar-track {
-    background-color: rgba(15, 23, 42, 0.06);
-    border-radius: 999px;
-    flex: 1;
-    height: 0.55rem;
-    overflow: hidden;
-}
-.proof-bar-fill {
-    background-color: #0d6efd;
-    border-radius: 999px;
-    display: block;
-    height: 100%;
+.proof-driver-text {
+    color: #334155;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    margin-top: 0.4rem;
 }
 
 /* Roadmap Section */

@@ -217,25 +217,16 @@ Built to help existing UPI platforms explain spending instead of simply recordin
         <div class="proof-panel">
             <div class="proof-list">
                 <div class="proof-item">
-                    <i class="bi bi-pie-chart" aria-hidden="true"></i>
-                    <div>
-                        <h4>Category &amp; merchant analytics</h4>
-                        <p>Highest spender, most frequent merchant, largest transaction — computed automatically.</p>
-                    </div>
+                    <p class="proof-item-label mb-2">Analyze</p>
+                    <p class="proof-item-text mb-0">Monthly trends, weekly spending, and category and merchant analytics — computed automatically from transaction history.</p>
                 </div>
                 <div class="proof-item">
-                    <i class="bi bi-search" aria-hidden="true"></i>
-                    <div>
-                        <h4>Search, filter, and export</h4>
-                        <p>Find any transaction in seconds and export filtered history to CSV.</p>
-                    </div>
+                    <p class="proof-item-label mb-2">Understand</p>
+                    <p class="proof-item-text mb-0">Transactions are categorized automatically and surfaced as financial observations — biggest driver, top merchant, month-over-month change.</p>
                 </div>
                 <div class="proof-item">
-                    <i class="bi bi-calendar2-week" aria-hidden="true"></i>
-                    <div>
-                        <h4>Month-over-month comparison</h4>
-                        <p>See how spending shifts across months, not just within one.</p>
-                    </div>
+                    <p class="proof-item-label mb-2">Find &amp; export</p>
+                    <p class="proof-item-text mb-0">Search and filter transaction history, then export the results to CSV.</p>
                 </div>
                 <a href="/dashboard" class="proof-link">Open the live dashboard <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
             </div>
@@ -243,35 +234,29 @@ Built to help existing UPI platforms explain spending instead of simply recordin
             <div class="proof-preview">
                 <div class="proof-preview-header">
                     <span class="dashboard-eyebrow">This Month</span>
-                    <span class="badge rounded-pill showcase-badge">Live in MVP</span>
+                    <span class="proof-live-marker"><span class="proof-live-dot" aria-hidden="true"></span>Live in MVP</span>
                 </div>
+
+                <div class="proof-main-figure">
+                    <span class="dashboard-kpi-label">Total spent</span>
+                    <span class="proof-figure-value">₹18,420</span>
+                    <span class="proof-figure-compare">vs ₹15,860 last month</span>
+                </div>
+
                 <div class="proof-kpi-row">
-                    <div class="proof-kpi">
-                        <span class="dashboard-kpi-label">Total spent</span>
-                        <span class="dashboard-kpi-value">₹18,420</span>
-                    </div>
                     <div class="proof-kpi">
                         <span class="dashboard-kpi-label">Top category</span>
                         <span class="dashboard-kpi-value">Food</span>
                     </div>
+                    <div class="proof-kpi">
+                        <span class="dashboard-kpi-label">Transactions</span>
+                        <span class="dashboard-kpi-value">42</span>
+                    </div>
                 </div>
-                <div class="proof-bars" role="img" aria-label="Spending by category bar chart">
-                    <div class="proof-bar-row">
-                        <span class="proof-bar-label">Food</span>
-                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:88%"></span></span>
-                    </div>
-                    <div class="proof-bar-row">
-                        <span class="proof-bar-label">Travel</span>
-                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:61%"></span></span>
-                    </div>
-                    <div class="proof-bar-row">
-                        <span class="proof-bar-label">Bills</span>
-                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:47%"></span></span>
-                    </div>
-                    <div class="proof-bar-row">
-                        <span class="proof-bar-label">Shopping</span>
-                        <span class="proof-bar-track"><span class="proof-bar-fill" style="width:33%"></span></span>
-                    </div>
+
+                <div class="proof-driver">
+                    <span class="dashboard-kpi-label">Biggest driver</span>
+                    <p class="proof-driver-text mb-0">Food &amp; Dining is up ₹1,240 this month — 32% of total spending.</p>
                 </div>
             </div>
         </div>
