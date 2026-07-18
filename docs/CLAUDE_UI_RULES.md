@@ -111,3 +111,12 @@ Wait for approval before implementation.
 One section at a time.
 
 Never polish the whole website in one prompt.
+
+## Existing Implementation Check
+
+Before implementing a requested sprint:
+
+1. Verify whether the requested work is already present in the codebase.
+2. If it is already implemented, do not modify the files.
+3. Explain your findings and ask whether to proceed to the next sprint instead.
+4. Avoid rewriting completed work unless explicitly requested.

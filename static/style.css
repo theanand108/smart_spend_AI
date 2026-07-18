@@ -514,7 +514,7 @@
     background-color: #0b1220;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     border-top: 1px solid rgba(255, 255, 255, 0.06);
-    padding: clamp(4.5rem, 9vw, 7rem) 0;
+    padding: clamp(4rem, 9vw, 7rem) 0;
 }
 .positioning-container {
     max-width: 660px;
@@ -663,10 +663,6 @@
 .phone-delta-down {
     background-color: rgba(21, 128, 61, 0.09);
     color: #15803d;
-}
-.phone-delta-up {
-    background-color: rgba(180, 83, 9, 0.1);
-    color: #b45309;
 }
 
 .phone-trend-inline {
@@ -1190,84 +1186,92 @@
     position: relative;
 }
 .roadmap-timeline::before {
-    background-color: rgba(33, 37, 41, 0.1);
+    background-color: rgba(33, 37, 41, 0.12);
     content: "";
-    height: 2px;
+    height: 1px;
     left: 12.5%;
     position: absolute;
     right: 12.5%;
-    top: 2rem;
+    top: 1.5rem;
 }
 .roadmap-stage {
     position: relative;
+    text-align: center;
     z-index: 1;
 }
 .roadmap-dot {
     align-items: center;
     background-color: #ffffff;
-    border: 1px solid rgba(33, 37, 41, 0.12);
+    border: 1.5px solid rgba(15, 23, 42, 0.14);
     border-radius: 50%;
-    box-shadow: 0 10px 26px rgba(33, 37, 41, 0.07);
-    color: #6c757d;
     display: flex;
-    height: 4rem;
+    height: 3rem;
     justify-content: center;
-    margin: 0 auto 1.25rem;
-    width: 4rem;
+    margin: 0 auto 1.35rem;
+    width: 3rem;
 }
-.roadmap-dot span {
-    background-color: rgba(33, 37, 41, 0.22);
-    border-radius: 50%;
-    display: block;
-    height: 0.8rem;
-    width: 0.8rem;
+.roadmap-dot-number {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
 }
 .roadmap-card {
-    background-color: #ffffff;
-    border: 1px solid rgba(33, 37, 41, 0.06);
-    border-radius: 24px;
-    box-shadow: 0 16px 38px rgba(33, 37, 41, 0.055);
-    min-height: 140px;
-    padding: 1.5rem;
-    text-align: center;
+    padding: 0 0.5rem;
 }
 .roadmap-status {
     color: #6c757d;
     display: inline-block;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.8rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
     text-transform: uppercase;
 }
 .roadmap-stage-title {
     color: #212529;
-    font-size: 1.18rem;
+    font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.3;
 }
-.roadmap-stage-completed .roadmap-dot {
-    border-color: rgba(13, 110, 253, 0.18);
+.roadmap-stage-text {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    margin-top: 0.5rem;
+}
+
+/* Live stages: the established foundation */
+.roadmap-stage-live .roadmap-dot {
+    border-color: rgba(13, 110, 253, 0.35);
+}
+.roadmap-stage-live .roadmap-dot-number,
+.roadmap-stage-live .roadmap-status {
     color: #0d6efd;
 }
-.roadmap-stage-completed .roadmap-card {
-    border-color: rgba(13, 110, 253, 0.12);
+
+/* Next stage: subtle emphasis as the active edge of the line */
+.roadmap-stage-next .roadmap-dot {
+    background-color: rgba(13, 110, 253, 0.08);
+    border-color: rgba(13, 110, 253, 0.45);
 }
-.roadmap-stage-completed .roadmap-status {
+.roadmap-stage-next .roadmap-dot-number,
+.roadmap-stage-next .roadmap-status {
     color: #0d6efd;
 }
-.roadmap-stage-active .roadmap-dot {
-    border-color: rgba(13, 110, 253, 0.18);
+
+/* Vision stage: still the destination, just further out */
+.roadmap-stage-vision {
+    opacity: 0.8;
 }
-.roadmap-stage-active .roadmap-dot span {
-    background-color: #0d6efd;
+.roadmap-stage-vision .roadmap-dot {
+    border-color: rgba(15, 23, 42, 0.16);
+    border-style: dashed;
 }
-.roadmap-stage-active .roadmap-card {
-    border-color: rgba(13, 110, 253, 0.16);
-}
-.roadmap-stage-active .roadmap-status {
-    color: #0d6efd;
+.roadmap-stage-vision .roadmap-dot-number,
+.roadmap-stage-vision .roadmap-status {
+    color: #94a3b8;
 }
 
 /* Final CTA and Footer */
@@ -1382,13 +1386,6 @@
     .transformation-card {
         border-radius: 24px;
     }
-    .benefits-section {
-        padding-top: 4rem !important;
-        padding-bottom: 4rem !important;
-    }
-    .benefit-card {
-        border-radius: 24px;
-    }
     .showcase-section {
         padding-top: 4rem !important;
         padding-bottom: 4rem !important;
@@ -1424,7 +1421,7 @@
         grid-template-columns: 4rem 1fr;
     }
     .roadmap-dot {
-        margin: 0;
+        margin: 0 auto;
     }
     .roadmap-card {
         min-height: auto;
@@ -1436,5 +1433,12 @@
     }
     .final-cta-panel {
         border-radius: 24px;
+    }
+}
+
+@media (max-width: 380px) {
+    .phone-frame {
+        width: 260px;
+        height: 530px;
     }
 }
