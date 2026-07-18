@@ -5,7 +5,11 @@ const ctx = chartCanvas.getContext('2d');
 const labels = JSON.parse(chartCanvas.dataset.labels);
 const values = JSON.parse(chartCanvas.dataset.values);
 
-
+// Restrained, categorical palette shared by the pie slices and the legend,
+// so every category gets a consistent color by position rather than a
+// fragile per-label name match.
+const CATEGORY_PALETTE = ['#0d6efd', '#64748b', '#f59e0b', '#10b981', '#94a3b8', '#a855f7'];
+const formatRupees = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
 // ======== Month Logic ======== 
 const months = Array.from({ length: 12 }, (_, i) => {
@@ -45,31 +49,37 @@ function navigateToMonth(selectedMonth) {
 
 
     
-const expense = document.querySelector(".expense");
+const legendContainer = document.querySelector(".dashboard-legend");
 window.addEventListener("DOMContentLoaded", ()=>{
+    if (!legendContainer) return;
+    const total = values.reduce((sum, value) => sum + value, 0);
+
     labels.forEach((label, index) => {
-        const elm = document.createElement("p");
-        elm.textContent = `${label} : ₹${values[index]}`
-        elm.style.fontWeight = "bold";
-        elm.style.fontSize = "18px"; 
-        elm.style.display = "block";
-        elm.style.marginBottom = "0.3rem"
-        if(label === "Food & Dining"){
-            elm.style.color = "rgb(255, 99, 132)";
-        }
-        else if(label === "Shopping"){
-            elm.style.color = "rgb(54, 162, 235)";
-        }else if(label === "Health & Fitness"){
-            elm.style.color = "rgb(255, 206, 86)";
-        }else if(label === "Bills & Utilities"){
-            elm.style.color = "rgb(75, 192, 192)";
-        }else if(label === "Groceries"){
-            elm.style.color = "rgb(153, 102, 255)";
-        }
-        else{
-            elm.style.color === "rgb(153, 102, 255)";
-        }
-        expense.appendChild(elm);
+        const value = values[index];
+        const share = total ? Math.round((value / total) * 100) : 0;
+        const color = CATEGORY_PALETTE[index % CATEGORY_PALETTE.length];
+
+        const item = document.createElement("div");
+        item.className = "dashboard-legend-item";
+
+        const dot = document.createElement("span");
+        dot.className = "dashboard-legend-dot";
+        dot.style.backgroundColor = color;
+
+        const labelEl = document.createElement("span");
+        labelEl.className = "dashboard-legend-label";
+        labelEl.textContent = label;
+
+        const valueEl = document.createElement("span");
+        valueEl.className = "dashboard-legend-value";
+        valueEl.textContent = formatRupees(value);
+
+        const shareEl = document.createElement("span");
+        shareEl.className = "dashboard-legend-share";
+        shareEl.textContent = `${share}%`;
+
+        item.append(dot, labelEl, valueEl, shareEl);
+        legendContainer.appendChild(item);
     })
 })
 
@@ -195,22 +205,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 datasets: [{
                     label: 'Total Spent (₹)',
                     data: pieValues,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)'
-                    ],
+                    backgroundColor: pieLabels.map((_, i) => CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]),
                     borderColor: '#ffffff',
-                    borderWidth: 2
+                    borderWidth: 2,
+                    hoverOffset: 6
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 450, easing: 'easeOutQuart' },
                 plugins: {
-                    legend: { position: 'top' },
-                    title: { display: true, text: 'Spending Distribution' }
+                    legend: { display: false },
+                    title: { display: false },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        bodyColor: '#f8fafc',
+                        cornerRadius: 10,
+                        displayColors: false,
+                        padding: 10,
+                        callbacks: {
+                            label: (context) => formatRupees(context.parsed)
+                        }
+                    }
                 }
             }
         });
@@ -265,8 +282,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const barCanvas = document.getElementById('myChart');
   if (barCanvas) {
-    const barLabels = JSON.parse(barCanvas.dataset.labels || "[]");
-    const barValues = JSON.parse(barCanvas.dataset.values || "[]");
+    const rawBarLabels = JSON.parse(barCanvas.dataset.labels || "[]");
+    const rawBarValues = JSON.parse(barCanvas.dataset.values || "[]");
+
+    // If the current month has fewer than five populated weeks, the backend
+    // still sends placeholder trailing weeks with no spending. Trim those
+    // trailing empty entries only (never a populated week in the middle)
+    // so the chart fills its space naturally instead of showing dead bars.
+    let lastPopulatedIndex = rawBarValues.length - 1;
+    while (lastPopulatedIndex > 0 && !rawBarValues[lastPopulatedIndex]) {
+      lastPopulatedIndex--;
+    }
+    const barLabels = rawBarLabels.slice(0, lastPopulatedIndex + 1);
+    const barValues = rawBarValues.slice(0, lastPopulatedIndex + 1);
+
     const monthlyTotal = barValues.reduce((sum, value) => sum + value, 0);
     const formatAmount = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
@@ -295,21 +324,31 @@ document.addEventListener("DOMContentLoaded", () => {
         datasets: [{
           label: 'Amount Spent (₹)',
           data: barValues,
-          backgroundColor: 'rgba(54, 162, 235, 0.7)',
-          borderColor: 'rgb(54, 162, 235)',
-          borderWidth: 1
+          backgroundColor: 'rgba(13, 110, 253, 0.85)',
+          hoverBackgroundColor: '#0d6efd',
+          borderRadius: 8,
+          borderSkipped: false,
+          maxBarThickness: 56,
+          barPercentage: 0.55,
+          categoryPercentage: 0.6
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: { duration: 450, easing: 'easeOutQuart' },
         plugins: {
           legend: { display: false },
-          title: { display: true, text: 'Weekly Spending Trend' },
-          subtitle: { display: true, text: 'Current Month' },
+          title: { display: false },
+          subtitle: { display: false },
           tooltip: {
+            backgroundColor: '#111827',
+            bodyColor: '#f8fafc',
+            cornerRadius: 10,
+            displayColors: false,
+            padding: 10,
             callbacks: {
-              label: (context) => `Total spending: ${formatAmount(context.parsed.y)}`
+              label: (context) => formatAmount(context.parsed.y)
             }
           }
         },
@@ -317,14 +356,28 @@ document.addEventListener("DOMContentLoaded", () => {
           y: {
             beginAtZero: true,
             suggestedMax: suggestedMax,
+            grid: {
+              color: 'rgba(15, 23, 42, 0.06)',
+              drawTicks: false
+            },
+            border: { display: false },
             ticks: {
               stepSize: stepSize,
+              color: '#94a3b8',
+              font: { size: 11 },
+              padding: 8,
               callback: (value) => formatAmount(value)
             },
-            title: { display: true, text: 'Amount (₹)' }
+            title: { display: false }
           },
           x: {
-            title: { display: true, text: 'Week' }
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 11 }
+            },
+            title: { display: false }
           }
         }
       }

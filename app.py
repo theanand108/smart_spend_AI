@@ -151,12 +151,13 @@ def format_currency(amount):
     return f"₹{amount:,.2f}"
 
 
-def make_insight(title, value, supporting_text, priority_score):
+def make_insight(title, value, supporting_text, priority_score, insight_type):
     return {
         "title": title,
         "value": value,
         "supporting_text": supporting_text,
         "priority_score": priority_score,
+        "type": insight_type,
     }
 
 
@@ -172,8 +173,9 @@ def biggest_money_destination_insight(context):
     return make_insight(
         "Biggest Money Destination",
         merchant,
-        f"You spent {format_currency(amount)} here, about {percent:.0f}% of this month's spending.",
-        90 + percent,
+        f"{format_currency(amount)} · {percent:.0f}% of monthly spending",
+        76 + min(percent * 0.16, 12),
+        "spending",
     )
 
 
@@ -191,8 +193,9 @@ def largest_transaction_insight(context):
     return make_insight(
         "Largest Transaction",
         format_currency(amount),
-        f"Your biggest expense was at {merchant}, making up about {percent:.0f}% of this month's spending.",
-        82 + percent,
+        f"{merchant} · {percent:.0f}% of monthly spending",
+        74 + min(percent * 0.16, 12),
+        "warning",
     )
 
 
@@ -207,8 +210,9 @@ def most_frequent_merchant_insight(context):
     return make_insight(
         "Most Frequent Merchant",
         merchant,
-        f"You had {count} transactions here this month.",
-        72 + (count * 3),
+        f"{count} transactions this month",
+        72 + min(count * 1.5, 12),
+        "habit",
     )
 
 
@@ -224,8 +228,9 @@ def highest_spending_category_insight(context):
     return make_insight(
         "Highest Spending Category",
         context["top_category"],
-        f"You spent {format_currency(context['top_category_amount'])} on this category, about {percent:.0f}% of the month.",
-        76 + percent,
+        f"{format_currency(context['top_category_amount'])} · {percent:.0f}% of monthly spending",
+        78 + min(percent * 0.16, 12),
+        "spending",
     )
 
 
@@ -237,8 +242,9 @@ def weekend_spending_pattern_insight(context):
     return make_insight(
         "Weekend Spending",
         f"{ratio * 100:.0f}% of your spending",
-        "Most of your expenses happened during weekends.",
-        70 + (ratio * 30),
+        "Most spending happened on weekends",
+        74 + min(ratio * 10, 10),
+        "behavior",
     )
 
 
@@ -249,8 +255,9 @@ def small_purchase_habit_insight(context):
     return make_insight(
         "Small Purchase Habit",
         f"{context['small_tx_count']} small purchases",
-        f"{context['small_tx_ratio'] * 100:.0f}% of your transactions were under ₹100.",
-        64 + (context["small_tx_ratio"] * 25),
+        f"{context['small_tx_ratio'] * 100:.0f}% of transactions under ₹100",
+        68 + min(context["small_tx_ratio"] * 12, 12),
+        "habit",
     )
 
 
@@ -262,8 +269,9 @@ def high_daily_average_insight(context):
     return make_insight(
         "High Daily Average",
         f"{format_currency(avg_daily_spend)} per day",
-        "Your daily average is running high for this month.",
-        68 + min(avg_daily_spend / 100, 30),
+        "Higher than usual this month",
+        70 + min(avg_daily_spend / 375, 12),
+        "warning",
     )
 
 
@@ -274,8 +282,9 @@ def few_transactions_this_month_insight(context):
     return make_insight(
         "Few Transactions This Month",
         f"{context['total_transactions']} transactions",
-        "There are only a few expenses recorded, so trends may still change quickly.",
-        62,
+        "Limited data — trends may still shift",
+        83,
+        "trend",
     )
 
 
@@ -286,8 +295,9 @@ def first_transaction_this_month_insight(context):
     return make_insight(
         "First Transaction This Month",
         "1 transaction",
-        "This is the first expense recorded for the selected month.",
-        66,
+        "Only expense recorded so far",
+        88,
+        "trend",
     )
 
 
@@ -556,30 +566,30 @@ def build_month_comparison_summary(
     daily_average_difference = abs(current_daily_average - previous_daily_average)
 
     if current_total_expense < previous_total_expense:
-        spending_helper = f"You spent {format_currency(spending_difference)} less than last month."
+        spending_helper = f"{format_currency(spending_difference)} less than last month"
     elif current_total_expense > previous_total_expense:
-        spending_helper = f"You spent {format_currency(spending_difference)} more than last month."
+        spending_helper = f"{format_currency(spending_difference)} more than last month"
     else:
-        spending_helper = "Your spending stayed the same as last month."
+        spending_helper = "Unchanged from last month"
 
     if current_total_transactions < previous_total_transactions:
-        transaction_helper = f"You made {format_numeric_change(current_total_transactions, previous_total_transactions)} fewer transactions than last month."
+        transaction_helper = f"{format_numeric_change(current_total_transactions, previous_total_transactions)} fewer than last month"
     elif current_total_transactions > previous_total_transactions:
-        transaction_helper = f"You made {format_numeric_change(current_total_transactions, previous_total_transactions)} more transactions than last month."
+        transaction_helper = f"{format_numeric_change(current_total_transactions, previous_total_transactions)} more than last month"
     else:
-        transaction_helper = "Your transaction count stayed the same as last month."
+        transaction_helper = "Unchanged from last month"
 
     if current_top_category != previous_top_category:
-        category_helper = f"{current_top_category} replaced {previous_top_category} as your largest category."
+        category_helper = f"Changed from {previous_top_category}"
     else:
-        category_helper = f"{current_top_category} stayed your largest category."
+        category_helper = "Largest category unchanged"
 
     if current_daily_average < previous_daily_average:
-        daily_average_helper = f"Your average daily spending decreased by {format_currency(daily_average_difference)}."
+        daily_average_helper = f"{format_currency(daily_average_difference)} lower than last month"
     elif current_daily_average > previous_daily_average:
-        daily_average_helper = f"Your average daily spending increased by {format_currency(daily_average_difference)}."
+        daily_average_helper = f"{format_currency(daily_average_difference)} higher than last month"
     else:
-        daily_average_helper = "Your average daily spending stayed the same."
+        daily_average_helper = "Unchanged from last month"
 
     return {
         "rows": [
