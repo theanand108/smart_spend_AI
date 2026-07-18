@@ -377,11 +377,6 @@ def format_numeric_change(current_value, previous_value):
     return f"{difference:g}"
 
 
-def format_signed_currency(amount):
-    sign = "+" if amount > 0 else "-" if amount < 0 else ""
-    return f"{sign}{format_currency(abs(amount))}"
-
-
 def get_change_details(current_value, previous_value, lower_is_better=False):
     if current_value == previous_value:
         return "→", "text-muted"
@@ -423,9 +418,9 @@ def get_financial_health(financial_pulse, current_total, previous_total):
     rule = financial_pulse.get("rule")
 
     if rule == "spending_decreased":
-        return "🟢 Excellent"
+        return {"level": "excellent", "label": "Excellent"}
     if rule in {"default"} and current_total <= previous_total:
-        return "🟢 Healthy"
+        return {"level": "good", "label": "Good"}
     if rule in {
         "limited_transaction_history",
         "first_transaction",
@@ -434,15 +429,24 @@ def get_financial_health(financial_pulse, current_total, previous_total):
         "weekend_dominant",
         "frequent_merchant",
     }:
-        return "🟡 Stable"
+        return {"level": "stable", "label": "Stable"}
     if rule in {"spending_increased", "high_daily_average", "largest_transaction"}:
-        return "🟠 Watching"
+        return {"level": "attention", "label": "Watch Closely"}
     if rule == "spending_increased_significantly":
-        return "🔴 Needs Attention"
+        return {"level": "warning", "label": "Needs Attention"}
     if rule == "no_activity":
-        return "🟡 Stable"
+        return {"level": "stable", "label": "Stable"}
 
-    return "🟢 Healthy"
+    return {"level": "good", "label": "Good"}
+
+
+def format_driver_change(amount):
+    amount = float(amount or 0)
+    if amount < 0:
+        return f"Saved {format_currency(abs(amount))}"
+    if amount > 0:
+        return f"{format_currency(amount)} more"
+    return "No change"
 
 
 def build_biggest_driver(current_category_totals, previous_category_totals, total_change):
@@ -455,49 +459,68 @@ def build_biggest_driver(current_category_totals, previous_category_totals, tota
     if not category_changes:
         return {
             "category": "No category yet",
-            "amount_change": format_signed_currency(0),
+            "amount_change": "No change yet",
+            "tone": "neutral",
             "share_text": "Add more transactions to reveal what is driving changes.",
         }
 
     if total_change > 0:
         category, change = max(category_changes, key=lambda item: item[1])
         share = (change / total_change * 100) if change > 0 else 0
-        share_text = f"{share:.0f}% of the total increase" if share else "No single category drove the increase"
+        share_text = f"{share:.0f}% of the monthly increase" if share else "No single category drove the increase"
     elif total_change < 0:
         category, change = min(category_changes, key=lambda item: item[1])
         share = (abs(change) / abs(total_change) * 100) if change < 0 else 0
-        share_text = f"{share:.0f}% of the total decrease" if share else "Savings were spread across categories"
+        share_text = f"{share:.0f}% of the monthly reduction" if share else "Savings were spread across categories"
     else:
         category, change = max(category_changes, key=lambda item: abs(item[1]))
         share_text = "Spending was mostly unchanged overall"
 
     return {
         "category": category,
-        "amount_change": format_signed_currency(change),
+        "amount_change": format_driver_change(change),
+        "tone": "positive" if change < 0 else "neutral",
         "share_text": share_text,
     }
 
 
-def build_pulse_recommendation(financial_pulse, biggest_driver, total_change):
-    category = biggest_driver["category"]
+def build_overall_assessment(financial_pulse, biggest_driver, total_change):
     rule = financial_pulse.get("rule")
+    category = biggest_driver["category"]
+    has_driver = category and category != "No category yet"
+
+    if rule == "no_activity":
+        return "No spending has been recorded this month yet."
+    if rule == "first_transaction":
+        return "Only one transaction has been recorded so far this month."
+    if rule in {"few_transactions", "limited_transaction_history"}:
+        return "There isn't enough transaction history yet to identify a clear spending pattern."
+    if rule == "spending_increased_significantly":
+        driver = f", primarily driven by {category}" if has_driver else ""
+        return f"Monthly spending increased noticeably compared to last month{driver}."
+    if rule == "spending_increased":
+        driver = f", mainly in {category}" if has_driver else ""
+        return f"Spending increased slightly compared to last month{driver}."
+    if rule == "spending_decreased":
+        return "Overall spending decreased compared to last month while maintaining a balanced pattern."
+    if rule == "largest_transaction":
+        return "A single large transaction shaped most of this month's spending."
+    if rule == "largest_category":
+        if has_driver:
+            return f"Most spending was concentrated in {category} this month."
+        return "Most spending was concentrated in a single category this month."
+    if rule == "frequent_merchant":
+        return "Spending this month was concentrated around one frequently used merchant."
+    if rule == "weekend_dominant":
+        return "Weekend spending made up a larger share of this month's expenses than weekdays."
+    if rule == "high_daily_average":
+        return "Daily spending has been higher than usual this month."
 
     if total_change < 0:
-        return f"{category} spending looks healthy this month."
-    if category == "Food & Dining" and total_change > 0:
-        return "One fewer food delivery each week could save around ₹800."
-    if category == "Travel & Transport" and total_change <= 0:
-        return "Transportation spending looks healthy this month."
-    if rule in {"spending_increased", "spending_increased_significantly"}:
-        return f"Most of your increase came from {category}; a small weekly adjustment could keep next month steadier."
-    if rule == "largest_transaction":
-        return "One large purchase shaped this month, so the overall trend may settle down next month."
-    if rule in {"first_transaction", "few_transactions", "limited_transaction_history"}:
-        return "As you add more transactions, your pulse will become more useful."
-    if category and category != "No category yet":
-        return f"{category} is the main area to watch, but your pattern is still manageable."
-
-    return "Your spending pattern looks steady; keep checking in as the month develops."
+        return "Spending remained balanced this month with no unusual category spikes."
+    if total_change > 0:
+        return "Spending was slightly higher than last month, without any single category standing out."
+    return "Spending stayed steady compared to last month."
 
 
 def build_financial_pulse_summary(
@@ -518,11 +541,14 @@ def build_financial_pulse_summary(
         main_change_value = "0%"
 
     if total_change > 0:
-        main_change_label = "Spending Increased"
+        main_change_label = "Monthly spending increased"
+        main_change_tone = "negative"
     elif total_change < 0:
-        main_change_label = "Spending Decreased"
+        main_change_label = "Monthly spending decreased"
+        main_change_tone = "positive"
     else:
-        main_change_label = "Spending Stayed Stable"
+        main_change_label = "Monthly spending stayed stable"
+        main_change_tone = "neutral"
 
     biggest_driver = build_biggest_driver(
         current_category_totals,
@@ -534,15 +560,15 @@ def build_financial_pulse_summary(
         "health": get_financial_health(financial_pulse, current_total, previous_total),
         "main_change_value": main_change_value,
         "main_change_label": main_change_label,
+        "main_change_tone": main_change_tone,
         "current_total": format_currency(current_total),
         "previous_total": format_currency(previous_total),
         "biggest_driver": biggest_driver,
-        "recommendation": build_pulse_recommendation(
+        "summary": build_overall_assessment(
             financial_pulse,
             biggest_driver,
             total_change,
         ),
-        "cta_text": "Explore Details",
     }
 
 

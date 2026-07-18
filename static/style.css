@@ -73,6 +73,12 @@
     border-radius: 24px;
     box-shadow: var(--dashboard-shadow);
     padding: clamp(1.35rem, 3vw, 2rem);
+    transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.dashboard-pulse-card:hover {
+    border-color: rgba(15, 23, 42, 0.16);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.1);
+    transform: translateY(-2px);
 }
 .dashboard-pulse-badge {
     background-color: rgba(13, 110, 253, 0.1);
@@ -85,13 +91,6 @@
     padding: 0.55rem 0.85rem;
     text-transform: uppercase;
 }
-.dashboard-pulse-title {
-    color: var(--dashboard-text);
-    font-size: clamp(1.4rem, 2.5vw, 2rem);
-    font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.2;
-}
 .dashboard-pulse-text {
     color: #334155;
     font-size: 1rem;
@@ -103,17 +102,70 @@
     font-size: 0.95rem;
     line-height: 1.55;
 }
-.dashboard-pulse-button {
-    border-radius: 999px;
+.dashboard-health-eyebrow {
+    color: var(--dashboard-muted);
+    font-size: 0.74rem;
     font-weight: 600;
-    padding: 0.7rem 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
-.dashboard-card-surface {
-    background: #f8fafc;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    border-radius: var(--dashboard-soft-radius);
-    padding: 1.1rem 1.2rem;
-    height: 100%;
+.dashboard-health-pill {
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    padding: 0.55rem 1.15rem;
+}
+.dashboard-health-pill-excellent {
+    background-color: rgba(22, 163, 74, 0.08);
+    border: 1px solid rgba(22, 163, 74, 0.26);
+    color: #15803d;
+}
+.dashboard-health-pill-good {
+    background-color: rgba(13, 148, 136, 0.08);
+    border: 1px solid rgba(13, 148, 136, 0.26);
+    color: #0f766e;
+}
+.dashboard-health-pill-stable {
+    background-color: rgba(100, 116, 139, 0.08);
+    border: 1px solid rgba(100, 116, 139, 0.22);
+    color: #475569;
+}
+.dashboard-health-pill-attention {
+    background-color: rgba(217, 119, 6, 0.09);
+    border: 1px solid rgba(217, 119, 6, 0.26);
+    color: #b45309;
+}
+.dashboard-health-pill-warning {
+    background-color: rgba(220, 38, 38, 0.07);
+    border: 1px solid rgba(220, 38, 38, 0.24);
+    color: #b91c1c;
+}
+.dashboard-tone-positive {
+    color: #15803d;
+}
+.dashboard-tone-negative {
+    color: #b91c1c;
+}
+.dashboard-pulse-col {
+    padding-bottom: 0.25rem;
+    padding-top: 0.25rem;
+}
+@media (min-width: 1200px) {
+    .dashboard-pulse-col {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+    .dashboard-pulse-col:first-child {
+        padding-left: 0;
+    }
+    .dashboard-pulse-col:last-child {
+        padding-right: 0;
+    }
+    .dashboard-pulse-col + .dashboard-pulse-col {
+        border-left: 1px solid rgba(15, 23, 42, 0.07);
+    }
 }
 .dashboard-kpi-card {
     background: #f8fafc;

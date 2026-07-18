@@ -32,49 +32,42 @@ block body %}
     </div>
 
     <div class="dashboard-card dashboard-pulse-card mb-4">
-      <div class="row g-4 align-items-stretch">
-        <div class="col-12 col-xl-4">
-          <p class="dashboard-eyebrow mb-2">Financial Health</p>
-          <h2 class="dashboard-pulse-title mt-0 mb-3">
-            {{ financial_pulse_summary.health }}
-          </h2>
-          <p class="dashboard-pulse-text mb-4">
-            {{ financial_pulse_summary.recommendation }}
+      <div class="row g-4 g-xl-0 align-items-stretch">
+        <div class="col-12 col-xl-4 dashboard-pulse-col">
+          <p class="dashboard-health-eyebrow mb-3">Overall Assessment</p>
+          <span class="dashboard-health-pill dashboard-health-pill-{{ financial_pulse_summary.health.level }}">
+            {{ financial_pulse_summary.health.label }}
+          </span>
+          <p class="dashboard-pulse-text mt-4 mb-0">
+            {{ financial_pulse_summary.summary }}
           </p>
-          <button type="button" class="btn btn-outline-primary dashboard-pulse-button">
-            {{ financial_pulse_summary.cta_text }}
-          </button>
         </div>
 
-        <div class="col-12 col-md-6 col-xl-4">
-          <div class="dashboard-card-surface h-100">
-            <p class="dashboard-eyebrow mb-2">Main Change</p>
-            <p class="dashboard-figure-value mb-1">
-              {{ financial_pulse_summary.main_change_value }}
-            </p>
-            <p class="dashboard-figure-label mb-3">
-              {{ financial_pulse_summary.main_change_label }}
-            </p>
-            <p class="dashboard-section-copy mb-1">{{ financial_pulse_summary.current_total }} this month</p>
-            <p class="dashboard-section-copy mb-0">
-              vs {{ financial_pulse_summary.previous_total }} last month
-            </p>
-          </div>
+        <div class="col-12 col-md-6 col-xl-4 dashboard-pulse-col">
+          <p class="dashboard-eyebrow mb-2">Main Change</p>
+          <p class="dashboard-figure-value dashboard-tone-{{ financial_pulse_summary.main_change_tone }} mb-1">
+            {{ financial_pulse_summary.main_change_value }}
+          </p>
+          <p class="dashboard-figure-label mb-3">
+            {{ financial_pulse_summary.main_change_label }}
+          </p>
+          <p class="dashboard-section-copy mb-1">{{ financial_pulse_summary.current_total }} this month</p>
+          <p class="dashboard-section-copy mb-0">
+            vs {{ financial_pulse_summary.previous_total }} last month
+          </p>
         </div>
 
-        <div class="col-12 col-md-6 col-xl-4">
-          <div class="dashboard-card-surface h-100">
-            <p class="dashboard-eyebrow mb-2">Biggest Driver</p>
-            <h3 class="dashboard-figure-value mb-2">
-              {{ financial_pulse_summary.biggest_driver.category }}
-            </h3>
-            <p class="dashboard-figure-label mb-1">
-              {{ financial_pulse_summary.biggest_driver.amount_change }}
-            </p>
-            <p class="dashboard-section-copy mb-0">
-              {{ financial_pulse_summary.biggest_driver.share_text }}
-            </p>
-          </div>
+        <div class="col-12 col-md-6 col-xl-4 dashboard-pulse-col">
+          <p class="dashboard-eyebrow mb-2">Biggest Driver</p>
+          <h3 class="dashboard-figure-value mb-2">
+            {{ financial_pulse_summary.biggest_driver.category }}
+          </h3>
+          <p class="dashboard-figure-label dashboard-tone-{{ financial_pulse_summary.biggest_driver.tone }} mb-1">
+            {{ financial_pulse_summary.biggest_driver.amount_change }}
+          </p>
+          <p class="dashboard-section-copy mb-0">
+            {{ financial_pulse_summary.biggest_driver.share_text }}
+          </p>
         </div>
       </div>
     </div>
