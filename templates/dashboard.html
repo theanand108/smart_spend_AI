@@ -276,7 +276,7 @@ block body %}
           <div class="dashboard-transaction-main">
             <div class="dashboard-transaction-title">{{ transaction.merchant_name }}</div>
             <div class="dashboard-transaction-meta">
-              <span class="badge rounded-pill bg-light text-dark dashboard-transaction-category">{{ transaction.category }}</span>
+              <span class="badge rounded-pill dashboard-transaction-category">{{ transaction.category }}</span>
               <span class="dashboard-transaction-date">{{ transaction.date.strftime('%d %b • %-I:%M %p') if transaction.date else '' }}</span>
             </div>
             {% if transaction.notes %}
