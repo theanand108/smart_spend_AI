@@ -101,12 +101,8 @@ block body %}
 
     <div class="card dashboard-card mt-4 dashboard-explore-card" id="explore-your-spending">
       <div class="card-body">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mb-4">
-          <div>
-            <p class="dashboard-eyebrow mb-2">Explore Your Spending</p>
-            <h5 class="dashboard-section-title mb-1">Start with a search or a category filter</h5>
-            <p class="dashboard-section-copy mb-0">Find the transactions that matter most in a few quick steps.</p>
-          </div>
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+          <h5 class="dashboard-section-title mb-0">Find Transactions</h5>
           <div class="d-flex align-items-center gap-2 flex-wrap">
             {% if search_query %}
             <a
@@ -116,33 +112,39 @@ block body %}
               Viewing: {{ search_query }} <span aria-hidden="true">×</span>
             </a>
             {% endif %}
-            <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="btn btn-outline-success dashboard-export-btn">Export</a>
+            <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="dashboard-export-btn">
+              <i class="bi bi-download" aria-hidden="true"></i> Export
+            </a>
           </div>
         </div>
 
         <form id="spend-search-form" class="dashboard-search-form" action="{{ request.path }}" method="get">
-          <div class="dashboard-search-row">
-            <div class="dashboard-search-input-group">
-              <input
-                id="spend-search-input"
-                type="search"
-                class="form-control form-control-lg"
-                name="q"
-                placeholder="Search merchant, notes, or category"
-                value="{{ search_query }}"
-                aria-label="Search merchant, notes, or category"
-              />
-              {% if search_query %}
-              <a href="{{ url_for('dashboard1', month=curr_month) }}" class="btn btn-outline-secondary">Clear</a>
-              {% endif %}
-            </div>
+          <div class="dashboard-search-bar">
+            <i class="bi bi-search dashboard-search-icon" aria-hidden="true"></i>
+            <input
+              id="spend-search-input"
+              type="search"
+              class="form-control dashboard-search-input"
+              name="q"
+              placeholder="Search by merchant, category, or note"
+              value="{{ search_query }}"
+              aria-label="Search transactions"
+            />
+            {% if search_query %}
+            <a href="{{ url_for('dashboard1', month=curr_month) }}" class="btn btn-outline-secondary dashboard-search-clear" aria-label="Clear search">
+              <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </a>
+            {% endif %}
           </div>
 
-          <div class="dashboard-chip-row mt-3">
-            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Food">Food</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Shopping">Shopping</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Health">Health</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Transport">Transport</button>
+          <div class="dashboard-filters-row">
+            <span class="dashboard-filters-label">Popular Filters</span>
+            <div class="dashboard-chip-row">
+              <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Food">Food</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Shopping">Shopping</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Health">Health</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm dashboard-chip" data-chip="Transport">Transport</button>
+            </div>
           </div>
         </form>
       </div>
