@@ -119,14 +119,33 @@ The goal is to reduce it.
 
 ## 🖼️ Screenshots
 
-> *(Screenshots will be added here.)*
+### Landing Page
+  <p align="center">
+  <img src="screenshots/landing.png" width="100%">
+</p>
 
-- Landing Page
-- Dashboard
-- Analytics
-- Transaction Management
-- Dark Mode
-- Mobile View
+### Analytics
+  <p align="center">
+  <img src="screenshots/analytics-charts.png" width="100%">
+</p>
+
+### Transaction Management
+<table>
+<tr>
+<td>
+<img src="screenshots/update-transaction.png">
+</td>
+
+<td>
+<img src="screenshots/simulate.png">
+</td>
+</tr>
+</table>
+
+### Dark Mode
+  <p align="center">
+  <img src="screenshots/dashboard-Dark.png" width="100%">
+</p>
 
 ---
 
