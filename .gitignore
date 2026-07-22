@@ -1,15 +1,34 @@
+# Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
 .venv/
 venv/
+
+# Flask runtime
 instance/
+
+# Generated output
 output/
 src/output/
+
+# Dependencies
+node_modules/
+
+# macOS
 .DS_Store
+
+# Logs
+*.log
+
+# Internal project docs
 CLAUDE_CONTEXT.md
 FEATURE_BACKLOG.md
 INTERVIEW_STORY.md
 LAYOUT.md
-PRODUCT_DESIGN_DOCUMENT.md
 SPRINT_LOG.md
 settings.json
