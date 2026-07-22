@@ -26,9 +26,4 @@ node_modules/
 *.log
 
 # Internal project docs
-CLAUDE_CONTEXT.md
-FEATURE_BACKLOG.md
-INTERVIEW_STORY.md
-LAYOUT.md
-SPRINT_LOG.md
-settings.json
+docs/
