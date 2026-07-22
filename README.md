@@ -18,7 +18,7 @@ Transform transaction history into meaningful financial insights that help peopl
 ## 🖼️ Product Preview
 
 <p align="center">
-  <img src="screenshots/dashboard-Dark.png" width="100%">
+  <img src="screenshots/light-dashboard.png" width="100%">
 </p>
 
 ## 📖 Product Overview
