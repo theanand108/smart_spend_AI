@@ -40,7 +40,7 @@
             <li class="nav-item ms-2">
               <a class="btn btn-outline-primary btn-sm rounded-pill" href="/simulateATransaction">+ Add Transaction</a>
             </li>
-            {% if request.endpoint == 'dashboard1' %}
+            {% if request.endpoint in ['dashboard1', 'home'] %}
             <li class="nav-item ms-2">
               <button type="button" id="theme-toggle-btn" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="Toggle dark mode" aria-pressed="false">
                 <i class="bi bi-moon-stars" aria-hidden="true"></i>
@@ -111,6 +111,7 @@
           } catch (e) {}
 
           applyIcon(nextTheme);
+          document.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: nextTheme } }));
         });
       });
     </script>

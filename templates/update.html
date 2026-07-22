@@ -3,45 +3,99 @@
   Update
 {% endblock title %}
 {% block body %}
-<div class="container2 simulate-hero">
-  <div class="w-75 mx-auto simulate-card">
-    <div class="mb-4">
-      <h1 class="simulate-heading">Update Transaction</h1>
-      <p class="simulate-subtitle">Adjust the details of an existing transaction and keep your insights current.</p>
-    </div>
+<main class="simulate-page">
+  <section class="simulate-shell">
+    <article class="simulate-workspace">
+      <header class="simulate-header">
+        <div>
+          <p class="simulate-kicker">Edit Transaction</p>
+          <h1 class="simulate-heading">Update Transaction</h1>
+          <p class="simulate-subtitle">Adjust the details of an existing transaction and keep your insights current.</p>
+        </div>
+      </header>
 
-    <form action="{{ url_for('update_transaction', id=transaction.id, next=next) }}" method="POST" class="simulate-form">
-      <input type="hidden" name="next" value="{{ next or '' }}">
-      <div class="mb-3">
-        <label for="merchant_name" class="form-label">Merchant's name</label>
-        <input type="text" class="form-control" name="merchant_name" id="merchant_name" value="{{ transaction.merchant_name }}" aria-describedby="merchant" required>
+      <div class="simulate-composer simulate-composer-single">
+        <section class="simulate-form-panel" aria-labelledby="update-form-title">
+          <div class="simulate-section-heading">
+            <span>Transaction details</span>
+            <h2 id="update-form-title">Edit details</h2>
+          </div>
+
+          <form action="{{ url_for('update_transaction', id=transaction.id, next=next) }}" method="POST" class="simulate-form">
+            <input type="hidden" name="next" value="{{ next or '' }}">
+
+            <div class="simulate-field">
+              <label for="merchant_name" class="form-label">Merchant</label>
+              <div class="simulate-input-shell">
+                <i class="bi bi-shop-window" aria-hidden="true"></i>
+                <input type="text" class="form-control" name="merchant_name" id="merchant_name" value="{{ transaction.merchant_name }}" required>
+              </div>
+            </div>
+
+            <div class="simulate-field simulate-field-amount">
+              <label for="amount" class="form-label">Amount</label>
+              <div class="simulate-amount-shell">
+                <span aria-hidden="true">₹</span>
+                <input type="number" class="form-control" name="amount" id="amount" value="{{ transaction.amount }}" required>
+              </div>
+            </div>
+
+            <div class="simulate-two-col">
+              <div class="simulate-field">
+                <label for="payment_method" class="form-label">Method</label>
+                <div class="simulate-method-shell">
+                  <div class="simulate-method-current">
+                    <i class="bi bi-phone" aria-hidden="true"></i>
+                    <div>
+                      <strong data-method-label>{{ transaction.payment_method }}</strong>
+                      <span>Payment method</span>
+                    </div>
+                  </div>
+                  <select class="form-select" name="payment_method" id="payment_method" aria-label="Select payment method">
+                    <option selected>Select payment method</option>
+                    <option value="upi">UPI</option>
+                    <option value="credit">Credit Card</option>
+                    <option value="debit">Debit Card</option>
+                    <option value="netbanking">Net Banking</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="simulate-field">
+                <label for="notes" class="form-label">Note <span>optional</span></label>
+                <div class="simulate-input-shell">
+                  <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                  <input type="text" class="form-control" name="notes" id="notes" value="{{ transaction.notes }}">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn simulate-submit">
+              <span>Update Transaction</span>
+              <i class="bi bi-check2" aria-hidden="true"></i>
+            </button>
+          </form>
+        </section>
       </div>
-      <div class="mb-3">
-        <label for="amount" class="form-label">Amount paid</label>
-        <input type="number" class="form-control" name="amount" id="amount" value="{{ transaction.amount }}" aria-describedby="amount" required>
-      </div>
-      <div class="mb-3">
-        <label for="notes" class="form-label">Note (optional)</label>
-        <input type="text" class="form-control" name="notes" id="notes" value="{{ transaction.notes }}" aria-describedby="notes">
-      </div>
-      <div class="dropdown mb-3">
-        <select class="form-select" name="payment_method" id="payment_method" value="{{ transaction.payment_method }}" aria-label="Default select example">
-          <option selected>Select payment method</option>
-          <option value="upi">UPI</option>
-          <option value="credit">Credit Card</option>
-          <option value="debit">Debit Card</option>
-          <option value="netbanking">Net Banking</option>
-        </select>
-      </div>
-      <button type="submit" class="btn btn-dark simulate-submit">Update Transaction</button>
-    </form>
-  </div>
+    </article>
+  </section>
+</main>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       const paymentMethod = document.getElementById('payment_method');
+      const methodLabel = document.querySelector('[data-method-label]');
+
+      function syncMethodLabel() {
+        if (!methodLabel || !paymentMethod) return;
+        const option = paymentMethod.options[paymentMethod.selectedIndex];
+        methodLabel.textContent = option && option.value ? option.text : '{{ transaction.payment_method }}';
+      }
+
       if (paymentMethod) {
         paymentMethod.value = "{{ transaction.payment_method }}";
+        syncMethodLabel();
+        paymentMethod.addEventListener('change', syncMethodLabel);
       }
     });
   </script>

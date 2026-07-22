@@ -105,6 +105,23 @@
     --chart-tooltip-bg: #111827;
     --chart-tooltip-text: #f8fafc;
 
+    /* Flow-arrow progression (The Shift, homepage) - a 5-step build separate
+       from the general border scale */
+    --flow-arrow-1: rgba(15, 23, 42, 0.2);
+    --flow-arrow-2: rgba(15, 23, 42, 0.28);
+    --flow-arrow-3: rgba(15, 23, 42, 0.36);
+    --flow-arrow-4: rgba(15, 23, 42, 0.44);
+    --flow-arrow-5: rgba(15, 23, 42, 0.55);
+
+    /* Simulate/Update page (index2.css) - its own teal accent + shadow */
+    --shadow-simulate: 0 18px 44px rgba(17, 24, 39, 0.045);
+    --simulate-focus-border: rgba(15, 118, 110, 0.35);
+    --simulate-focus-ring: rgba(15, 118, 110, 0.08);
+    --simulate-highlight-flash: rgba(20, 184, 166, 0.16);
+    --shadow-toast: 0 12px 30px rgba(15, 23, 42, 0.08);
+    --shadow-transformation: 0 18px 45px rgba(33, 37, 41, 0.07);
+    --shadow-final-cta: 0 22px 60px rgba(33, 37, 41, 0.06);
+
     /* Inputs */
     --input-bg: var(--surface-elevated);
     --input-bg-focus: #ffffff;
@@ -213,6 +230,20 @@
     --chart-tooltip-bg: #f3f5f9;
     --chart-tooltip-text: #10141f;
 
+    --flow-arrow-1: rgba(255, 255, 255, 0.16);
+    --flow-arrow-2: rgba(255, 255, 255, 0.24);
+    --flow-arrow-3: rgba(255, 255, 255, 0.32);
+    --flow-arrow-4: rgba(255, 255, 255, 0.4);
+    --flow-arrow-5: rgba(255, 255, 255, 0.5);
+
+    --shadow-simulate: 0 18px 44px rgba(0, 0, 0, 0.32);
+    --simulate-focus-border: rgba(45, 212, 191, 0.4);
+    --simulate-focus-ring: rgba(45, 212, 191, 0.14);
+    --simulate-highlight-flash: rgba(45, 212, 191, 0.18);
+    --shadow-toast: 0 12px 30px rgba(0, 0, 0, 0.32);
+    --shadow-transformation: 0 18px 45px rgba(0, 0, 0, 0.3);
+    --shadow-final-cta: 0 22px 60px rgba(0, 0, 0, 0.34);
+
     --input-bg-focus: #1b2130;
 }
 
@@ -229,12 +260,16 @@
     --bs-navbar-hover-color: var(--accent);
     --bs-navbar-active-color: var(--accent);
     --bs-navbar-brand-color: var(--text-primary);
+    --bs-navbar-brand-hover-color: var(--accent);
     --bs-navbar-toggler-border-color: var(--border);
 }
 [data-theme="dark"] .navbar .navbar-toggler-icon {
     filter: invert(1) grayscale(100%) brightness(180%);
 }
 [data-theme="dark"] .dashboard-month-select .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f3f5f9' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+[data-theme="dark"] .simulate-form .form-select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f3f5f9' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
 }
 [data-theme="dark"] .dashboard-compare-chip.text-success {
@@ -245,6 +280,26 @@
 }
 [data-theme="dark"] .dashboard-compare-chip.text-muted {
     color: var(--text-muted) !important;
+}
+[data-theme="dark"] .btn-primary {
+    --bs-btn-bg: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-hover-bg: var(--accent);
+    --bs-btn-hover-border-color: var(--accent);
+    --bs-btn-active-bg: var(--accent);
+    --bs-btn-active-border-color: var(--accent);
+    --bs-btn-disabled-bg: var(--accent);
+    --bs-btn-disabled-border-color: var(--accent);
+}
+[data-theme="dark"] .toast-container .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+html {
+    background-color: var(--bg-primary);
+}
+body {
+    background-color: var(--bg-primary);
 }
 
 .dashboard-card {
@@ -798,6 +853,7 @@
     gap: 0.4rem;
 }
 .dashboard-transaction-icons .btn {
+    border-color: var(--input-border);
     border-radius: 999px;
     padding: 0.32rem 0.55rem;
     color: var(--text-tertiary);
@@ -933,7 +989,7 @@
     background-color: var(--surface);
     border: 1px solid var(--border-subtle);
     border-radius: 16px;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--shadow-toast);
     color: var(--dashboard-text);
     min-width: min(320px, calc(100vw - 2rem));
 }
@@ -1130,10 +1186,10 @@
     color: var(--dashboard-text);
     display: flex;
     flex-shrink: 0;
-    font-size: 1.05rem;
-    font-weight: 700;
+    font-size: 1.12rem;
+    font-weight: 800;
     justify-content: space-between;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
     padding: 2.75rem 1.15rem 1rem;
 }
 
@@ -1372,6 +1428,7 @@
     max-width: 1180px;
 }
 .transformation-kicker {
+    color: var(--text-muted-alt);
     font-size: 0.95rem;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -1388,7 +1445,7 @@
     background-color: var(--surface);
     border: 1px solid var(--border-accent-faint);
     border-radius: 28px;
-    box-shadow: 0 18px 45px rgba(33, 37, 41, 0.07);
+    box-shadow: var(--shadow-transformation);
     padding: clamp(2rem, 5vw, 3.25rem);
 }
 .transformation-card-highlight {
@@ -1428,19 +1485,19 @@
     color: var(--border-medium);
 }
 .flow-arrow-1 {
-    color: rgba(15, 23, 42, 0.2);
+    color: var(--flow-arrow-1);
 }
 .flow-arrow-2 {
-    color: rgba(15, 23, 42, 0.28);
+    color: var(--flow-arrow-2);
 }
 .flow-arrow-3 {
-    color: rgba(15, 23, 42, 0.36);
+    color: var(--flow-arrow-3);
 }
 .flow-arrow-4 {
-    color: rgba(15, 23, 42, 0.44);
+    color: var(--flow-arrow-4);
 }
 .flow-arrow-5 {
-    color: rgba(15, 23, 42, 0.55);
+    color: var(--flow-arrow-5);
 }
 .flow-step-stop {
     background-color: var(--bg-secondary);
@@ -1812,7 +1869,7 @@
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-charcoal-soft);
     border-radius: 32px;
-    box-shadow: 0 22px 60px rgba(33, 37, 41, 0.06);
+    box-shadow: var(--shadow-final-cta);
     padding: clamp(2.5rem, 6vw, 5rem);
 }
 .final-cta-title {

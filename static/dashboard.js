@@ -11,6 +11,13 @@ const values = JSON.parse(chartCanvas.dataset.values);
 const CATEGORY_PALETTE = ['#0d6efd', '#64748b', '#f59e0b', '#10b981', '#94a3b8', '#a855f7'];
 const formatRupees = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
+function getThemeColor(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+let pieChartInstance = null;
+let barChartInstance = null;
+
 // ======== Month Logic ======== 
 const months = Array.from({ length: 12 }, (_, i) => {
   return new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2000, i));
@@ -198,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const pieValues = JSON.parse(pieCanvas.dataset.values || "[]");
         
         const ctx = pieCanvas.getContext('2d');
-        new Chart(ctx, {
+        pieChartInstance = new Chart(ctx, {
             type: 'pie',
             data: {
                 labels: pieLabels,
@@ -206,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     label: 'Total Spent (₹)',
                     data: pieValues,
                     backgroundColor: pieLabels.map((_, i) => CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]),
-                    borderColor: '#ffffff',
+                    borderColor: getThemeColor('--surface'),
                     borderWidth: 2,
                     hoverOffset: 6
                 }]
@@ -219,8 +226,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     legend: { display: false },
                     title: { display: false },
                     tooltip: {
-                        backgroundColor: '#111827',
-                        bodyColor: '#f8fafc',
+                        backgroundColor: getThemeColor('--chart-tooltip-bg'),
+                        titleColor: getThemeColor('--chart-tooltip-text'),
+                        bodyColor: getThemeColor('--chart-tooltip-text'),
+                        borderColor: getThemeColor('--chart-grid'),
+                        borderWidth: 1,
                         cornerRadius: 10,
                         displayColors: false,
                         padding: 10,
@@ -317,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const maxValue = barValues.length ? Math.max(...barValues) : 0;
     const suggestedMax = stepSize ? Math.ceil(maxValue / stepSize) * stepSize : undefined;
 
-    new Chart(barCanvas.getContext('2d'), {
+    barChartInstance = new Chart(barCanvas.getContext('2d'), {
       type: 'bar',
       data: {
         labels: barLabels,
@@ -342,8 +352,11 @@ document.addEventListener("DOMContentLoaded", () => {
           title: { display: false },
           subtitle: { display: false },
           tooltip: {
-            backgroundColor: '#111827',
-            bodyColor: '#f8fafc',
+            backgroundColor: getThemeColor('--chart-tooltip-bg'),
+            titleColor: getThemeColor('--chart-tooltip-text'),
+            bodyColor: getThemeColor('--chart-tooltip-text'),
+            borderColor: getThemeColor('--chart-grid'),
+            borderWidth: 1,
             cornerRadius: 10,
             displayColors: false,
             padding: 10,
@@ -357,13 +370,13 @@ document.addEventListener("DOMContentLoaded", () => {
             beginAtZero: true,
             suggestedMax: suggestedMax,
             grid: {
-              color: 'rgba(15, 23, 42, 0.06)',
+              color: getThemeColor('--chart-grid'),
               drawTicks: false
             },
             border: { display: false },
             ticks: {
               stepSize: stepSize,
-              color: '#94a3b8',
+              color: getThemeColor('--chart-axis'),
               font: { size: 11 },
               padding: 8,
               callback: (value) => formatAmount(value)
@@ -374,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
             grid: { display: false },
             border: { display: false },
             ticks: {
-              color: '#94a3b8',
+              color: getThemeColor('--chart-axis'),
               font: { size: 11 }
             },
             title: { display: false }
@@ -434,4 +447,28 @@ document.addEventListener("DOMContentLoaded", () => {
     exploreSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+});
+
+// Re-color both charts live when the theme toggle fires, since the toggle
+// button and these charts live on the same page - a page reload shouldn't
+// be required to see them match.
+document.addEventListener('theme-changed', function () {
+  if (pieChartInstance) {
+    pieChartInstance.data.datasets[0].borderColor = getThemeColor('--surface');
+    pieChartInstance.options.plugins.tooltip.backgroundColor = getThemeColor('--chart-tooltip-bg');
+    pieChartInstance.options.plugins.tooltip.titleColor = getThemeColor('--chart-tooltip-text');
+    pieChartInstance.options.plugins.tooltip.bodyColor = getThemeColor('--chart-tooltip-text');
+    pieChartInstance.options.plugins.tooltip.borderColor = getThemeColor('--chart-grid');
+    pieChartInstance.update();
+  }
+  if (barChartInstance) {
+    barChartInstance.options.plugins.tooltip.backgroundColor = getThemeColor('--chart-tooltip-bg');
+    barChartInstance.options.plugins.tooltip.titleColor = getThemeColor('--chart-tooltip-text');
+    barChartInstance.options.plugins.tooltip.bodyColor = getThemeColor('--chart-tooltip-text');
+    barChartInstance.options.plugins.tooltip.borderColor = getThemeColor('--chart-grid');
+    barChartInstance.options.scales.y.grid.color = getThemeColor('--chart-grid');
+    barChartInstance.options.scales.y.ticks.color = getThemeColor('--chart-axis');
+    barChartInstance.options.scales.x.ticks.color = getThemeColor('--chart-axis');
+    barChartInstance.update();
+  }
 });
