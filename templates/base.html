@@ -58,6 +58,24 @@
 
     <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3"></div>
 
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header border-0">
+            <h5 class="modal-title" id="deleteModalLabel">Delete Transaction</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-0">This action cannot be undone.</p>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <a id="confirm-delete-link" href="#" class="btn btn-danger">Delete</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='toast.js') }}"></script>
     <script>
@@ -112,6 +130,26 @@
 
           applyIcon(nextTheme);
           document.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: nextTheme } }));
+        });
+      });
+    </script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var deleteModalEl = document.getElementById('deleteModal');
+        var confirmDeleteLink = document.getElementById('confirm-delete-link');
+        if (!deleteModalEl || !confirmDeleteLink) return;
+
+        document.addEventListener('click', function (event) {
+          var trigger = event.target.closest('[data-delete-trigger]');
+          if (!trigger) return;
+
+          event.preventDefault();
+          var deleteUrl = trigger.getAttribute('data-delete-url');
+          if (!deleteUrl) return;
+
+          confirmDeleteLink.setAttribute('href', deleteUrl);
+          var modal = bootstrap.Modal.getOrCreateInstance(deleteModalEl);
+          modal.show();
         });
       });
     </script>

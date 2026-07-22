@@ -218,6 +218,7 @@ block body %}
 </div>
 {% endif %}
 
+{% if show_charts %}
 <div class="container dashboard-analytics-container dashboard-section-block">
   <div class="row g-4 align-items-stretch">
     <div class="col-lg-5">
@@ -253,6 +254,16 @@ block body %}
     </div>
   </div>
 </div>
+{% else %}
+<div class="container dashboard-section-block">
+  <div class="card dashboard-card">
+    <div class="card-body">
+      <h5 class="dashboard-section-title mb-2">No spending data available</h5>
+      <p class="dashboard-section-copy mb-0">There are no transactions matching the current filter. Try another category or clear the filter.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Transactions -->
 <div class="container dashboard-section-block">
@@ -284,7 +295,7 @@ block body %}
               <a href="{{ url_for('update_transaction', id=transaction.id, next=request.full_path) }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit transaction">
                 <i class="bi bi-pencil"></i>
               </a>
-              <a href="{{ url_for('delete_transaction', id=transaction.id, next=request.full_path) }}" class="btn btn-outline-secondary btn-sm dashboard-transaction-delete-btn" aria-label="Delete transaction">
+              <a href="#" class="btn btn-outline-secondary btn-sm dashboard-transaction-delete-btn" aria-label="Delete transaction" data-delete-trigger data-delete-url="{{ url_for('delete_transaction', id=transaction.id, next=request.full_path) }}">
                 <i class="bi bi-trash"></i>
               </a>
             </div>

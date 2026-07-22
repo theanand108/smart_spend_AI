@@ -151,6 +151,15 @@ def format_currency(amount):
     return f"₹{amount:,.2f}"
 
 
+def normalize_month(month):
+    try:
+        month_value = int(month)
+    except (TypeError, ValueError):
+        return None
+
+    return month_value if 1 <= month_value <= 12 else None
+
+
 def make_insight(title, value, supporting_text, priority_score, insight_type):
     return {
         "title": title,
@@ -717,7 +726,10 @@ def dashboard1(month=None):
     curr_month = datetime.now().month
     curr_year = datetime.now().year
     if month is not None:
-        curr_month = month
+        normalized_month = normalize_month(month)
+        if normalized_month is None:
+            return redirect("/dashboard")
+        curr_month = normalized_month
 
     # Build months dropdown up to the latest month that has transaction data for the current year.
     # If there are no transactions for the current year, fall back to current month.
@@ -935,6 +947,7 @@ def dashboard1(month=None):
 
     curr_month_name = datetime(curr_year, curr_month, 1).strftime("%B")
     flash_messages = get_flashed_messages(with_categories=True)
+    show_charts = filtered_total_transactions > 0
     return render_template(
         "dashboard.html",
         total_expense=total_expense,
@@ -961,6 +974,7 @@ def dashboard1(month=None):
         weekly_spending_data=weekly_spending_data,
         flash_messages=flash_messages,
         months=months,
+        show_charts=show_charts,
     )
 
 
@@ -1016,7 +1030,11 @@ def update_transaction(id):
 
 @app.route("/export/<int:month>")
 def exportCSV(month=None):
-    curr_month = month
+    normalized_month = normalize_month(month)
+    if normalized_month is None:
+        return redirect("/dashboard")
+
+    curr_month = normalized_month
     curr_year = datetime.now().year
     search_query = request.args.get("q", "").strip()
 

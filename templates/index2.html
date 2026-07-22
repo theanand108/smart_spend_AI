@@ -141,7 +141,7 @@
                 <a href="/update/{{ transaction.id }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit transaction">
                   <i class="bi bi-pencil"></i>
                 </a>
-                <a href="/delete/{{ transaction.id }}" class="btn btn-outline-secondary btn-sm" aria-label="Delete transaction">
+                <a href="#" class="btn btn-outline-secondary btn-sm" aria-label="Delete transaction" data-delete-trigger data-delete-url="{{ url_for('delete_transaction', id=transaction.id, next=request.full_path) }}">
                   <i class="bi bi-trash"></i>
                 </a>
               </div>

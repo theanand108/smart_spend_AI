@@ -295,6 +295,54 @@
     filter: invert(1) grayscale(100%) brightness(200%);
 }
 
+[data-theme="dark"] .modal-content {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .modal-body,
+[data-theme="dark"] .modal-body p {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal .btn-outline-secondary {
+    color: var(--text-secondary);
+    border-color: var(--border);
+    background-color: transparent;
+}
+
+[data-theme="dark"] .modal .btn-outline-secondary:hover,
+[data-theme="dark"] .modal .btn-outline-secondary:focus-visible {
+    color: var(--text-primary);
+    border-color: var(--accent);
+    background-color: var(--surface-accent-tint);
+}
+
+[data-theme="dark"] .modal .btn-danger {
+    background-color: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+[data-theme="dark"] .modal .btn-danger:hover,
+[data-theme="dark"] .modal .btn-danger:focus-visible {
+    background-color: var(--danger-alt);
+    border-color: var(--danger-alt);
+    color: #fff;
+}
+
+[data-theme="dark"] .modal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(180%);
+}
+
 html {
     background-color: var(--bg-primary);
 }
