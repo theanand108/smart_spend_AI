@@ -121,7 +121,7 @@ The goal is to reduce it.
 
 ### Landing Page
   <p align="center">
-  <img src="screenshots/landing.png" width="100%">
+  <img src="screenshots/Landing.png" width="100%">
 </p>
 
 ### Analytics
