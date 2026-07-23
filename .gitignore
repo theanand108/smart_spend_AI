@@ -9,9 +9,6 @@ htmlcov/
 .venv/
 venv/
 
-# Flask runtime
-instance/
-
 # Generated output
 output/
 src/output/
