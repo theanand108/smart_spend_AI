@@ -18,7 +18,7 @@ Transform transaction history into meaningful financial insights that help peopl
 ## 🖼️ Product Preview
 
 <p align="center">
-  <img src="screenshots/light-dashboard.png" width="100%">
+  <img src="screenshots/Landing.png" width="100%">
 </p>
 
 ## 📖 Product Overview
@@ -119,9 +119,9 @@ The goal is to reduce it.
 
 ## 🖼️ Screenshots
 
-### Landing Page
+### Dashboard
   <p align="center">
-  <img src="screenshots/Landing.png" width="100%">
+  <img src="screenshots/dashboard-Dark.png" width="100%">
 </p>
 
 ### Analytics
@@ -142,9 +142,9 @@ The goal is to reduce it.
 </tr>
 </table>
 
-### Dark Mode
+### Light Mode
   <p align="center">
-  <img src="screenshots/dashboard-Dark.png" width="100%">
+  <img src="screenshots/light-dashboard.png" width="100%">
 </p>
 
 ---
@@ -153,23 +153,21 @@ The goal is to reduce it.
 
 ```
                  User
-                   │
-                   ▼
-          Flask Web Application
-                   │
-      ┌────────────┴────────────┐
-      │                         │
- Dashboard UI            Transaction Engine
-      │                         │
-      └────────────┬────────────┘
-                   ▼
-          Financial Intelligence
-                   │
-                   ▼
-          SQLAlchemy ORM
-                   │
-                   ▼
-               SQLite Database
+                    │
+                    ▼
+            Flask Web Application
+                    │
+     ┌──────────────┴──────────────┐
+     │                             │
+HTML Templates              Analytics Engine
+(Jinja2)                           │
+     │                     Financial Intelligence
+     └──────────────┬──────────────┘
+                    ▼
+             SQLAlchemy ORM
+                    │
+                    ▼
+            SQLite Database
 ```
 
 ---
@@ -255,23 +253,40 @@ http://127.0.0.1:5000
 
 ```
 smart_spend_AI/
-
+│
 ├── app.py
-├── models/
-├── routes/
-├── templates/
-├── static/
-│   ├── css/
-│   ├── js/
-│   └── images/
-├── instance/
 ├── requirements.txt
-└── README.md
+├── README.md
+├── PRODUCT_DESIGN_DOCUMENT.md
+│
+├── src/
+│   └── analytics/
+│
+├── static/
+│   ├── dashboard.js
+│   ├── style.css
+│   ├── toast.js
+│   └── ...
+│
+├── templates/
+│   ├── index2.html
+│   ├── dashboard.html
+│   ├── update.html
+│   └── ...
+│
+└── instance/ 
 ```
 
 ---
 
 ## 🛣️ Roadmap
+
+- AI Financial Coach
+- Recurring Payment Detection
+- Spending Anomaly Detection
+- Smart Budget Prediction
+- Merchant Intelligence
+- Personalized Spending Insights
 
 ### ✅ Version 1
 
@@ -282,6 +297,10 @@ smart_spend_AI/
 - CSV Export
 - Responsive UI
 - Dark Mode
+
+ **Demo Dataset**
+>
+> This repository includes a pre-populated SQLite database with sample transactions so the dashboard and analytics can be explored immediately. The data is for demonstration purposes only.
 
 ---
 
@@ -298,12 +317,9 @@ smart_spend_AI/
 
 ---
 
-## 📚 Documentation
+## 📚 Product Design
 
-- Product Identity
-- Product Design Document
-- UI Design Philosophy
-- Architecture Documentation
+The complete product vision, roadmap, and design principles are available in **PRODUCT_DESIGN_DOCUMENT.md**.
 
 ---
 
@@ -328,10 +344,9 @@ This project is licensed under the MIT License.
 
 <div align="center">
 
-### Smart Spend AI
+⭐ If you found Smart Spend AI interesting, consider giving this repository a star.
 
-**Understanding your money should be easier than spending it.**
+It helps others discover the project and supports future development.
 
 Built with ❤️ to make financial understanding simple, intelligent, and accessible.
-
 </div>
