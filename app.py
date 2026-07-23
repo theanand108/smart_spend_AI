@@ -1,4 +1,5 @@
 from calendar import monthrange, month_name
+import os
 
 # pyright: reportMissingImports=false
 from flask import Flask, request, render_template, redirect, flash, get_flashed_messages
@@ -1095,4 +1096,6 @@ def exportCSV(month=None):
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5001)
+        
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False)
