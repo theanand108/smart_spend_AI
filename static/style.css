@@ -1149,6 +1149,10 @@ body {
     max-width: 660px;
     text-align: center;
 }
+[data-theme="dark"] .positioning-band {
+       border-color: var(--border-accent-soft);
+    box-shadow: 0 22px 55px rgba(13, 110, 253, 0.09);
+}
 .positioning-eyebrow {
     color: rgba(231, 235, 243, 0.42);
     font-size: 0.74rem;
@@ -1231,7 +1235,7 @@ body {
 .app-bar {
     align-items: center;
     border-bottom: 1px solid var(--dashboard-border);
-    color: var(--dashboard-text);
+    color: #111827;
     display: flex;
     flex-shrink: 0;
     font-size: 1.12rem;
@@ -1275,7 +1279,7 @@ body {
     text-transform: uppercase;
 }
 .phone-metric-value {
-    color: var(--dashboard-text);
+    color: #111827;
     font-size: 1.55rem;
     font-weight: 800;
     letter-spacing: -0.02em;
