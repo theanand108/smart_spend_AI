@@ -24,7 +24,7 @@ https://smart-spend-ai-toiv.onrender.com
 ## 🖼️ Product Preview
 
 <p align="center">
-  <img src="screenshots/Landing.png" width="100%">
+  <img src="screenshots/landing.png" width="100%">
 </p>
 
 ## 📖 Product Overview
