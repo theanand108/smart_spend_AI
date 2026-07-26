@@ -16,7 +16,7 @@ Transform transaction history into meaningful financial insights that help peopl
 
 **Try Smart Spend AI here:**
 
-https://smart-spend-ai-toiv.onrender.com
+👉 **[Launch Smart Spend AI](https://smart-spend-ai-toiv.onrender.com)**
 
 ---
 ## 🖼️ Product Preview
