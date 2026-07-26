@@ -33,7 +33,9 @@ Modern payment platforms are exceptional at processing transactions.
 
 They can tell you **what** you spent.
 
-They rarely help you understand **why** you spent it.
+They rarely help you understand **how your spending changes over time**.
+
+Understanding your financial habits shouldn't require scrolling through months of transaction history or manually categorizing every expense.
 
 Smart Spend AI bridges that gap.
 
@@ -68,11 +70,23 @@ The goal is to reduce it.
 
 ---
 
+## 🎯 Product Principles
+
+Smart Spend AI is guided by a few simple principles that shape every product decision.
+
+- **Understanding over bookkeeping** — Users shouldn't have to manually recreate transaction history to understand their spending.
+- **Insights over dashboards** — Charts explain the past; actionable insights help users make better financial decisions.
+- **Progressive intelligence** — The product becomes more valuable as transaction history grows, delivering increasingly personalized insights over time.
+- **Assist, never overwhelm** — AI should simplify financial understanding, not create unnecessary complexity or notifications.
+- **Designed to integrate, not replace** — Smart Spend AI is envisioned as a financial intelligence layer for existing payment platforms, not another standalone expense tracker.
+
+---
+
 ## ✨ Key Features
 
 ### 🧠 Financial Intelligence
 
-- AI-powered transaction categorization
+- Intelligent transaction categorization
 - Financial health analysis
 - Monthly spending insights
 - Spending trend detection
@@ -155,29 +169,6 @@ The goal is to reduce it.
 
 ---
 
-## 🏗️ System Architecture
-
-```
-                 User
-                    │
-                    ▼
-            Flask Web Application
-                    │
-     ┌──────────────┴──────────────┐
-     │                             │
-HTML Templates              Analytics Engine
-(Jinja2)                           │
-     │                     Financial Intelligence
-     └──────────────┬──────────────┘
-                    ▼
-             SQLAlchemy ORM
-                    │
-                    ▼
-            SQLite Database
-```
-
----
-
 ## 🛠 Technology Stack
 
 ### Backend
@@ -202,6 +193,29 @@ HTML Templates              Analytics Engine
 - Git
 - GitHub
 - VS Code
+
+---
+
+## 🏗️ System Architecture
+
+```
+                 User
+                    │
+                    ▼
+            Flask Web Application
+                    │
+     ┌──────────────┴──────────────┐
+     │                             │
+HTML Templates              Analytics Engine
+(Jinja2)                           │
+     │                     Financial Intelligence
+     └──────────────┬──────────────┘
+                    ▼
+             SQLAlchemy ORM
+                    │
+                    ▼
+            SQLite Database
+```
 
 ---
 
@@ -294,7 +308,7 @@ smart_spend_AI/
 - Merchant Intelligence
 - Personalized Spending Insights
 
-### ✅ Version 1
+### ✅ Current MVP
 
 - Transaction Management
 - Financial Dashboard
@@ -310,7 +324,7 @@ smart_spend_AI/
 
 ---
 
-### 🚧 Future Plans
+### 🚧 Planned Features
 
 - AI Spending Coach
 - Personalized Financial Insights
@@ -323,7 +337,7 @@ smart_spend_AI/
 
 ---
 
-## 📚 Product Design
+## 📚 Product Philosophy
 
 The complete product vision, roadmap, and design principles are available in **PRODUCT_DESIGN_DOCUMENT.md**.
 
@@ -354,5 +368,5 @@ This project is licensed under the MIT License.
 
 It helps others discover the project and supports future development.
 
-Built with ❤️ to make financial understanding simple, intelligent, and accessible.
+Built with ❤️, curiosity, product thinking, and a lot of late nights.
 </div>
