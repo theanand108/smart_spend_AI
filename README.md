@@ -1,6 +1,4 @@
-# Smart Spend AI
-
-<div align="center">
+<div align="center"><h1>Smart Spend AI</h1>
 
 ### Understanding your money should be easier than spending it.
 
