@@ -34,7 +34,7 @@ CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     ),
     "Shopping": (
         "clothing", "clothes", "kurti", "shopping", "purchase", "extension board",
-        "hardware", "household", "gift",
+        "hardware", "household",
     ),
     "Bills & Utilities": (
         "recharge", "mobile recharge", "phone recharge", "electricity", "water bill",
