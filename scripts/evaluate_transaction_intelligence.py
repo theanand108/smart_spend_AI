@@ -26,7 +26,7 @@ DATASET = ROOT / "data" / "transaction_intelligence_eval.csv"
 def v2_prediction(row: dict[str, str], history: list[dict[str, Any]]) -> dict[str, Any]:
     return categorize_transaction(
         merchant_name=row["merchant_name"],
-        amount=float(row["amount"]),
+        amount=float(row["amount_inr"]),
         note=row["note"],
         payment_method=row["payment_method"],
         history=history,
@@ -105,6 +105,7 @@ def main() -> None:
             )
 
     total = len(rows)
+    unknown_total = sum(row["expected_category_v2"] == "Unknown" for row in rows)
 
     print("Transaction Intelligence — V1 vs V2")
     print("=" * 55)
@@ -112,7 +113,7 @@ def main() -> None:
     print(f"V1 category accuracy:        {v1_correct / total:.1%}")
     print(f"V2 category accuracy:        {v2_correct / total:.1%}")
     print(f"V2 improvement:              {(v2_correct - v1_correct) / total:+.1%}")
-    print(f"V2 unknown cases resolved:   {v2_unknown_correct}/{sum(row['expected_category_v2'] == 'Unknown' for row in rows)}")
+    print(f"V2 unknown cases resolved:   {v2_unknown_correct}/{unknown_total}")
     print(f"V2 false-confidence cases:   {v2_false_confidence}")
     print(f"V2 confirmation cases:       {v2_confirmation_cases}")
     print()
