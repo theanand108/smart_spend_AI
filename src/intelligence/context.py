@@ -18,7 +18,7 @@ CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "Entertainment": ("movie", "streaming", "netflix", "spotify", "entertainment"),
 }
 
-WEAK_NOTE_WORDS = {"ok", "home", "personal", "payment", "stuff", "monthly", "urgent", "for", "the"}
+WEAK_NOTE_WORDS = {"ok", "home", "personal", "payment", "stuff", "monthly", "urgent", "for", "the", "gift"}
 
 STRONG_PHRASES: dict[str, tuple[str, ...]] = {
     "Food & Dining": ("tea from", "chai from", "coffee from", "food from", "lunch from", "dinner from", "breakfast from", "college canteen", "college cafeteria", "friend paid the bill", "my share of dinner", "my share of the dinner", "split dinner", "split the dinner", "split the bill", "my share of the bill"),
@@ -30,9 +30,11 @@ STRONG_PHRASES: dict[str, tuple[str, ...]] = {
     "Transfer / Personal": ("sent back what i borrowed", "paying back my friend", "paid back my friend", "returning borrowed money", "returning what i borrowed", "money i owed", "sent money to friend", "transferred to friend", "transfer to friend"),
 }
 
+
 def normalize_text(value: Any) -> str:
     text = "" if value is None else str(value)
     return re.sub(r"\s+", " ", text.strip().lower())
+
 
 def note_evidence(note: Any) -> dict[str, str | float | None]:
     text = normalize_text(note)
@@ -67,10 +69,30 @@ def note_evidence(note: Any) -> dict[str, str | float | None]:
     confidence = 0.82 if len(meaningful_tokens) <= 2 else 0.86
     return {"category": category, "confidence": confidence, "reason": f'Note contains "{keyword}" as category evidence.'}
 
+
 def history_categories(history: list[dict[str, Any]] | None) -> dict[str, int]:
     counts: dict[str, int] = {}
     for item in history or []:
         category = item.get("category")
-        if category and category != "Others":
+        if category and category not in {"Others", "Unknown", "VARIES"}:
             counts[category] = counts.get(category, 0) + 1
     return counts
+
+
+def history_profile(history: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """Summarize merchant memory without pretending one category is always true."""
+    counts = history_categories(history)
+    total = sum(counts.values())
+    if not counts:
+        return {"counts": {}, "total": 0, "dominant_category": None, "dominance": 0.0, "varies": False}
+    dominant_category, dominant_count = max(counts.items(), key=lambda item: item[1])
+    dominance = dominant_count / total
+    # A merchant used for multiple purposes should be remembered as VARIES.
+    varies = len(counts) > 1 and dominance < 0.75
+    return {
+        "counts": counts,
+        "total": total,
+        "dominant_category": dominant_category,
+        "dominance": dominance,
+        "varies": varies,
+    }
