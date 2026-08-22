@@ -1,4 +1,4 @@
-"""Context extraction helpers used by transaction intelligence."""
+"""Context extraction helpers used by transaction intelligence V2."""
 
 from __future__ import annotations
 
@@ -87,8 +87,8 @@ def history_profile(history: list[dict[str, Any]] | None) -> dict[str, Any]:
         return {"counts": {}, "total": 0, "dominant_category": None, "dominance": 0.0, "varies": False}
     dominant_category, dominant_count = max(counts.items(), key=lambda item: item[1])
     dominance = dominant_count / total
-    # A merchant used for multiple purposes should be remembered as VARIES.
-    varies = len(counts) > 1 and dominance < 0.75
+    # Reserve VARIES for merchants with several genuinely different uses.
+    varies = len(counts) >= 3 and dominance < 0.75
     return {
         "counts": counts,
         "total": total,
