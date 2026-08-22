@@ -1,0 +1,1 @@
+Temporary GitHub connector permission test. This file is safe to delete after confirming write access.
