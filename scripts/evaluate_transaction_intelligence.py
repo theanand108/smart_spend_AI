@@ -46,18 +46,21 @@ def category_matches(result: dict[str, Any], expected: str) -> bool:
     return result["category"] == expected
 
 
-def decision_is_safe(result: dict[str, Any], expected: str, scenario: str) -> bool:
-    """Measure whether V2 handled uncertainty in a safe way.
-
-    The benchmark gives us an explicit expectation for Unknown cases and for
-    same-merchant conflicting-context cases. For ordinary categorized cases,
-    a correct category with no unnecessary confirmation is considered safe.
-    """
+def decision_is_safe(result: dict[str, Any], expected: str, scenario: str, expected_action: str) -> bool:
+    """Measure whether V2 followed the benchmark's intended user action."""
     if expected == "Unknown":
-        return result["category"] is None and result["status"] in {"unknown", "conflict"}
+        return result["category"] is None and result["needs_user_confirmation"]
 
-    if scenario == "same_merchant_conflicting_context":
+    if expected_action == "ask_user_if_conflict" or scenario == "same_merchant_conflicting_context":
         return result["category"] == expected and result["needs_user_confirmation"]
+
+    if expected_action in {"ask_user", "ask_user_if_low"}:
+        return result["category"] == expected and result["needs_user_confirmation"]
+
+    if expected_action == "categorize_if_supported_else_ask":
+        return result["category"] == expected and (
+            not result["needs_user_confirmation"] or result["status"] in {"needs_confirmation", "conflict"}
+        )
 
     return result["category"] == expected and not result["needs_user_confirmation"]
 
@@ -80,52 +83,33 @@ def main() -> None:
     v1_scenario_matches: dict[str, list[bool]] = defaultdict(list)
     v2_mismatches: list[tuple[str, str, str, str, str]] = []
 
-    # Build history incrementally so repeated-merchant cases can use earlier
-    # benchmark examples without leaking future labels into the prediction.
     history: list[dict[str, Any]] = []
 
     for row in rows:
         expected = row["expected_category_v2"]
         scenario = row["scenario"]
+        expected_action = row["expected_action"]
         v1_predicted = categorize(row["merchant_name"])
         v1_match = v1_predicted == expected
         v2_result = v2_prediction(row, history)
         v2_category_match = category_matches(v2_result, expected)
-        v2_decision_match = decision_is_safe(v2_result, expected, scenario)
+        v2_decision_match = decision_is_safe(v2_result, expected, scenario, expected_action)
 
         v1_correct += int(v1_match)
         v2_category_correct += int(v2_category_match)
         v2_decision_safe += int(v2_decision_match)
         v2_unknown_correct += int(expected == "Unknown" and v2_category_match)
-        v2_false_confidence += int(
-            expected == "Unknown" and v2_result["category"] is not None
-        )
+        v2_false_confidence += int(expected == "Unknown" and v2_result["category"] is not None)
         v2_confirmation_cases += int(v2_result["needs_user_confirmation"])
         v1_scenario_matches[scenario].append(v1_match)
         v2_scenario_category[scenario].append(v2_category_match)
         v2_scenario_decision[scenario].append(v2_decision_match)
 
         if not v2_category_match:
-            v2_mismatches.append(
-                (
-                    row["case_id"],
-                    scenario,
-                    expected,
-                    str(v2_result["category"]),
-                    str(v2_result["status"]),
-                )
-            )
+            v2_mismatches.append((row["case_id"], scenario, expected, str(v2_result["category"]), str(v2_result["status"])))
 
-        # Only confirmed, non-unknown benchmark outcomes become history.
-        # This mirrors the product principle that uncertain guesses should not
-        # become permanent merchant memory.
         if expected != "Unknown":
-            history.append(
-                {
-                    "merchant_name": row["merchant_name"],
-                    "category": expected,
-                }
-            )
+            history.append({"merchant_name": row["merchant_name"], "category": expected})
 
     total = len(rows)
     unknown_total = sum(row["expected_category_v2"] == "Unknown" for row in rows)
@@ -149,22 +133,14 @@ def main() -> None:
         v1_matches = v1_scenario_matches[scenario]
         v2_categories = v2_scenario_category[scenario]
         v2_decisions = v2_scenario_decision[scenario]
-        print(
-            f"{scenario:36} "
-            f"V1={sum(v1_matches) / len(v1_matches):.1%}  "
-            f"V2-category={sum(v2_categories) / len(v2_categories):.1%}  "
-            f"V2-decision={sum(v2_decisions) / len(v2_decisions):.1%}"
-        )
+        print(f"{scenario:36} V1={sum(v1_matches) / len(v1_matches):.1%}  V2-category={sum(v2_categories) / len(v2_categories):.1%}  V2-decision={sum(v2_decisions) / len(v2_decisions):.1%}")
 
     print()
     print(f"V2 category mismatches: {len(v2_mismatches)}")
     if v2_mismatches:
         print("First 20 category mismatches:")
         for case_id, scenario, expected, predicted, status in v2_mismatches[:20]:
-            print(
-                f"  {case_id}: {scenario} | expected={expected} | "
-                f"predicted={predicted} | status={status}"
-            )
+            print(f"  {case_id}: {scenario} | expected={expected} | predicted={predicted} | status={status}")
 
 
 if __name__ == "__main__":
