@@ -13,7 +13,7 @@ CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "Education": ("college", "semester", "semester fee", "semester fees", "fee", "fees", "notebooks", "pens", "stationery", "education"),
     "Travel & Transport": ("ride", "auto", "rickshaw", "transport", "petrol", "fuel", "uber", "ola"),
     "Groceries": ("grocery", "groceries", "kirana", "vegetables", "vegetable", "milk", "ration", "grocery purchase"),
-    "Shopping": ("clothing", "clothes", "kurti", "shopping", "purchase", "extension board", "hardware", "household"),
+    "Shopping": ("clothing", "clothes", "kurti", "shopping", "purchase", "extension board", "hardware", "household", "plumbing"),
     "Bills & Utilities": ("recharge", "mobile recharge", "phone recharge", "electricity", "water bill", "mobile bill", "internet", "bill", "airtel"),
     "Entertainment": ("movie", "streaming", "netflix", "spotify", "entertainment"),
 }
@@ -24,7 +24,7 @@ STRONG_PHRASES: dict[str, tuple[str, ...]] = {
     "Food & Dining": ("tea from", "chai from", "coffee from", "food from", "lunch from", "dinner from", "breakfast from", "college canteen", "college cafeteria", "friend paid the bill", "my share of dinner", "my share of the dinner", "split dinner", "split the dinner", "split the bill", "my share of the bill"),
     "Health & Fitness": ("medicine for", "medicines for", "tablet for", "doctor visit", "pharmacy purchase", "medicine from", "medicines from"),
     "Housing / Rent": ("monthly room rent", "room rent", "monthly rent"),
-    "Travel & Transport": ("auto ride", "cab ride", "uber ride", "ola ride", "friend bought my ticket"),
+    "Travel & Transport": ("auto ride", "cab ride", "uber ride", "ola ride", "ride to college", "friend bought my ticket"),
     "Groceries": ("grocery purchase", "grocery shopping", "monthly groceries", "vegetables for us", "vegetables for me", "groceries for us", "groceries for me", "milk for us", "ration for us"),
     "Bills & Utilities": ("mobile recharge", "phone recharge", "electricity bill", "water bill"),
     "Transfer / Personal": ("sent back what i borrowed", "paying back my friend", "paid back my friend", "returning borrowed money", "returning what i borrowed", "money i owed", "sent money to friend", "transferred to friend", "transfer to friend"),
