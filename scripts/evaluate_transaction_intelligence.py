@@ -109,7 +109,16 @@ def main() -> None:
             v2_mismatches.append((row["case_id"], scenario, expected, str(v2_result["category"]), str(v2_result["status"])))
 
         if expected != "Unknown":
-            history.append({"merchant_name": row["merchant_name"], "category": expected})
+            # Preserve the full historical transaction context. The V2
+            # evidence layer can use amount similarity, so the benchmark must
+            # not discard amount information when constructing merchant memory.
+            history.append({
+                "merchant_name": row["merchant_name"],
+                "category": expected,
+                "amount": float(row["amount_inr"]),
+                "note": row["note"],
+                "payment_method": row["payment_method"],
+            })
 
     total = len(rows)
     unknown_total = sum(row["expected_category_v2"] == "Unknown" for row in rows)
