@@ -70,6 +70,30 @@ def test_varies_personal_history_does_not_force_no_note_transaction():
     assert result["needs_user_confirmation"] is True
 
 
+def test_repeated_amount_can_break_a_tied_history():
+    history = [
+        {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 500},
+        {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 500},
+        {"merchant_name": "RAHUL KUMAR", "category": "Groceries", "amount": 2000},
+        {"merchant_name": "RAHUL KUMAR", "category": "Groceries", "amount": 2100},
+    ]
+    result = categorize_transaction("RAHUL KUMAR", 500, None, "UPI", history)
+    assert result["category"] == "Food & Dining"
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
+
+
+def test_unseen_amount_does_not_break_tied_history():
+    history = [
+        {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 500},
+        {"merchant_name": "RAHUL KUMAR", "category": "Groceries", "amount": 2000},
+    ]
+    result = categorize_transaction("RAHUL KUMAR", 900, None, "UPI", history)
+    assert result["category"] is None
+    assert result["status"] == "conflict"
+    assert result["needs_user_confirmation"] is True
+
+
 def test_conflicting_history_requires_confirmation():
     history = [
         {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining"},
