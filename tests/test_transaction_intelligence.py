@@ -31,11 +31,7 @@ def test_weak_note_does_not_create_false_confidence():
 
 def test_history_can_resolve_repeated_personal_merchant():
     history = [
-        {
-            "merchant_name": "RAHUL KUMAR",
-            "category": "Food & Dining",
-            "amount": 60,
-        }
+        {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 60}
     ]
     result = categorize_transaction("RAHUL KUMAR", 55, "", "UPI", history)
     assert result["category"] == "Food & Dining"
@@ -91,6 +87,30 @@ def test_unseen_amount_does_not_break_tied_history():
     result = categorize_transaction("RAHUL KUMAR", 900, None, "UPI", history)
     assert result["category"] is None
     assert result["status"] == "conflict"
+    assert result["needs_user_confirmation"] is True
+
+
+def test_small_history_without_amount_match_stays_unresolved():
+    history = [
+        {"merchant_name": "MOHAN", "category": "Transfer / Personal", "amount": 500},
+        {"merchant_name": "MOHAN", "category": "Transfer / Personal", "amount": 500},
+    ]
+    result = categorize_transaction("MOHAN", 3000, None, "UPI", history)
+    assert result["category"] is None
+    assert result["status"] == "unknown"
+    assert result["needs_user_confirmation"] is True
+
+
+def test_repeated_historical_semantics_can_support_varies_entity():
+    history = [
+        {"merchant_name": "ANITA DEVI", "category": "Health & Fitness", "amount": 850, "note": "Medicines"},
+        {"merchant_name": "ANITA DEVI", "category": "Health & Fitness", "amount": 600, "note": "Pharmacy"},
+        {"merchant_name": "ANITA DEVI", "category": "Shopping", "amount": 1200, "note": "Clothes"},
+        {"merchant_name": "ANITA DEVI", "category": "Education", "amount": 5000, "note": "College fee"},
+    ]
+    result = categorize_transaction("ANITA DEVI", 850, None, "UPI", history)
+    assert result["category"] == "Health & Fitness"
+    assert result["status"] == "needs_confirmation"
     assert result["needs_user_confirmation"] is True
 
 
