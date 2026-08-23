@@ -42,6 +42,34 @@ def test_history_can_resolve_repeated_personal_merchant():
     assert result["status"] == "categorized"
 
 
+def test_stable_personal_history_can_categorize_without_note():
+    history = [
+        {"merchant_name": "RAHUL KUMAR", "category": "Transfer / Personal", "amount": 500},
+        {"merchant_name": "RAHUL KUMAR", "category": "Transfer / Personal", "amount": 700},
+        {"merchant_name": "RAHUL KUMAR", "category": "Transfer / Personal", "amount": 1000},
+        {"merchant_name": "RAHUL KUMAR", "category": "Transfer / Personal", "amount": 500},
+        {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 120},
+    ]
+    result = categorize_transaction("RAHUL KUMAR", 500, None, "UPI", history)
+    assert result["category"] == "Transfer / Personal"
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
+    assert result["personal_category_candidate"] == "Transfer / Personal"
+
+
+def test_varies_personal_history_does_not_force_no_note_transaction():
+    history = [
+        {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 300},
+        {"merchant_name": "RAHUL KUMAR", "category": "Groceries", "amount": 500},
+        {"merchant_name": "RAHUL KUMAR", "category": "Health & Fitness", "amount": 650},
+        {"merchant_name": "RAHUL KUMAR", "category": "Transfer / Personal", "amount": 1000},
+    ]
+    result = categorize_transaction("RAHUL KUMAR", 500, None, "UPI", history)
+    assert result["category"] is None
+    assert result["status"] == "varies"
+    assert result["needs_user_confirmation"] is True
+
+
 def test_conflicting_history_requires_confirmation():
     history = [
         {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining"},
