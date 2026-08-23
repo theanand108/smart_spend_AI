@@ -23,6 +23,28 @@ def test_lending_money_to_friend_is_personal_transfer():
     assert result["category"] == "Transfer / Personal"
 
 
+def test_allowance_is_personal_transfer():
+    result = semantic_note_evidence("monthly allowance")
+    assert result["category"] == "Transfer / Personal"
+
+
+def test_reimbursement_is_personal_transfer():
+    result = semantic_note_evidence("refund for shared purchase")
+    assert result["category"] == "Transfer / Personal"
+
+
+def test_weak_personal_note_is_not_a_category():
+    result = semantic_note_evidence("personal")
+    assert result["category"] is None
+    assert result["confidence"] == 0.0
+
+
+def test_weak_home_note_is_not_a_category():
+    result = semantic_note_evidence("home")
+    assert result["category"] is None
+    assert result["confidence"] == 0.0
+
+
 def test_vegetables_for_us_is_groceries():
     result = semantic_note_evidence("Rahul got vegetables for us")
     assert result["category"] == "Groceries"
