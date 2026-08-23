@@ -33,7 +33,8 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
     ),
     "Housing / Rent": (r"\brent\b", r"\blandlord\b", r"\broom\s+rent\b"),
     "Education": (
-        r"\bcollege\b", r"\bsemester\b", r"\btuition\b", r"\bfee(?:s)?\b",
+        r"\bcollege\s+(?:fee|fees|tuition|payment)\b",
+        r"\bsemester\b", r"\btuition\b", r"\bfee(?:s)?\b",
         r"\bstationery\b", r"\bnotebook(?:s)?\b",
     ),
     "Shopping": (
