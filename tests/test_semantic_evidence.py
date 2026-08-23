@@ -33,6 +33,31 @@ def test_reimbursement_is_personal_transfer():
     assert result["category"] == "Transfer / Personal"
 
 
+def test_dinner_repayment_is_personal_transfer():
+    result = semantic_note_evidence("split dinner repayment")
+    assert result["category"] == "Transfer / Personal"
+
+
+def test_paid_back_for_lunch_is_personal_transfer():
+    result = semantic_note_evidence("paid back for lunch")
+    assert result["category"] == "Transfer / Personal"
+
+
+def test_sent_for_travel_is_personal_transfer():
+    result = semantic_note_evidence("sent money for travel")
+    assert result["category"] == "Transfer / Personal"
+
+
+def test_local_business_food_note_is_semantic_food():
+    result = semantic_note_evidence("Birthday cake")
+    assert result["category"] == "Food & Dining"
+
+
+def test_local_business_household_note_is_shopping():
+    result = semantic_note_evidence("Extension board")
+    assert result["category"] == "Shopping"
+
+
 def test_weak_personal_note_is_not_a_category():
     result = semantic_note_evidence("personal")
     assert result["category"] is None
