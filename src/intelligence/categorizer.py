@@ -62,6 +62,14 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
             return _result(category=category, confidence=0.82, status="conflict", reason="Current transaction context is strong but conflicts with this entity's history.", needs_user_confirmation=True, entity_memory=entity_profile)
         return _result(category=category, confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence.", needs_user_confirmation=False, entity_memory=entity_profile)
 
+    # A supplied note that carries no meaningful semantic signal is not a
+    # reason to fall back to historical behavior. Users often type short notes
+    # such as "personal", "home", or "payment"; treating those as permission
+    # to reuse an old category creates false confidence. When there is no note,
+    # history and amount evidence remain available for lazy users.
+    if normalize_text(note) and not note_category:
+        return _result(category=None, confidence=0.05, status="unknown", reason="The note is too vague to identify transaction purpose; historical category memory is not strong enough to override it silently.", needs_user_confirmation=True, entity_memory=entity_profile)
+
     if profile["varies"] and not note_category:
         return _result(category=None, confidence=0.25, status="varies", reason="Entity history spans multiple categories, so this entity is remembered as VARIES.", needs_user_confirmation=True, entity_memory=entity_profile)
 
