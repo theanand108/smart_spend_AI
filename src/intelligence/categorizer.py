@@ -69,11 +69,6 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     if should_create_personal_category(entity_profile):
         personal_category_candidate = entity_profile["dominant_category"]
 
-    if len(historical_counts) >= 2:
-        ranked_history = sorted(historical_counts.values(), reverse=True)
-        if ranked_history[0] == ranked_history[1]:
-            return _result(category=None, confidence=0.20, status="conflict", reason="Entity has equally represented historical categories.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
-
     ranked = evidence.get("ranked") or []
     if not ranked:
         return _result(category=None, confidence=0.05, status="unknown", reason="Available evidence does not provide enough context to categorize safely.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
@@ -84,6 +79,15 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
 
     if note_category:
         return _result(category=str(note_category), confidence=min(0.89, max(0.35, top_score)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+
+    # Equal category counts are normally a conflict. However, repeated/similar
+    # amounts can break a tie when one category has materially stronger amount
+    # evidence. This lets no-note transactions use a useful behavioral clue
+    # without treating the amount itself as proof of purpose.
+    if len(historical_counts) >= 2:
+        ranked_history = sorted(historical_counts.values(), reverse=True)
+        if ranked_history[0] == ranked_history[1] and margin < 0.12:
+            return _result(category=None, confidence=0.20, status="conflict", reason="Entity has equally represented historical categories and the current amount does not provide enough separation.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
     if historical_counts and not profile["varies"] and profile["dominance"] >= 0.80 and margin >= 0.20:
         confidence = min(0.90, 0.65 + top_score * 0.30 + margin * 0.10)
