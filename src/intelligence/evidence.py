@@ -42,8 +42,6 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
     moderate_matches = sum(ratio <= 0.25 for ratio in ratios)
 
     if exact_or_close:
-        # One close match is useful; repeated close matches strengthen the
-        # signal, but the cap keeps this evidence deliberately secondary.
         return min(0.25, 0.10 + 0.05 * exact_or_close), exact_or_close
     if moderate_matches:
         return 0.05, 0
@@ -57,6 +55,7 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
     candidates: dict[str, float] = {}
     reasons: dict[str, list[str]] = {}
     amount_matches: dict[str, int] = {}
+    historical_semantic_matches: dict[str, int] = {}
 
     def add(category: str, score: float, reason: str) -> None:
         if score <= 0:
@@ -71,6 +70,21 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
 
     total_history = sum(history_counts.values())
     if total_history:
+        for item in history:
+            historical_note = item.get("note")
+            if not historical_note:
+                continue
+            historical_signal = semantic_note_evidence(historical_note)
+            historical_category = historical_signal.get("category")
+            historical_confidence = float(historical_signal.get("confidence") or 0.0)
+            if historical_category and historical_confidence >= 0.90:
+                category = str(historical_category)
+                historical_semantic_matches[category] = historical_semantic_matches.get(category, 0) + 1
+                # Historical notes are useful memory, but weaker than a current
+                # note. They can reinforce a repeated purpose without becoming
+                # a permanent merchant rule by themselves.
+                add(category, 0.12, "semantic purpose repeated in transaction history")
+
         for category, count in history_counts.items():
             share = count / total_history
             add(category, min(0.45, share * 0.45), f"merchant history ({count}/{total_history})")
@@ -93,4 +107,5 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
         "semantic_candidates": note_signal.get("candidates", []),
         "semantic_reason": note_signal.get("reason", ""),
         "amount_matches": amount_matches,
+        "historical_semantic_matches": historical_semantic_matches,
     }
