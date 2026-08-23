@@ -13,18 +13,18 @@ from .context import history_categories
 from .semantic import semantic_note_evidence
 
 
-def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], category: str) -> float:
-    """Return a small, explainable signal when amount resembles this category's history.
+def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], category: str) -> tuple[float, int]:
+    """Return an explainable amount signal and close-match count.
 
     Repeated amounts are stronger than a single coincidence. Exact or near-exact
     matches contribute progressively, but the total signal is capped so amount
     alone cannot become an unconditional categorization rule.
     """
     if amount is None:
-        return 0.0
+        return 0.0, 0
     current = float(amount)
     if current <= 0:
-        return 0.0
+        return 0.0, 0
 
     ratios: list[float] = []
     for item in history:
@@ -36,7 +36,7 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
         ratios.append(abs(current - value) / max(current, value, 1.0))
 
     if not ratios:
-        return 0.0
+        return 0.0, 0
 
     exact_or_close = sum(ratio <= 0.10 for ratio in ratios)
     moderate_matches = sum(ratio <= 0.25 for ratio in ratios)
@@ -44,10 +44,10 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
     if exact_or_close:
         # One close match is useful; repeated close matches strengthen the
         # signal, but the cap keeps this evidence deliberately secondary.
-        return min(0.25, 0.10 + 0.05 * exact_or_close)
+        return min(0.25, 0.10 + 0.05 * exact_or_close), exact_or_close
     if moderate_matches:
-        return 0.05
-    return 0.0
+        return 0.05, 0
+    return 0.0, 0
 
 
 def collect_evidence(*, amount: float | int | None, note: str | None, payment_method: str | None, history: list[dict[str, Any]]) -> dict[str, Any]:
@@ -56,6 +56,7 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
     history_counts = history_categories(history)
     candidates: dict[str, float] = {}
     reasons: dict[str, list[str]] = {}
+    amount_matches: dict[str, int] = {}
 
     def add(category: str, score: float, reason: str) -> None:
         if score <= 0:
@@ -73,7 +74,9 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
         for category, count in history_counts.items():
             share = count / total_history
             add(category, min(0.45, share * 0.45), f"merchant history ({count}/{total_history})")
-            amount_signal = _amount_signal(amount, history, category)
+            amount_signal, close_matches = _amount_signal(amount, history, category)
+            if close_matches:
+                amount_matches[category] = close_matches
             add(category, amount_signal, "repeated/similar historical amount")
 
     # Payment method is intentionally weak: UPI alone does not reveal purpose.
@@ -89,4 +92,5 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
         "note_confidence": note_confidence,
         "semantic_candidates": note_signal.get("candidates", []),
         "semantic_reason": note_signal.get("reason", ""),
+        "amount_matches": amount_matches,
     }
