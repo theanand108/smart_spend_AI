@@ -49,8 +49,7 @@ def categorize_transaction(
 ) -> dict[str, Any]:
     """Categorize a transaction using independent evidence sources.
 
-    The function separates evidence collection from the decision policy:
-    explicit current context is strongest, merchant history is a prior, and
+    Explicit current context is strongest, merchant history is a prior, and
     amount/payment metadata are supporting signals. Weak evidence should not
     silently become a confident category.
     """
@@ -83,9 +82,15 @@ def categorize_transaction(
         return _result(category=category, confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence.", needs_user_confirmation=False)
 
     # A merchant with genuinely mixed historical uses is remembered as VARIES.
-    # Weak current evidence cannot safely collapse that ambiguity.
     if profile["varies"] and not note_category:
         return _result(category=None, confidence=0.25, status="varies", reason="Merchant history spans multiple categories, so this merchant is remembered as VARIES.", needs_user_confirmation=True)
+
+    # Two equally represented historical categories are an explicit conflict,
+    # even if the evidence scorer happens to give one a tiny supporting signal.
+    if len(historical_counts) >= 2:
+        ranked_history = sorted(historical_counts.values(), reverse=True)
+        if ranked_history[0] == ranked_history[1]:
+            return _result(category=None, confidence=0.20, status="conflict", reason="Merchant has equally represented historical categories.", needs_user_confirmation=True)
 
     ranked = evidence.get("ranked") or []
     if not ranked:
