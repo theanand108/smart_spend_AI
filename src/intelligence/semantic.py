@@ -24,7 +24,8 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
     "Food & Dining": (
         r"\btea\b", r"\bchai\b", r"\bcoffee\b", r"\blunch\b",
         r"\bdinner\b", r"\bbreakfast\b", r"\bmeal\b", r"\bcanteen\b",
-        r"\brestaurant\b", r"\bfood\b", r"\bdining\b",
+        r"\brestaurant\b", r"\bfood\b", r"\bdining\b", r"\bcake\b",
+        r"\bbakery\b",
     ),
     "Travel & Transport": (
         r"\bauto\b", r"\brickshaw\b", r"\bcab\b", r"\buber\b",
@@ -39,7 +40,7 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
     ),
     "Shopping": (
         r"\bclothes?\b", r"\bshopping\b", r"\bkurti\b", r"\bhousehold\b",
-        r"\bhardware\b",
+        r"\bhardware\b", r"\bextension\s+board\b", r"\bplumbing\b",
     ),
     "Bills & Utilities": (
         r"\brecharge\b", r"\belectricity\s+bill\b", r"\bwater\s+bill\b",
@@ -62,8 +63,12 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
 }
 
 # Purpose-bearing phrases should override a generic interpersonal-transfer signal.
-# This is deliberately explicit until an NLP model can learn the same distinction.
+# Repayment/refund language is itself a transaction purpose: even when the
+# underlying purchase was food, the current transaction is money being returned.
 PURPOSE_OVERRIDES: tuple[tuple[str, str], ...] = (
+    (r"(?:refund|refunded|reimbursement|reimbursed|repayment|repay|payback|paid\s+back|returned)\b", "Transfer / Personal"),
+    (r"(?:split|share)\s+(?:the\s+)?(?:dinner|bill|food|meal)\s+(?:repayment|refund|reimbursement)", "Transfer / Personal"),
+    (r"(?:paid|sent|gave|transferred)\s+.*\bfor\s+(?:travel|trip|journey)\b", "Transfer / Personal"),
     (r"(?:my\s+)?share\s+of\s+(?:the\s+)?(?:dinner|bill|food|meal)", "Food & Dining"),
     (r"split\s+(?:the\s+)?(?:bill|dinner|food|meal)", "Food & Dining"),
     (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|toward)\s+(?:the\s+)?(?:medicine|medical|pharmacy)", "Health & Fitness"),
