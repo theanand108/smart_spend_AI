@@ -65,19 +65,37 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     # A supplied note that carries no meaningful semantic signal is not a
     # reason to fall back to historical behavior. Users often type short notes
     # such as "personal", "home", or "payment"; treating those as permission
-    # to reuse an old category creates false confidence. When there is no note,
-    # history and amount evidence remain available for lazy users.
+    # to reuse an old category creates false confidence.
     if normalize_text(note) and not note_category:
         return _result(category=None, confidence=0.05, status="unknown", reason="The note is too vague to identify transaction purpose; historical category memory is not strong enough to override it silently.", needs_user_confirmation=True, entity_memory=entity_profile)
-
-    if profile["varies"] and not note_category:
-        return _result(category=None, confidence=0.25, status="varies", reason="Entity history spans multiple categories, so this entity is remembered as VARIES.", needs_user_confirmation=True, entity_memory=entity_profile)
 
     personal_category_candidate = None
     if should_create_personal_category(entity_profile):
         personal_category_candidate = entity_profile["dominant_category"]
 
     ranked = evidence.get("ranked") or []
+    amount_matches = evidence.get("amount_matches") or {}
+    historical_semantic_matches = evidence.get("historical_semantic_matches") or {}
+
+    # Repeated historical purpose + a matching amount is useful even when the
+    # entity is otherwise VARIES. Keep this as a confirmation candidate rather
+    # than silently treating the entity as having one permanent category.
+    if not note_category and ranked:
+        for category, semantic_count in historical_semantic_matches.items():
+            if semantic_count >= 2 and int(amount_matches.get(category, 0)) >= 1:
+                return _result(
+                    category=str(category),
+                    confidence=0.78,
+                    status="needs_confirmation",
+                    reason="Repeated historical notes and a matching amount support this category, but the entity has mixed or incomplete history.",
+                    needs_user_confirmation=True,
+                    entity_memory=entity_profile,
+                    personal_category_candidate=personal_category_candidate,
+                )
+
+    if profile["varies"] and not note_category:
+        return _result(category=None, confidence=0.25, status="varies", reason="Entity history spans multiple categories, so this entity is remembered as VARIES.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+
     if not ranked:
         return _result(category=None, confidence=0.05, status="unknown", reason="Available evidence does not provide enough context to categorize safely.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
@@ -88,7 +106,13 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     if note_category:
         return _result(category=str(note_category), confidence=min(0.89, max(0.35, top_score)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
-    amount_matches = evidence.get("amount_matches") or {}
+    # A single historical category can resolve a no-note transaction only when
+    # the amount itself has a close historical precedent. This preserves useful
+    # memory without allowing a one-off old payment to become a permanent rule.
+    if len(historical_counts) == 1 and int(amount_matches.get(str(top_category), 0)) >= 1:
+        close_matches = int(amount_matches[str(top_category)])
+        confidence = min(0.84, 0.68 + 0.04 * close_matches)
+        return _result(category=str(top_category), confidence=confidence, status="categorized", reason="The entity has one historical purpose and the current amount closely matches a previous transaction.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
     # Equal category counts are normally a conflict. A repeated close amount
     # can safely break that tie when the same amount repeatedly belonged to
@@ -108,9 +132,15 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
         if ranked_history[0] == ranked_history[1] and margin < 0.12:
             return _result(category=None, confidence=0.20, status="conflict", reason="Entity has equally represented historical categories and the current amount does not provide enough separation.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
-    if historical_counts and not profile["varies"] and profile["dominance"] >= 0.80 and margin >= 0.20:
-        confidence = min(0.90, 0.65 + top_score * 0.30 + margin * 0.10)
-        return _result(category=str(top_category), confidence=confidence, status="categorized", reason="Consistent entity history is reinforced by the available transaction evidence.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+    # A dominant history with only a few transactions is useful evidence but is
+    # not enough for silent categorization without an amount match. This is
+    # especially important for friends/family whose payment purpose can vary.
+    if historical_counts and not profile["varies"] and profile["dominance"] >= 0.80:
+        if entity_profile.get("transaction_count", 0) >= 4 and margin >= 0.20:
+            confidence = min(0.90, 0.65 + top_score * 0.30 + margin * 0.10)
+            return _result(category=str(top_category), confidence=confidence, status="categorized", reason="Consistent entity history across several transactions is reinforced by the available evidence.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+
+        return _result(category=None, confidence=min(0.35, top_score), status="unknown", reason="Historical evidence is too small to silently reuse without a matching amount or current note.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
     if top_score >= 0.35 and margin >= 0.12:
         confidence = min(0.84, 0.45 + top_score * 0.25 + margin * 0.10)
