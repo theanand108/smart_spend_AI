@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .context import history_categories, history_profile, note_evidence, normalize_text
+from .context import history_categories, history_profile, normalize_text
+from .evidence import collect_evidence
 
 KNOWN_MERCHANTS: dict[str, str] = {
     "zomato": "Food & Dining", "swiggy": "Food & Dining", "starbucks": "Food & Dining",
@@ -29,21 +30,6 @@ def _history_for_merchant(merchant_name: str, history: list[dict[str, Any]] | No
     return [item for item in (history or []) if normalize_text(item.get("merchant_name")) == normalized]
 
 
-def _amount_similarity(amount: float | int | None, values: list[float]) -> float:
-    """Return a small similarity signal for repeated transaction amounts."""
-    if amount is None or not values:
-        return 0.0
-    current = float(amount)
-    if current <= 0:
-        return 0.0
-    closest_ratio = min(abs(current - value) / max(current, value, 1.0) for value in values)
-    if closest_ratio <= 0.10:
-        return 1.0
-    if closest_ratio <= 0.25:
-        return 0.5
-    return 0.0
-
-
 def _result(*, category: str | None, confidence: float, status: str, reason: str, needs_user_confirmation: bool) -> dict[str, Any]:
     return {
         "category": category,
@@ -61,16 +47,13 @@ def categorize_transaction(
     payment_method: str | None = None,
     history: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Categorize one transaction while explicitly representing uncertainty.
+    """Categorize a transaction using independent evidence sources.
 
-    The decision order is deliberately evidence-first:
-    known merchant -> explicit note -> merchant memory -> unknown.
-    History is a prior, never proof. A merchant used for several purposes is
-    treated as VARIES and should not be silently forced into one category.
-    Amount similarity is only a supporting signal; it cannot rescue an
-    otherwise ambiguous transaction by itself.
+    The function separates evidence collection from the decision policy:
+    explicit current context is strongest, merchant history is a prior, and
+    amount/payment metadata are supporting signals. Weak evidence should not
+    silently become a confident category.
     """
-    del payment_method  # Reserved for the future feature-scoring/ML layer.
     merchant = normalize_text(merchant_name)
     if not merchant:
         return _result(category=None, confidence=0.0, status="unknown", reason="Merchant name is missing.", needs_user_confirmation=True)
@@ -79,42 +62,51 @@ def categorize_transaction(
     if known_category:
         return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known transaction category.", needs_user_confirmation=False)
 
-    evidence = note_evidence(note)
     merchant_history = _history_for_merchant(merchant, history)
     historical_counts = history_categories(merchant_history)
     profile = history_profile(merchant_history)
-    evidence_category = evidence.get("category")
-    evidence_confidence = float(evidence.get("confidence") or 0.0)
+    evidence = collect_evidence(
+        amount=amount,
+        note=note,
+        payment_method=payment_method,
+        history=merchant_history,
+    )
 
-    if evidence_category:
-        note_category = str(evidence_category)
-        if historical_counts and note_category not in historical_counts:
-            return _result(category=note_category, confidence=0.78, status="conflict", reason="Current note conflicts with this merchant's historical category.", needs_user_confirmation=True)
-        if evidence_confidence >= 0.90:
-            return _result(category=note_category, confidence=evidence_confidence, status="categorized", reason=str(evidence.get("reason")), needs_user_confirmation=False)
-        return _result(category=note_category, confidence=evidence_confidence, status="needs_confirmation", reason="The note provides a plausible category but not enough evidence for automatic categorization.", needs_user_confirmation=True)
+    note_category = evidence.get("note_category")
+    note_confidence = float(evidence.get("note_confidence") or 0.0)
 
-    if historical_counts:
-        if profile["varies"]:
-            return _result(category=None, confidence=0.25, status="varies", reason="Merchant history spans multiple categories, so this merchant is remembered as VARIES.", needs_user_confirmation=True)
+    # Explicit, high-confidence current context can override old merchant memory.
+    if note_category and note_confidence >= 0.90:
+        category = str(note_category)
+        if historical_counts and category not in historical_counts:
+            return _result(category=category, confidence=0.82, status="conflict", reason="Current transaction context is strong but conflicts with this merchant's history.", needs_user_confirmation=True)
+        return _result(category=category, confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence.", needs_user_confirmation=False)
 
-        ranked = sorted(historical_counts.items(), key=lambda item: item[1], reverse=True)
-        top_category, top_count = ranked[0]
-        second_count = ranked[1][1] if len(ranked) > 1 else 0
-        if top_count == second_count:
-            return _result(category=None, confidence=0.2, status="conflict", reason="Merchant has conflicting historical categories.", needs_user_confirmation=True)
+    # A merchant with genuinely mixed historical uses is remembered as VARIES.
+    # Weak current evidence cannot safely collapse that ambiguity.
+    if profile["varies"] and not note_category:
+        return _result(category=None, confidence=0.25, status="varies", reason="Merchant history spans multiple categories, so this merchant is remembered as VARIES.", needs_user_confirmation=True)
 
-        # Amount similarity can strengthen a dominant memory, but cannot create
-        # a category when history itself is mixed or absent.
-        category_amounts = [
-            float(item["amount"])
-            for item in merchant_history
-            if item.get("category") == top_category and item.get("amount") is not None
-        ]
-        amount_signal = _amount_similarity(amount, category_amounts)
-        confidence = 0.72 + (0.08 if amount_signal else 0.0)
-        if profile["dominance"] < 0.80:
-            return _result(category=top_category, confidence=confidence, status="needs_confirmation", reason="History has a dominant category but is not consistent enough for silent categorization.", needs_user_confirmation=True)
-        return _result(category=top_category, confidence=min(0.9, confidence), status="categorized", reason="Merchant matches a consistent historical category; amount similarity is supporting evidence." if amount_signal else "Merchant matches a consistent historical category in transaction history.", needs_user_confirmation=False)
+    ranked = evidence.get("ranked") or []
+    if not ranked:
+        return _result(category=None, confidence=0.05, status="unknown", reason="Available evidence does not provide enough context to categorize safely.", needs_user_confirmation=True)
 
-    return _result(category=None, confidence=0.05, status="unknown", reason="Merchant identity does not provide enough context to categorize safely.", needs_user_confirmation=True)
+    top_category, top_score = ranked[0]
+    second_score = ranked[1][1] if len(ranked) > 1 else 0.0
+    margin = top_score - second_score
+
+    # Weak notes are suggestions, not automatic decisions.
+    if note_category:
+        return _result(category=str(note_category), confidence=min(0.89, max(0.35, top_score)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True)
+
+    # Consistent history plus a clear evidence margin is safe enough to automate.
+    if historical_counts and not profile["varies"] and profile["dominance"] >= 0.80 and margin >= 0.20:
+        confidence = min(0.90, 0.65 + top_score * 0.30 + margin * 0.10)
+        return _result(category=str(top_category), confidence=confidence, status="categorized", reason="Consistent merchant history is reinforced by the available transaction evidence.", needs_user_confirmation=False)
+
+    # Ambiguous evidence should be surfaced as a suggestion rather than a fact.
+    if top_score >= 0.35 and margin >= 0.12:
+        confidence = min(0.84, 0.45 + top_score * 0.25 + margin * 0.10)
+        return _result(category=str(top_category), confidence=confidence, status="needs_confirmation", reason="There is a leading category, but the evidence margin is not strong enough for silent categorization.", needs_user_confirmation=True)
+
+    return _result(category=None, confidence=min(0.40, top_score), status="unknown", reason="Evidence is too weak or conflicting to choose a category safely.", needs_user_confirmation=True)
