@@ -14,24 +14,39 @@ from .semantic import semantic_note_evidence
 
 
 def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], category: str) -> float:
-    """Return a small signal when the current amount resembles this category's history."""
+    """Return a small, explainable signal when amount resembles this category's history.
+
+    Repeated amounts are stronger than a single coincidence. Exact or near-exact
+    matches contribute progressively, but the total signal is capped so amount
+    alone cannot become an unconditional categorization rule.
+    """
     if amount is None:
         return 0.0
     current = float(amount)
     if current <= 0:
         return 0.0
-    values = [
-        float(item["amount"])
-        for item in history
-        if item.get("category") == category and item.get("amount") is not None
-    ]
-    if not values:
+
+    ratios: list[float] = []
+    for item in history:
+        if item.get("category") != category or item.get("amount") is None:
+            continue
+        value = float(item["amount"])
+        if value <= 0:
+            continue
+        ratios.append(abs(current - value) / max(current, value, 1.0))
+
+    if not ratios:
         return 0.0
-    closest_ratio = min(abs(current - value) / max(current, value, 1.0) for value in values)
-    if closest_ratio <= 0.10:
-        return 0.15
-    if closest_ratio <= 0.25:
-        return 0.07
+
+    exact_or_close = sum(ratio <= 0.10 for ratio in ratios)
+    moderate_matches = sum(ratio <= 0.25 for ratio in ratios)
+
+    if exact_or_close:
+        # One close match is useful; repeated close matches strengthen the
+        # signal, but the cap keeps this evidence deliberately secondary.
+        return min(0.25, 0.10 + 0.05 * exact_or_close)
+    if moderate_matches:
+        return 0.05
     return 0.0
 
 
@@ -58,7 +73,8 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
         for category, count in history_counts.items():
             share = count / total_history
             add(category, min(0.45, share * 0.45), f"merchant history ({count}/{total_history})")
-            add(category, _amount_signal(amount, history, category), "similar historical amount")
+            amount_signal = _amount_signal(amount, history, category)
+            add(category, amount_signal, "repeated/similar historical amount")
 
     # Payment method is intentionally weak: UPI alone does not reveal purpose.
     if payment_method and str(payment_method).strip().lower() == "upi":
