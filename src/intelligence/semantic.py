@@ -1,6 +1,6 @@
 """Semantic interpretation of transaction notes.
 
-V2.4 keeps semantic interpretation separate from the final categorization
+V2.5 keeps semantic interpretation separate from the final categorization
 policy. The important distinction is transaction *purpose*: the person being
 paid is not automatically the category. For example, "sent my share of dinner
 to Rahul" is Food & Dining, while "lent money to Rahul" is Transfer / Personal.
@@ -51,10 +51,13 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
     "Transfer / Personal": (
         r"\blent\b", r"\blend(?:ing)?\b", r"\bloan(?:ed)?\b",
         r"\bborrow(?:ed)?\b", r"\bowe(?:d)?\b", r"\bpay(?:ing)?\s+back\b",
-        r"\bpaid\s+back\b", r"\bmoney\s+i\s+owed\b", r"\bpersonal\s+transfer\b",
-        r"\bgave\s+(?:money|cash)\b", r"\bsent\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?(?:friend|brother|sister|father|mother|dad|mom)\b",
+        r"\bpaid\s+back\b", r"\breturned\s+(?:the\s+)?(?:money|loan|borrowed\s+money)\b",
+        r"\brefund(?:ed)?\b", r"\breimbursement\b", r"\bpayback\b",
+        r"\bmoney\s+i\s+owed\b", r"\bpersonal\s+transfer\b",
+        r"\bgave\s+(?:money|cash)\b",
+        r"\bmonthly\s+(?:allowance|pocket\s+money)\b",
+        r"\bsent\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?(?:friend|brother|sister|father|mother|dad|mom)\b",
         r"\btransferred\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?(?:friend|brother|sister|father|mother|dad|mom)\b",
-        r"\breimbursement\b",
     ),
 }
 
