@@ -80,12 +80,23 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     if note_category:
         return _result(category=str(note_category), confidence=min(0.89, max(0.35, top_score)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
-    # Equal category counts are normally a conflict. However, repeated/similar
-    # amounts can break a tie when one category has materially stronger amount
-    # evidence. This lets no-note transactions use a useful behavioral clue
-    # without treating the amount itself as proof of purpose.
+    amount_matches = evidence.get("amount_matches") or {}
+
+    # Equal category counts are normally a conflict. A repeated close amount
+    # can safely break that tie when the same amount repeatedly belonged to
+    # one category and not the competing category. This is a behavioral clue,
+    # not a permanent rule for the merchant.
     if len(historical_counts) >= 2:
         ranked_history = sorted(historical_counts.values(), reverse=True)
+        top_amount_matches = int(amount_matches.get(str(top_category), 0))
+        competing_amount_matches = max(
+            (int(amount_matches.get(str(category), 0)) for category in historical_counts if category != top_category),
+            default=0,
+        )
+        if top_amount_matches >= 2 and top_amount_matches > competing_amount_matches:
+            confidence = min(0.88, 0.70 + 0.04 * top_amount_matches + max(0.0, margin) * 0.10)
+            return _result(category=str(top_category), confidence=confidence, status="categorized", reason="Repeated historical amounts consistently support this category despite mixed entity history.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+
         if ranked_history[0] == ranked_history[1] and margin < 0.12:
             return _result(category=None, confidence=0.20, status="conflict", reason="Entity has equally represented historical categories and the current amount does not provide enough separation.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
