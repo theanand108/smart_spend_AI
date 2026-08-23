@@ -18,7 +18,7 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
     "Travel & Transport": (r"\bauto\b", r"\brickshaw\b", r"\bcab\b", r"\buber\b", r"\bola\b", r"\bpetrol\b", r"\bfuel\b", r"\bride\b", r"\bticket\b"),
     "Housing / Rent": (r"\brent\b", r"\blandlord\b", r"\broom\s+rent\b"),
     "Education": (r"\bcollege\b", r"\bsemester\b", r"\btuition\b", r"\bfee(?:s)?\b", r"\bstationery\b", r"\bnotebook(?:s)?\b"),
-    "Transfer / Personal": (r"\bmy\s+share\b", r"\bmy\s+part\b", r"\bsplit\s+(?:the\s+)?(?:bill|dinner|food)\b", r"\bpay(?:ing)?\s+back\b", r"\bpaid\s+back\b", r"\bmoney\s+i\s+owed\b", r"\bsent\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?friend\b", r"\btransferred\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?friend\b", r"\breimbursement\b"),
+    "Transfer / Personal": (r"\bmy\s+share(?:\s+of\s+(?:the\s+)?)?(?:dinner|bill|food)\b", r"\bmy\s+part\b", r"\bsplit\s+(?:the\s+)?(?:bill|dinner|food)\b", r"\bpay(?:ing)?\s+back\b", r"\bpaid\s+back\b", r"\bmoney\s+i\s+owed\b", r"\bsent\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?friend\b", r"\btransferred\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?friend\b", r"\breimbursement\b"),
     "Shopping": (r"\bclothes?\b", r"\bshopping\b", r"\bkurti\b", r"\bhousehold\b", r"\bhardware\b"),
     "Bills & Utilities": (r"\brecharge\b", r"\belectricity\s+bill\b", r"\bwater\s+bill\b", r"\binternet\s+bill\b"),
     "Entertainment": (r"\bmovie\b", r"\bnetflix\b", r"\bspotify\b", r"\bconcert\b"),
@@ -53,5 +53,5 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
         return {"category": None, "candidates": candidates, "confidence": 0.0, "reason": "Multiple categories have equally strong semantic evidence."}
 
     top = matches[0]
-    confidence = 0.92 if top[1] >= 2 else 0.78
+    confidence = 0.92 if top[1] >= 2 else 0.90
     return {"category": top[0], "candidates": candidates, "confidence": confidence, "reason": f"Semantic note pattern matched {top[0]} evidence."}
