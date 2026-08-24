@@ -5,4 +5,5 @@ SQLAlchemy==2.0.50
 pandas==3.0.3
 numpy==2.5.1
 matplotlib==3.11.0
+scikit-learn==1.9.0
 gunicorn==23.0.0
