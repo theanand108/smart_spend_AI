@@ -159,6 +159,23 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
                 "Learned NLP evidence resolves conflicting surface-level clues.",
             )
 
+        # A single generic keyword can be misleading (for example, "ticket"
+        # appears in transport notes but also in entertainment notes). Let a
+        # strong learned prediction override that weak surface clue.
+        if (
+            len(matches) == 1
+            and matches[0][1] == 1
+            and learned["category"]
+            and learned["category"] != matches[0][0]
+            and learned["confidence"] >= 0.82
+        ):
+            return _result(
+                learned["category"],
+                learned["candidates"],
+                learned["confidence"],
+                "Learned NLP evidence is stronger than a single generic keyword clue.",
+            )
+
     if not matches:
         return _result(
             None,
