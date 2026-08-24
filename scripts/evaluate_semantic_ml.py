@@ -1,14 +1,4 @@
-"""Evaluate a small supervised NLP baseline on held-out semantic notes.
-
-This experiment deliberately keeps the ML model separate from transaction
-decision-making. The model predicts semantic purpose from the note only.
-The existing intelligence layer remains responsible for confidence, history,
-conflicts, and user confirmation.
-
-The dataset has explicit train/test rows so evaluation does not reuse the
-100-case transaction benchmark.
-"""
-
+"""Evaluate Smart Spend AI V2 semantic NLP model on held-out rows."""
 from __future__ import annotations
 
 import csv
@@ -22,17 +12,58 @@ if str(ROOT) not in sys.path:
 DATASET = ROOT / "data" / "semantic_intent_dataset.csv"
 
 
-def main() -> None:
-    try:
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.linear_model import LogisticRegression
-        from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
-        from sklearn.pipeline import Pipeline
-    except ImportError as exc:
-        raise SystemExit(
-            "scikit-learn is required for this experiment. "
-            "Install it in the project virtualenv with: pip install scikit-learn"
-        ) from exc
+def build_model():
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import FeatureUnion, Pipeline
+
+    return Pipeline(
+        [
+            (
+                "features",
+                FeatureUnion(
+                    [
+                        (
+                            "word_tfidf",
+                            TfidfVectorizer(
+                                lowercase=True,
+                                analyzer="word",
+                                ngram_range=(1, 2),
+                                min_df=1,
+                                sublinear_tf=True,
+                            ),
+                        ),
+                        (
+                            "char_tfidf",
+                            TfidfVectorizer(
+                                lowercase=True,
+                                analyzer="char_wb",
+                                ngram_range=(3, 5),
+                                min_df=1,
+                                sublinear_tf=True,
+                            ),
+                        ),
+                    ]
+                ),
+            ),
+            (
+                "classifier",
+                LogisticRegression(
+                    max_iter=2000,
+                    class_weight="balanced",
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
+
+
+def main():
+    from sklearn.metrics import (
+        accuracy_score,
+        classification_report,
+        f1_score,
+    )
 
     with DATASET.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -48,35 +79,13 @@ def main() -> None:
     test_notes = [row["note"] for row in test]
     test_labels = [row["label"] for row in test]
 
-    model = Pipeline(
-        [
-            (
-                "tfidf",
-                TfidfVectorizer(
-                    lowercase=True,
-                    ngram_range=(1, 2),
-                    min_df=1,
-                    sublinear_tf=True,
-                ),
-            ),
-            (
-                "classifier",
-                LogisticRegression(
-                    max_iter=2000,
-                    class_weight="balanced",
-                    random_state=42,
-                ),
-            ),
-        ]
-    )
-
-    model.fit(train_notes, train_labels)
+    model = build_model().fit(train_notes, train_labels)
     predictions = model.predict(test_notes)
 
     accuracy = accuracy_score(test_labels, predictions)
     macro_f1 = f1_score(test_labels, predictions, average="macro")
 
-    print("Semantic NLP Baseline")
+    print("Semantic NLP V2")
     print("=" * 60)
     print(f"Training examples:         {len(train)}")
     print(f"Held-out test examples:    {len(test)}")
@@ -88,20 +97,16 @@ def main() -> None:
     print("-" * 60)
     print(classification_report(test_labels, predictions, digits=3, zero_division=0))
 
-    print("Confusion matrix labels")
-    print("-" * 60)
-    labels = sorted(set(train_labels) | set(test_labels))
-    matrix = confusion_matrix(test_labels, predictions, labels=labels)
-    print(", ".join(labels))
-    for label, values in zip(labels, matrix):
-        print(f"{label}: {values.tolist()}")
-
     print()
     print("Held-out predictions")
     print("-" * 60)
+
     for row, prediction in zip(test, predictions):
         status = "OK" if prediction == row["label"] else "MISS"
-        print(f"[{status}] {row['note']!r} -> {prediction} (expected {row['label']})")
+        print(
+            f"[{status}] {row['note']!r} -> "
+            f"{prediction} (expected {row['label']})"
+        )
 
 
 if __name__ == "__main__":
