@@ -137,6 +137,13 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
     # vocabulary. This is the key transition from keyword memorization to
     # learned language patterns while keeping transparent rules as a fallback.
     learned = learned_semantic_evidence(text)
+
+    # Multiple independent rule categories are a genuine ambiguity. Do not let
+    # the model manufacture certainty in this case.
+    categories = {category for category, _, _ in matches}
+    if len(categories) > 1:
+        return _result(None, learned.get("candidates", []), 0.0, "Multiple category signals conflict; learned inference is not allowed to pick a winner.")
+
     if learned["category"] and learned["confidence"] >= 0.72:
         if not matches:
             return _result(
@@ -146,26 +153,12 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
                 learned["reason"],
             )
 
-        # If deterministic evidence is internally conflicting, a sufficiently
-        # separated learned prediction may resolve the conflict.
-        categories = {category for category, _, _ in matches}
-        if len(categories) > 1 and learned["category"] not in categories:
-            return _result(None, learned["candidates"], 0.0, "Rule evidence conflicts with the learned model; no category selected.")
-        if len(categories) > 1 and learned["category"] in categories:
-            return _result(
-                learned["category"],
-                learned["candidates"],
-                learned["confidence"],
-                "Learned NLP evidence resolves conflicting surface-level clues.",
-            )
-
         # A single generic keyword can be misleading (for example, "ticket"
         # appears in transport notes but also in entertainment notes). Let a
         # strong learned prediction override that weak surface clue.
         if (
             len(matches) == 1
             and matches[0][1] == 1
-            and learned["category"]
             and learned["category"] != matches[0][0]
             and learned["confidence"] >= 0.82
         ):
