@@ -1,16 +1,20 @@
 """Semantic interpretation of transaction notes.
 
-V2.5 keeps semantic interpretation separate from the final categorization
-policy. The important distinction is transaction *purpose*: the person being
-paid is not automatically the category. For example, "sent my share of dinner
-to Rahul" is Food & Dining, while "lent money to Rahul" is Transfer / Personal.
-A learned NLP model can replace this deterministic layer later.
+V2.6 uses a layered approach:
+- high-precision purpose overrides for safety-critical ambiguities,
+- a small supervised NLP model for learned semantic evidence,
+- deterministic keyword/phrase evidence as a transparent fallback.
+
+The ML model is evidence, not the final transaction decision. Confidence and
+history are handled by the transaction-intelligence layer.
 """
 
 from __future__ import annotations
 
 import re
 from typing import Any
+
+from .semantic_ml import learned_semantic_evidence
 
 SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
     "Health & Fitness": (
@@ -62,9 +66,6 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Purpose-bearing phrases should override a generic interpersonal-transfer signal.
-# Repayment/refund language is itself a transaction purpose: even when the
-# underlying purchase was food, the current transaction is money being returned.
 PURPOSE_OVERRIDES: tuple[tuple[str, str], ...] = (
     (r"(?:refund|refunded|reimbursement|reimbursed|repayment|repay|payback|paid\s+back|returned)\b", "Transfer / Personal"),
     (r"(?:split|share)\s+(?:the\s+)?(?:dinner|bill|food|meal)\s+(?:repayment|refund|reimbursement)", "Transfer / Personal"),
@@ -82,13 +83,29 @@ NEGATION_PATTERNS = (
     r"\bnot\s+(?:for|a)\b",
 )
 
+WEAK_NOTE_WORDS = {
+    "ok", "home", "personal", "payment", "stuff", "monthly", "urgent",
+    "for", "the", "gift", "something", "done", "important", "cash",
+    "needed", "paid", "transfer",
+}
+
 
 def _normalize(text: Any) -> str:
     return re.sub(r"\s+", " ", str(text or "").strip().lower())
 
 
-def _result(category: str | None, candidates: list[tuple[str, int]], confidence: float, reason: str) -> dict[str, Any]:
-    return {"category": category, "candidates": candidates, "confidence": confidence, "reason": reason}
+def _result(
+    category: str | None,
+    candidates: list[tuple[str, Any]],
+    confidence: float,
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "category": category,
+        "candidates": candidates,
+        "confidence": confidence,
+        "reason": reason,
+    }
 
 
 def semantic_note_evidence(note: Any) -> dict[str, Any]:
@@ -96,6 +113,7 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
     text = _normalize(note)
     if not text:
         return _result(None, [], 0.0, "No note provided.")
+
     if any(re.search(pattern, text) for pattern in NEGATION_PATTERNS):
         return _result(None, [], 0.0, "Note contains a negation pattern; semantic inference is unsafe.")
 
@@ -103,14 +121,51 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
         if re.search(pattern, text):
             return _result(category, [(category, 2)], 0.96, f"Explicit transaction purpose indicates {category}.")
 
+    # Very short/general notes are intentionally excluded from learned inference.
+    # They contain little semantic signal and are better handled as Unknown.
+    tokens = set(re.findall(r"[a-z]+", text))
+    if tokens and not (tokens - WEAK_NOTE_WORDS):
+        return _result(None, [], 0.0, "Note is too weak to identify transaction purpose.")
+
     matches: list[tuple[str, int, str]] = []
     for category, patterns in SEMANTIC_PATTERNS.items():
         category_matches = [pattern for pattern in patterns if re.search(pattern, text)]
         if category_matches:
             matches.append((category, len(category_matches), category_matches[0]))
 
+    # Let the learned model resolve notes that are outside the hand-written
+    # vocabulary. This is the key transition from keyword memorization to
+    # learned language patterns while keeping transparent rules as a fallback.
+    learned = learned_semantic_evidence(text)
+    if learned["category"] and learned["confidence"] >= 0.72:
+        if not matches:
+            return _result(
+                learned["category"],
+                learned["candidates"],
+                learned["confidence"],
+                learned["reason"],
+            )
+
+        # If deterministic evidence is internally conflicting, a sufficiently
+        # separated learned prediction may resolve the conflict.
+        categories = {category for category, _, _ in matches}
+        if len(categories) > 1 and learned["category"] not in categories:
+            return _result(None, learned["candidates"], 0.0, "Rule evidence conflicts with the learned model; no category selected.")
+        if len(categories) > 1 and learned["category"] in categories:
+            return _result(
+                learned["category"],
+                learned["candidates"],
+                learned["confidence"],
+                "Learned NLP evidence resolves conflicting surface-level clues.",
+            )
+
     if not matches:
-        return _result(None, [], 0.0, "No meaningful semantic category signal found.")
+        return _result(
+            None,
+            learned.get("candidates", []),
+            0.0,
+            learned.get("reason", "No meaningful semantic category signal found."),
+        )
 
     matches.sort(key=lambda item: item[1], reverse=True)
     candidates = [(category, count) for category, count, _ in matches]
