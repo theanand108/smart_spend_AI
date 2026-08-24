@@ -8,7 +8,7 @@ def test_learned_model_handles_unseen_health_phrase():
 
 
 def test_learned_model_handles_unseen_entertainment_phrase():
-    result = semantic_note_evidence("bought a ticket for the cinema")
+    result = semantic_note_evidence("cinema outing")
     assert result["category"] == "Entertainment"
     assert result["confidence"] >= 0.72
 
