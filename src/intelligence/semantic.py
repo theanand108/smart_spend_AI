@@ -170,9 +170,12 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
             )
 
     if not matches:
+        # An abstaining ML model is deliberately exposed as no semantic
+        # candidates. Probability rankings are internal evidence, not a
+        # user-facing category guess.
         return _result(
             None,
-            learned.get("candidates", []),
+            [],
             0.0,
             learned.get("reason", "No meaningful semantic category signal found."),
         )
