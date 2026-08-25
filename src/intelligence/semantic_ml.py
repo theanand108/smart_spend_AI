@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DATASET = ROOT / "data" / "semantic_intent_dataset.csv"
 AUGMENTATION_DATASET = ROOT / "data" / "semantic_intent_augmentation_v21.csv"
 AUGMENTATION_DATASET_V22 = ROOT / "data" / "semantic_intent_augmentation_v22.csv"
+AUGMENTATION_DATASET_V23 = ROOT / "data" / "semantic_intent_augmentation_v23.csv"
 
 
 def _load_rows(path: Path, *, train_only: bool = False) -> list[dict[str, str]]:
@@ -28,7 +29,11 @@ def _load_rows(path: Path, *, train_only: bool = False) -> list[dict[str, str]]:
 
 def _load_training_rows() -> tuple[list[str], list[str]]:
     rows = _load_rows(DATASET, train_only=True)
-    for augmentation_dataset in (AUGMENTATION_DATASET, AUGMENTATION_DATASET_V22):
+    for augmentation_dataset in (
+        AUGMENTATION_DATASET,
+        AUGMENTATION_DATASET_V22,
+        AUGMENTATION_DATASET_V23,
+    ):
         if augmentation_dataset.exists():
             rows.extend(_load_rows(augmentation_dataset))
     return [r["note"] for r in rows], [r["label"] for r in rows]
