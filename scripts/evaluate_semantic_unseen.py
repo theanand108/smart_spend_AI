@@ -24,7 +24,7 @@ from src.intelligence.semantic_ml import _build_model
 
 
 def main() -> None:
-    from sklearn.metrics import accuracy_score, classification_report, f1_score
+    from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
 
     if len(sys.argv) != 2:
         raise SystemExit(
@@ -77,6 +77,35 @@ def main() -> None:
     print("-" * 64)
     print(classification_report(labels, predictions, digits=3, zero_division=0))
 
+    # Show where the model confuses categories. This is more useful than
+    # accuracy alone when auditing a multi-class semantic classifier.
+    class_labels = sorted(set(labels) | set(predictions))
+    matrix = confusion_matrix(labels, predictions, labels=class_labels)
+    print("Confusion matrix")
+    print("-" * 64)
+    header = "Expected \\ Predicted".ljust(24) + " ".join(
+        f"{label[:12]:>12}" for label in class_labels
+    )
+    print(header)
+    for label, row_values in zip(class_labels, matrix):
+        values = " ".join(f"{int(value):>12}" for value in row_values)
+        print(f"{label[:23].ljust(24)}{values}")
+
+    print()
+    print("Top misclassification pairs")
+    print("-" * 64)
+    pair_counts = Counter(
+        (expected, predicted)
+        for expected, predicted in zip(labels, predictions)
+        if expected != predicted
+    )
+    if pair_counts:
+        for (expected, predicted), count in pair_counts.most_common():
+            print(f"{count:>3}  {expected} -> {predicted}")
+    else:
+        print("No misclassifications.")
+
+    print()
     print("Unseen predictions")
     print("-" * 64)
     misses = 0
