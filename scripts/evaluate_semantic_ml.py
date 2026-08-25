@@ -1,4 +1,4 @@
-"""Evaluate Smart Spend AI V2 semantic NLP model on held-out rows."""
+"""Evaluate Smart Spend AI V2.2 semantic NLP model on held-out rows."""
 from __future__ import annotations
 
 import csv
@@ -87,10 +87,10 @@ def main():
     accuracy = accuracy_score(test_labels, predictions)
     macro_f1 = f1_score(test_labels, predictions, average="macro")
 
-    print("Semantic NLP V2.1")
+    print("Semantic NLP V2.2")
     print("=" * 60)
     print(f"Base training examples:    {len(train) - len(augmentation_rows)}")
-    print(f"V2.1 augmentation examples:{len(augmentation_rows):4d}")
+    print(f"V2.2 augmentation examples:{len(augmentation_rows):4d}")
     print(f"Total training examples:    {len(train)}")
     print(f"Held-out test examples:    {len(test)}")
     print(f"Classes:                   {len(set(train_labels))}")
