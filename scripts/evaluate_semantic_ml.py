@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 DATASET = ROOT / "data" / "semantic_intent_dataset.csv"
+AUGMENTATION_DATASET = ROOT / "data" / "semantic_intent_augmentation_v21.csv"
 
 
 def build_model():
@@ -58,18 +59,19 @@ def build_model():
     )
 
 
+def load_rows(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
 def main():
-    from sklearn.metrics import (
-        accuracy_score,
-        classification_report,
-        f1_score,
-    )
+    from sklearn.metrics import accuracy_score, classification_report, f1_score
 
-    with DATASET.open(newline="", encoding="utf-8") as handle:
-        rows = list(csv.DictReader(handle))
+    base_rows = load_rows(DATASET)
+    augmentation_rows = load_rows(AUGMENTATION_DATASET) if AUGMENTATION_DATASET.exists() else []
 
-    train = [row for row in rows if row["split"] == "train"]
-    test = [row for row in rows if row["split"] == "test"]
+    train = [row for row in base_rows if row["split"] == "train"] + augmentation_rows
+    test = [row for row in base_rows if row["split"] == "test"]
 
     if not train or not test:
         raise SystemExit("Dataset must contain both train and test rows.")
@@ -85,9 +87,11 @@ def main():
     accuracy = accuracy_score(test_labels, predictions)
     macro_f1 = f1_score(test_labels, predictions, average="macro")
 
-    print("Semantic NLP V2")
+    print("Semantic NLP V2.1")
     print("=" * 60)
-    print(f"Training examples:         {len(train)}")
+    print(f"Base training examples:    {len(train) - len(augmentation_rows)}")
+    print(f"V2.1 augmentation examples:{len(augmentation_rows):4d}")
+    print(f"Total training examples:    {len(train)}")
     print(f"Held-out test examples:    {len(test)}")
     print(f"Classes:                   {len(set(train_labels))}")
     print(f"Test accuracy:             {accuracy:.1%}")
