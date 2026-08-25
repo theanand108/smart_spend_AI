@@ -12,12 +12,23 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-DATASET = Path(__file__).resolve().parents[2] / "data" / "semantic_intent_dataset.csv"
+ROOT = Path(__file__).resolve().parents[2]
+DATASET = ROOT / "data" / "semantic_intent_dataset.csv"
+AUGMENTATION_DATASET = ROOT / "data" / "semantic_intent_augmentation_v21.csv"
+
+
+def _load_rows(path: Path, *, train_only: bool = False) -> list[dict[str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if train_only:
+        rows = [r for r in rows if r["split"] == "train"]
+    return rows
 
 
 def _load_training_rows() -> tuple[list[str], list[str]]:
-    with DATASET.open(newline="", encoding="utf-8") as handle:
-        rows = [r for r in csv.DictReader(handle) if r["split"] == "train"]
+    rows = _load_rows(DATASET, train_only=True)
+    if AUGMENTATION_DATASET.exists():
+        rows.extend(_load_rows(AUGMENTATION_DATASET))
     return [r["note"] for r in rows], [r["label"] for r in rows]
 
 
