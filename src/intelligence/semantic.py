@@ -2,8 +2,8 @@
 
 V2.6 uses a layered approach:
 - high-precision purpose overrides for safety-critical ambiguities,
-- a small supervised NLP model for learned semantic evidence,
-- deterministic keyword/phrase evidence as a transparent fallback.
+- deterministic keyword/phrase evidence for transparent signals,
+- a small supervised NLP model for learned semantic evidence.
 
 The ML model is evidence, not the final transaction decision. Confidence and
 history are handled by the transaction-intelligence layer.
@@ -48,6 +48,19 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bglucose monitor\b",
         r"\bbp monitor\b",
         r"\bspectacles\b",
+        r"\borthopedic\b",
+        r"\bhomeopath\w*\b",
+        r"\bdiagnostic(?:s)?\b",
+        r"\bscan\b",
+        r"\bphysio(?:therapist)?\b",
+        r"\bglucose\s+monitor\b",
+        r"\bbp\s+monitor\b",
+        r"\bprotein\s+bars?\b",
+        r"\bmultivitamins?\b",
+        r"\bfirst\s+aid\b",
+        r"\bfitness\s+(?:studio|membership)\b",
+        r"\bpersonal\s+trainer\b",
+        r"\bswimming\s+class\b",
     ),
 
     "Groceries": (
@@ -91,6 +104,15 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bbaby food\b",
         r"\bformula\b",
         r"\bhousehold cleaning consumables\b",
+        r"\bfridge\b",
+        r"\bcooking\s+oil\b",
+        r"\bfruit\s+basket\b",
+        r"\bmeat\s+shop\b",
+        r"\btea\s+leaves\b",
+        r"\bcoffee\s+powder\b",
+        r"\bbaby\s+food\b",
+        r"\bgrocery\s+delivery\b",
+        r"\bcleaning\s+consumables?\b",
     ),
 
     "Food & Dining": (
@@ -128,6 +150,12 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bhotel buffet\b",
         r"\bquick bite\b",
         r"\bcravings?\b",
+        r"\bcafe\b",
+        r"\bfood\s+court\b",
+        r"\bdelivery\s+guy\b",
+        r"\bsports\s+bar\b",
+        r"\bcoffee\b.*\b(?:run|order|meeting)\b",
+        r"\btea\b.*\b(?:run|order|meeting)\b",
     ),
 
     "Travel & Transport": (
@@ -159,6 +187,11 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bcommute\b",
         r"\bsmart card\b",
         r"\broad trip\b",
+        r"\bairport\b",
+        r"\brental\s+car\b",
+        r"\boil\s+change\b",
+        r"\broad\s+trip\b",
+        r"\bpetrol\s+tank\b",
     ),
 
     "Housing / Rent": (
@@ -179,6 +212,18 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\blease\b",
         r"\bnew lease\b",
         r"\bsecurity deposit\b",
+        r"\broom\s+rent\b",
+        r"\bhostel\s+(?:room|fee)\b",
+        r"\bpg\s+(?:fee|owner)\b",
+        r"\bpg\b",
+        r"\bapartment\b",
+        r"\bstudio\s+apartment\b",
+        r"\bco-living\b",
+        r"\bnew\s+room\b",
+        r"\bnew\s+place\b",
+        r"\bbroker\s+fee\b",
+        r"\bsecurity\s+deposit\b",
+        r"\bowner\b.*\b(?:rent|room|flat)\b",
     ),
 
     "Education": (
@@ -208,6 +253,26 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bproject viva\b",
         r"\binvigilation fee\b",
         r"\bcollege id card\b",
+        r"\bexam\b",
+        r"\badmission\b",
+        r"\bthesis\b",
+        r"\bconvocation\b",
+        r"\bworkshop\b",
+        r"\bcoaching\b",
+        r"\bbootcamp\b",
+        r"\bcalculator\b",
+        r"\bassignment\b",
+        r"\bspoken\s+english\b",
+        r"\bjournal\s+database\b",
+        r"\btextbooks?\b",
+        r"\bcollege\s+id\b",
+        r"\bproficiency\s+test\b",
+        r"\bviva\b",
+        r"\blab\s+manual\b",
+        r"\bgeometry\s+box\b",
+        r"\bgraph\s+sheets?\b",
+        r"\bproject\b.*\bfee\b",
+        r"\bstudy\s+desk\s+setup\b",
     ),
 
     "Shopping": (
@@ -245,6 +310,17 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bsunglasses\b",
         r"\bphoto frame\b",
         r"\braincoat\b",
+        r"\bextension\s+board\b",
+        r"\bjeans\b",
+        r"\bphone\s+cover\b",
+        r"\bscreen\s+guard\b",
+        r"\btable\s+lamp\b",
+        r"\bjacket\b",
+        r"\bcushion\s+covers?\b",
+        r"\bpressure\s+cooker\b",
+        r"\bstudy\s+chair\b",
+        r"\bphoto\s+frame\b",
+        r"\blaptop\s+bag\b",
     ),
 
     "Bills & Utilities": (
@@ -268,6 +344,19 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bgenerator backup charge\b",
         r"\blandline\b",
         r"\bcommon area electricity\b",
+        r"\bwater\s+bill\b",
+        r"\bpower\s+bill\b",
+        r"\bpower\s+dues?\b",
+        r"\bwater\s+(?:charge|tax|tanker)\b",
+        r"\binternet\s+(?:plan|subscription|upgrade)\b",
+        r"\bprepaid\s+sim\b",
+        r"\bsim\b.*\b(?:recharge|top(?:ped)?\s+up)\b",
+        r"\bcable\s+connection\b",
+        r"\bgas\s+cylinder\b",
+        r"\bpiped\s+gas\b",
+        r"\butility\s+dues?\b",
+        r"\bgenerator\s+backup\b",
+        r"\bsociety\s+maintenance\b",
     ),
 
     "Entertainment": (
@@ -298,6 +387,24 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\baudiobook\b",
         r"\bgo karting\b",
         r"\btheatre\b",
+        r"\bstand[- ]?up\b",
+        r"\brooftop\s+lounge\b",
+        r"\bpub\b",
+        r"\blaser\s+tag\b",
+        r"\bwater\s+park\b",
+        r"\bgaming\s+pass\b",
+        r"\bboard\s+game\b",
+        r"\bescape\s+room\b",
+        r"\bcomic\s+con\b",
+        r"\bcricket\s+match\b",
+        r"\btheater\b",
+        r"\bpaint\s+and\s+sip\b",
+        r"\bseason\s+pass\b",
+        r"\bstreaming\s+service\b",
+        r"\baudiobook\s+app\b",
+        r"\bindie\s+game\b",
+        r"\bcover\s+charge\b",
+        r"\bkaraoke\s+room\b",
     ),
 
     "Transfer / Personal": (
@@ -324,32 +431,90 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bpocket money\b",
         r"\bhousehold kitty\b",
         r"\bsavings contribution\b",
+        r"\bgave\s+(?:money|cash)\b",
+        r"\bmonthly\s+(?:allowance|pocket\s+money)\b",
+        r"\bsent\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?(?:friend|brother|sister|father|mother|dad|mom|relative|cousin|niece|nephew)\b",
+        r"\btransferred\s+(?:money\s+)?(?:to|for)\s+(?:my\s+)?(?:friend|brother|sister|father|mother|dad|mom|relative|cousin|niece|nephew)\b",
+        r"\b(?:share|half|part|contribution)\s+(?:of|for)\s+(?:the\s+)?(?:rent|gift|subscription|kitty|expenses?)\b",
+        r"\bsent\s+.*\b(?:rent|gift|admission|wedding|birthday|household|subscription|kitty)\b.*\b(?:flatmate|roommate|friend|relative|cousin|niece|nephew|family|dad|mom|sister|brother)\b",
+        r"\bsettled\s+dues?\s+with\s+(?:my\s+)?(?:friend|roommate|flatmate|colleague)\b",
+        r"\breimbursed?\s+(?:my\s+)?(?:friend|colleague|roommate|flatmate)\b",
+        r"\b(?:gift|wedding|birthday)\s+amount\b",
+        r"\bhousehold\s+(?:expenses?|kitty)\b.*\b(?:sent|gave|paid|transferred)\b",
     ),
+
 }
 
 PURPOSE_OVERRIDES: tuple[tuple[str, str], ...] = (
-    (r"(?:refund|refunded|reimbursement|reimbursed|repayment|repay|payback|paid\s+back|returned)\b", "Transfer / Personal"),
-    (r"(?:split|share)\s+(?:the\s+)?(?:dinner|bill|food|meal)\s+(?:repayment|refund|reimbursement)", "Transfer / Personal"),
-    (r"(?:paid|sent|gave|transferred)\s+.*\bfor\s+(?:travel|trip|journey)\b", "Transfer / Personal"),
-    (r"(?:my\s+)?share\s+of\s+(?:the\s+)?(?:dinner|bill|food|meal)", "Food & Dining"),
-    (r"split\s+(?:the\s+)?(?:bill|dinner|food|meal)", "Food & Dining"),
-    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|toward)\s+(?:the\s+)?(?:medicine|medical|pharmacy)", "Health & Fitness"),
-    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|to get)\s+(?:the\s+)?(?:vegetables?|groceries?|milk|ration)", "Groceries"),
-    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|to get)\s+(?:the\s+)?(?:dinner|lunch|breakfast|food|meal)", "Food & Dining"),
+    # High-precision contextual phrases.
+    (r"\bprescription\s+refill\b.*\bchemist\b", "Health & Fitness"),
+    (r"\b(?:cinema|movie)\s+outing\b", "Entertainment"),
+    (r"\b(?:cinema|movie|theatre|theater)\s+ticket\b", "Entertainment"),
+
+    # Money sent to another person specifically for rent is a personal
+    # transfer, not the user's own Housing / Rent expense.
+    (
+        r"\b(?:sent|gave|paid|transferred)\s+.*\brent\b.*"
+        r"\b(?:friend|flatmate|roommate|relative|cousin|niece|nephew|family|"
+        r"dad|mom|sister|brother)\b",
+        "Transfer / Personal",
+    ),
+
+    (r"\bsecurity\s+deposit\s+refund\b.*\bpaid\b", 'Housing / Rent'),
+    (r"\b(?:deposit|security\s+deposit|broker\s+fee)\b.*\b(?:room|flat|apartment|place|lease)\b", 'Housing / Rent'),
+    (r"\b(?:hostel|pg|accommodation)\b.*\b(?:fee|charge|payment|rent)\b", 'Housing / Rent'),
+    (r"\b(?:studio|flat|room)\s+rent\b", 'Housing / Rent'),
+    (r"\b(?:transferred|paid|sent)\s+house\s+rent\s+to\s+(?:my\s+)?(?:dad|mom|father|mother|parent)\b", 'Housing / Rent'),
+    (r"\bpaid\s+(?:the\s+)?owner\s+before\s+leaving\s+town\b", 'Housing / Rent'),
+    (r"\b(?:power|electricity|water|utility|broadband|wifi|internet)\b.*\b(?:bill|dues?|charge|payment|paid|settled)\b", 'Bills & Utilities'),
+    (r"\b(?:bill|dues?|charge|payment)\b.*\b(?:power|electricity|water|utility|broadband|wifi|internet)\b", 'Bills & Utilities'),
+    (r"\bsociety\s+(?:maintenance|water)\b", 'Bills & Utilities'),
+    (r"\b(?:prepaid\s+sim|sim|dth)\b.*\b(?:recharge|renewal|top(?:ped)?\s+up|balance)\b", 'Bills & Utilities'),
+    (r"\b(?:stocked|restocked|grocery|groceries|pantry|fridge)\b.*\b(?:food|snacks?|items?|delivery|week)\b", 'Groceries'),
+    (r"\b(?:tea\s+leaves|coffee\s+powder|pulses?|fish|prawns?|baby\s+food|formula)\b", 'Groceries'),
+    (r"\bhousehold\s+cleaning\s+consumables?\b.*\bfood\s+items?\b", 'Groceries'),
+    (r"\b(?:bowling|laser\s+tag|arcade|karaoke|escape\s+room|paint\s+and\s+sip)\b.*\b(?:snacks?|food|meal)?\b", 'Entertainment'),
+    (r"\b(?:pub|club)\b.*\b(?:table|cover|entry|charge|booked|paid)\b", 'Entertainment'),
+    (r"\bdessert\s+after\s+the\s+movie\b", 'Food & Dining'),
+    (r"\bbirthday\s+treat\b", 'Food & Dining'),
+    (r"(?:refund|refunded|reimbursement|reimbursed|repayment|repay|payback|paid\s+back)\b", 'Transfer / Personal'),
+    (r"(?:split|share)\s+(?:the\s+)?(?:dinner|bill|food|meal)\s+(?:repayment|refund|reimbursement)", 'Transfer / Personal'),
+    (r"(?:paid|sent|gave|transferred)\s+.*\bfor\s+(?:travel|trip|journey)\b", 'Transfer / Personal'),
+    (r"(?:my\s+)?share\s+of\s+(?:the\s+)?(?:dinner|bill|food|meal)", 'Food & Dining'),
+    (r"split\s+(?:the\s+)?(?:bill|dinner|food|meal)", 'Food & Dining'),
+    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|toward)\s+(?:the\s+)?(?:medicine|medical|pharmacy)\b", 'Health & Fitness'),
+    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|to get)\s+(?:the\s+)?(?:vegetables?|groceries?|milk|ration)\b", 'Groceries'),
+    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|to get)\s+(?:the\s+)?(?:dinner|lunch|breakfast|food|meal)\b", 'Food & Dining'),
+    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:rent|gift|wedding|birthday|subscription|kitty|household expenses?)\b.*\b(?:friend|flatmate|roommate|relative|cousin|niece|nephew|family|dad|mom|sister|brother)\b", 'Transfer / Personal'),
+    (r"(?:refund|refunded|reimbursement|reimbursed|repayment|repay|payback|paid\s+back|returned)\b", 'Transfer / Personal'),
+    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|toward)\s+(?:the\s+)?(?:medicine|medical|pharmacy)", 'Health & Fitness'),
+    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|to get)\s+(?:the\s+)?(?:vegetables?|groceries?|milk|ration)", 'Groceries'),
+    (r"(?:sent|gave|paid|transferred)\s+.*\b(?:for|to get)\s+(?:the\s+)?(?:dinner|lunch|breakfast|food|meal)", 'Food & Dining'),
+)
+
+GENERIC_ABSTENTION_PATTERNS = (
+    r"\bpaid\s+what\s+i\s+owed\b",
+    r"\bpaid\s+the\s+balance\b",
+    r"\bpaid\s+off\s+the\s+balance\b",
+    r"\bpaid\s+the\s+person\b",
+    r"\bpaid\s+the\s+vendor\b",
+    r"\bpaid\s+for\s+the\s+service\b",
+    r"\bpaid\s+for\s+the\s+arrangement\b",
+    r"\bpaid\s+up\s+front\b",
+    r"\bsent\s+the\s+funds\b",
+    r"\bgave\s+the\s+money\b",
+    r"\bcleared\s+dues\b",
+    r"\bsettled\s+up\b",
 )
 
 NEGATION_PATTERNS = (
-    r"\bno\s+(?:need|purchase|buying)\b",
-    r"\bdidn['’]?t\s+buy\b",
-    r"\bnot\s+(?:for|a)\b",
+    r"\bno\s+(?:need|purchase|buying)\b", r"\bdidn['’]?t\s+buy\b", r"\bnot\s+(?:for|a)\b",
 )
 
 WEAK_NOTE_WORDS = {
-    "ok", "home", "personal", "payment", "stuff", "monthly", "urgent",
-    "for", "the", "gift", "something", "done", "important", "cash",
-    "needed", "paid", "transfer",
+    "ok", "home", "personal", "payment", "stuff", "monthly", "urgent", "for", "the", "gift", "something",
+    "done", "important", "cash", "needed", "paid", "transfer",
 }
-
 
 def _normalize(text: Any) -> str:
     return re.sub(r"\s+", " ", str(text or "").strip().lower())
@@ -376,34 +541,64 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
         return _result(None, [], 0.0, "No note provided.")
 
     if any(re.search(pattern, text) for pattern in NEGATION_PATTERNS):
-        return _result(None, [], 0.0, "Note contains a negation pattern; semantic inference is unsafe.")
+        return _result(
+            None,
+            [],
+            0.0,
+            "Note contains a negation pattern; semantic inference is unsafe.",
+        )
 
+    # Explicit contextual phrases have highest precedence.
     for pattern, category in PURPOSE_OVERRIDES:
         if re.search(pattern, text):
-            return _result(category, [(category, 2)], 0.96, f"Explicit transaction purpose indicates {category}.")
+            return _result(
+                category,
+                [(category, 2)],
+                0.96,
+                f"Explicit transaction purpose indicates {category}.",
+            )
 
-    # Very short/general notes are intentionally excluded from learned inference.
-    # They contain little semantic signal and are better handled as Unknown.
+    # Do not let the learned model turn deliberately vague language into a
+    # confident Transfer / Personal prediction.
+    if any(re.search(pattern, text) for pattern in GENERIC_ABSTENTION_PATTERNS):
+        return _result(
+            None,
+            [],
+            0.0,
+            "Note is generic and does not identify the transaction purpose safely.",
+        )
+
     tokens = set(re.findall(r"[a-z]+", text))
     if tokens and not (tokens - WEAK_NOTE_WORDS):
-        return _result(None, [], 0.0, "Note is too weak to identify transaction purpose.")
+        return _result(
+            None,
+            [],
+            0.0,
+            "Note is too weak to identify transaction purpose.",
+        )
 
     matches: list[tuple[str, int, str]] = []
     for category, patterns in SEMANTIC_PATTERNS.items():
-        category_matches = [pattern for pattern in patterns if re.search(pattern, text)]
+        category_matches = [
+            pattern for pattern in patterns if re.search(pattern, text)
+        ]
         if category_matches:
-            matches.append((category, len(category_matches), category_matches[0]))
+            matches.append(
+                (category, len(category_matches), category_matches[0])
+            )
 
-    # Let the learned model resolve notes that are outside the hand-written
-    # vocabulary. This is the key transition from keyword memorization to
-    # learned language patterns while keeping transparent rules as a fallback.
     learned = learned_semantic_evidence(text)
 
-    # Multiple independent rule categories are a genuine ambiguity. Do not let
-    # the model manufacture certainty in this case.
+    # Genuine rule-level conflicts remain ambiguous; ML is not allowed to
+    # manufacture certainty over contradictory deterministic evidence.
     categories = {category for category, _, _ in matches}
     if len(categories) > 1:
-        return _result(None, learned.get("candidates", []), 0.0, "Multiple category signals conflict; learned inference is not allowed to pick a winner.")
+        return _result(
+            None,
+            learned.get("candidates", []),
+            0.0,
+            "Multiple category signals conflict; learned inference is not allowed to pick a winner.",
+        )
 
     if learned["category"] and learned["confidence"] >= 0.72:
         if not matches:
@@ -414,9 +609,8 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
                 learned["reason"],
             )
 
-        # A single generic keyword can be misleading (for example, "ticket"
-        # appears in transport notes but also in entertainment notes). Let a
-        # strong learned prediction override that weak surface clue.
+        # A single generic keyword can be misleading. A strong learned
+        # prediction may override that one weak surface clue.
         if (
             len(matches) == 1
             and matches[0][1] == 1
@@ -431,9 +625,6 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
             )
 
     if not matches:
-        # An abstaining ML model is deliberately exposed as no semantic
-        # candidates. Probability rankings are internal evidence, not a
-        # user-facing category guess.
         return _result(
             None,
             [],
@@ -443,9 +634,20 @@ def semantic_note_evidence(note: Any) -> dict[str, Any]:
 
     matches.sort(key=lambda item: item[1], reverse=True)
     candidates = [(category, count) for category, count, _ in matches]
+
     if len(matches) > 1 and matches[0][1] == matches[1][1]:
-        return _result(None, candidates, 0.0, "Multiple categories have equally strong semantic evidence.")
+        return _result(
+            None,
+            candidates,
+            0.0,
+            "Multiple categories have equally strong semantic evidence.",
+        )
 
     top = matches[0]
     confidence = 0.92 if top[1] >= 2 else 0.90
-    return _result(top[0], candidates, confidence, f"Semantic note pattern matched {top[0]} evidence.")
+    return _result(
+        top[0],
+        candidates,
+        confidence,
+        f"Semantic note pattern matched {top[0]} evidence.",
+    )
