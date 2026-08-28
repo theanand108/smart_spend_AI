@@ -132,6 +132,25 @@ def learned_semantic_evidence(
         for category, probability in ranked[:3]
     ]
 
+    # Preserve the conservative default gate, but allow a strong separation
+    # signal to count as learned evidence even when TF-IDF probabilities are
+    # diluted across many classes. This is deliberately stricter on margin
+    # than on probability: the model must clearly prefer one class over the
+    # runner-up before this rescue path is allowed.
+    high_margin_confidence = 0.45
+    high_margin_threshold = 0.35
+    if (
+        float(top_probability) >= high_margin_confidence
+        and margin >= high_margin_threshold
+    ):
+        return {
+            "category": str(top_category),
+            "confidence": round(float(top_probability), 3),
+            "margin": round(margin, 3),
+            "candidates": candidates,
+            "reason": f"Learned NLP model has strong class separation for {top_category}; accepted as high-margin evidence.",
+        }
+
     if float(top_probability) < min_confidence or margin < min_margin:
         return {
             "category": None,
