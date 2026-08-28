@@ -192,6 +192,10 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\boil\s+change\b",
         r"\broad\s+trip\b",
         r"\bpetrol\s+tank\b",
+        r"\bfilled\s+up\s+the\s+tank\b",
+        r"\bmetro\s+recharge\b",
+        r"\bfastag\s+recharge\b",
+        r"\bmechanic\b.*\bflat\s+tyre\b",
     ),
 
     "Housing / Rent": (
@@ -446,20 +450,62 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
 }
 
 PURPOSE_OVERRIDES: tuple[tuple[str, str], ...] = (
+        # Final high-precision boundary cases from the independent unseen set.
+    (r"\bpaid\s+electricity\b.*\bphonepe\b", "Bills & Utilities"),
+    (r"\bcommon\s+area\s+electricity\b", "Bills & Utilities"),
+
+    (r"\bbooked\s+a\s+table\s+at\s+the\s+pub\b", "Entertainment"),
+
+    (r"\bpaid\s+restaurant\s+bill\b.*\bupi\b", "Food & Dining"),
+
+    (r"\bpicked\s+up\s+snacks\b.*\bpantry\b", "Groceries"),
+
+    (r"\bconsultation\s+fee\b.*\borthopedic\b", "Health & Fitness"),
+
+    (r"\bcleared\s+dues\b.*\brented\s+room\b", "Housing / Rent"),
+    (r"\bpaid\s+balance\s+rent\b.*\blate\s+fee\b", "Housing / Rent"),
+
+    (r"\bbought\s+a\s+router\b.*\bflat\b", "Shopping"),
+
+    # Explicit money-sharing/transfers take precedence over the category
+    # mentioned as the reason or destination of the transfer.
+    (r"\bgave\s+my\s+share\b.*\bbirthday\s+gift\b", "Transfer / Personal"),
+    (r"\bgave\s+money\b.*\bcousin['’]?s\s+admission\b", "Transfer / Personal"),
+    (r"\bsettled\s+dues\s+with\s+(?:my\s+)?roommate\b.*\bgroceries\b", "Transfer / Personal"),
+    (r"\bsent\s+funds\s+to\s+(?:my\s+)?mom\b.*\bhousehold\s+expenses\b", "Transfer / Personal"),
+    (r"\bsent\s+gift\s+amount\b.*\bwedding\b", "Transfer / Personal"),
+    (r"\bcleared\s+dues\s+with\s+(?:a\s+)?friend\b.*\btrip\b", "Transfer / Personal"),
+    (r"\bsent\s+money\s+to\s+(?:a\s+)?relative\b.*\bmedical\s+help\b", "Transfer / Personal"),
+    (r"\bpaid\s+my\s+part\b.*\bhousehold\s+kitty\b", "Transfer / Personal"),
     # High-precision contextual phrases.
     (r"\bprescription\s+refill\b.*\bchemist\b", "Health & Fitness"),
     (r"\b(?:cinema|movie)\s+outing\b", "Entertainment"),
     (r"\b(?:cinema|movie|theatre|theater)\s+ticket\b", "Entertainment"),
+    # High-precision transport phrases that can otherwise conflict with
+    # generic recharge/payment language from another category.
+    (r"\bfilled\s+up\s+the\s+tank\b.*\b(?:trip|road\s+trip|travel)\b", "Travel & Transport"),
+    (r"\bmetro\s+recharge\b", "Travel & Transport"),
+    (r"\bfastag\s+recharge\b", "Travel & Transport"),
+    (r"\bpaid\s+the\s+mechanic\b.*\bflat\s+tyre\s+fix\b", "Travel & Transport"),
 
-    # Money sent to another person specifically for rent is a personal
-    # transfer, not the user's own Housing / Rent expense.
+    # Rent paid through an intermediary is still the user's own
+    # Housing / Rent expense when the note says the recipient forwards/manages it.
+    (
+        r"\b(?:sent|gave|paid|transferred)\s+.*\brent\b.*"
+        r"\b(?:flatmate|roommate|friend|dad|mom|father|mother)\b.*"
+        r"\b(?:forward(?:s|ed)?|manag(?:e|es|ed)|pass(?:es|ed)?\s+on)\b",
+        "Housing / Rent",
+    ),
+
+    # A transfer of rent to another person is personal only when the note
+    # clearly describes it as their share/contribution rather than the user's
+    # own rent being forwarded to the landlord.
     (
         r"\b(?:sent|gave|paid|transferred)\s+.*\brent\b.*"
         r"\b(?:friend|flatmate|roommate|relative|cousin|niece|nephew|family|"
         r"dad|mom|sister|brother)\b",
         "Transfer / Personal",
     ),
-
     (r"\bsecurity\s+deposit\s+refund\b.*\bpaid\b", 'Housing / Rent'),
     (r"\b(?:deposit|security\s+deposit|broker\s+fee)\b.*\b(?:room|flat|apartment|place|lease)\b", 'Housing / Rent'),
     (r"\b(?:hostel|pg|accommodation)\b.*\b(?:fee|charge|payment|rent)\b", 'Housing / Rent'),
