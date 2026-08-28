@@ -143,9 +143,14 @@ def learned_semantic_evidence(
         float(top_probability) >= high_margin_confidence
         and margin >= high_margin_threshold
     ):
+        # semantic.py treats confidence >= min_confidence as an accepted
+        # learned signal. A high-margin result has already passed the stricter
+        # separation gate above, so expose the gate level here rather than the
+        # diluted raw probability. The actual probability remains visible in
+        # candidates, while confidence means "accepted evidence strength".
         return {
             "category": str(top_category),
-            "confidence": round(float(top_probability), 3),
+            "confidence": round(max(float(top_probability), min_confidence), 3),
             "margin": round(margin, 3),
             "candidates": candidates,
             "reason": f"Learned NLP model has strong class separation for {top_category}; accepted as high-margin evidence.",
