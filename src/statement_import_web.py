@@ -8,7 +8,10 @@ remain isolated as received money.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from sqlalchemy import text
 from werkzeug.utils import secure_filename
 
 from .statement_import_service import import_statement
@@ -30,6 +33,41 @@ def register_statement_import(app, db, Transaction) -> None:
     app.config.setdefault("MAX_CONTENT_LENGTH", MAX_UPLOAD_BYTES)
     app.extensions["statement_import_db"] = db
     app.extensions["statement_import_transaction_model"] = Transaction
+
+    @app.context_processor
+    def inject_received_money_summary():
+        if request.endpoint != "dashboard1":
+            return {}
+
+        month = request.view_args.get("month") if request.view_args else None
+        try:
+            month = int(month) if month is not None else datetime.now().month
+        except (TypeError, ValueError):
+            month = datetime.now().month
+        if not 1 <= month <= 12:
+            month = datetime.now().month
+
+        year = datetime.now().year
+        try:
+            row = db.session.execute(
+                text(
+                    "SELECT COALESCE(SUM(amount), 0), COUNT(*) "
+                    "FROM received_money "
+                    "WHERE strftime('%Y', transaction_date) = :year "
+                    "AND strftime('%m', transaction_date) = :month"
+                ),
+                {"year": str(year), "month": f"{month:02d}"},
+            ).first()
+        except Exception:
+            # The table is created on the first statement import. Until then,
+            # dashboard rendering must remain unchanged.
+            return {"received_money_total": 0.0, "received_money_count": 0}
+
+        return {
+            "received_money_total": float(row[0] or 0) if row else 0.0,
+            "received_money_count": int(row[1] or 0) if row else 0,
+        }
+
     if statement_import_bp.name not in app.blueprints:
         app.register_blueprint(statement_import_bp)
 
