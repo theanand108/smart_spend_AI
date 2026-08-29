@@ -211,14 +211,13 @@ _GPAY_AMOUNT = re.compile(r"₹\s*([\d,]+(?:\.\d+)?)")
 
 def parse_google_pay_text(text: str) -> StatementImportResult:
     """Parse the text extracted from a native Google Pay transaction PDF."""
-    compact = re.sub(r"\s+", " ", text)
-    starts = list(_GPAY_DATE.finditer(compact))
+    starts = list(_GPAY_DATE.finditer(text))
     parsed: list[ImportedTransaction] = []
     skipped: list[str] = []
 
     for index, match in enumerate(starts):
-        block_end = starts[index + 1].start() if index + 1 < len(starts) else len(compact)
-        block = compact[match.start() : block_end]
+        block_end = starts[index + 1].start() if index + 1 < len(starts) else len(text)
+        block = text[match.start() : block_end]
         date_text = match.group(1)
         time_match = _GPAY_TIME.search(block)
         if not time_match:
