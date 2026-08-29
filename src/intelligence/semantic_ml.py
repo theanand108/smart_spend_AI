@@ -132,6 +132,18 @@ def learned_semantic_evidence(
         for category, probability in ranked[:3]
     ]
 
+    # "Unknown" is a training label for intentionally vague transactions,
+    # but it is not a concrete spending category. Preserve the public
+    # semantic-evidence contract by exposing that prediction as abstention.
+    if str(top_category) == "Unknown":
+        return {
+            "category": None,
+            "confidence": round(float(top_probability), 3),
+            "margin": round(margin, 3),
+            "candidates": candidates,
+            "reason": "Learned model identifies the note as unknown/vague; abstaining.",
+        }
+
     # Preserve the conservative default gate, but allow a strong separation
     # signal to count as learned evidence even when TF-IDF probabilities are
     # diluted across many classes. This is deliberately stricter on margin
