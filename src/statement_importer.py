@@ -228,7 +228,7 @@ def parse_google_pay_text(text: str) -> StatementImportResult:
             amount = _parse_amount(amount_matches[-1].group(1))
 
             direction_match = re.search(
-                r"\b(Paid\s*to|Received\s*from)\s+(.+?)\s*UPI\s*Transaction",
+                r"\b(Paid\s*to|Received\s*from)\s*(.+?)\s*UPI\s*Transaction",
                 block,
                 re.I,
             )
