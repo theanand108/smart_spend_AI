@@ -7,7 +7,6 @@ that pipeline and are stored as received money only.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
 from sqlalchemy import text
@@ -102,8 +101,7 @@ def _store_received_money(session: Any, item: ImportedTransaction) -> None:
         text(
             "INSERT INTO received_money "
             "(transaction_date, merchant_name, amount, source, source_transaction_id) "
-            "VALUES (:transaction_date, :merchant_name, :amount, :source, :source_transaction_id) "
-            "ON CONFLICT(source, source_transaction_id) DO NOTHING"
+            "VALUES (:transaction_date, :merchant_name, :amount, :source, :source_transaction_id)"
         ),
         {
             "transaction_date": item.date,
