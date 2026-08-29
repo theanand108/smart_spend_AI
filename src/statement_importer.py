@@ -114,7 +114,7 @@ def _direction_from_values(details: str, transaction_type: str) -> str | None:
 
 def _merchant_from_details(details: str) -> str:
     cleaned = _clean(details)
-    cleaned = re.sub(r"^(paid\s*to|received\s*from)\s+", "", cleaned, flags=re.I)
+    cleaned = re.sub(r"^(paid\s*to|received\s*from)\s*", "", cleaned, flags=re.I)
     return cleaned.strip()
 
 
@@ -228,7 +228,7 @@ def parse_google_pay_text(text: str) -> StatementImportResult:
             amount = _parse_amount(amount_matches[-1].group(1))
 
             direction_match = re.search(
-                r"\b(Paid\s*to|Received\s*from)\s+(.+?)\s+UPI\s*Transaction",
+                r"\b(Paid\s*to|Received\s*from)\s+(.+?)\s*UPI\s*Transaction",
                 block,
                 re.I,
             )
