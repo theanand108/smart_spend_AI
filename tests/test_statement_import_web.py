@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from flask import Flask
+from flask import Flask, get_flashed_messages
 
 from src.statement_import_web import register_statement_import
 
@@ -51,8 +51,12 @@ def test_statement_import_rejects_unsupported_extension():
             "/import",
             data={"statement": (BytesIO(b"hello"), "statement.txt")},
             content_type="multipart/form-data",
-            follow_redirects=True,
         )
 
-    assert response.status_code == 200
-    assert b"Unsupported file type" in response.data
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/import")
+
+        with client.session_transaction() as session:
+            flashed = session.get("_flashes", [])
+
+    assert ("danger", "Unsupported file type. Upload a CSV or PDF statement.") in flashed
