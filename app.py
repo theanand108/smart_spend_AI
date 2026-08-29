@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
 from datetime import datetime
 from src.analytics.financial_pulse import generate_financial_pulse
+from src.statement_import_web import register_statement_import
 
 app = Flask(__name__)
 app.secret_key = "smart-spend-toast-secret"
@@ -34,6 +35,9 @@ class Transaction(db.Model):
     def __repr__(self):
 
         return f"<Transaction {self.merchant_name}>"
+
+
+register_statement_import(app, db, Transaction)
 
 
 def categorize(merchant):
