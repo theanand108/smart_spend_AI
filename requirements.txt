@@ -7,3 +7,4 @@ numpy==2.5.1
 matplotlib==3.11.0
 scikit-learn==1.9.0
 gunicorn==23.0.0
+pypdf==6.1.3
