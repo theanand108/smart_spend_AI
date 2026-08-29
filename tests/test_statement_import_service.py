@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, create_engine
+from sqlalchemy import Column, DateTime, Float, Integer, String, create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session
 
 from src.intelligence.persistence import install
@@ -64,7 +64,7 @@ def test_import_separates_debits_from_received_money():
     assert session.query(Transaction).one().amount == 369
 
     received = session.execute(
-        "SELECT amount, merchant_name FROM received_money"
+        text("SELECT amount, merchant_name FROM received_money")
     ).all()
     assert received == [(5000.0, "MUKUND KUSHWAHA")]
 
