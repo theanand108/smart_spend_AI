@@ -8,7 +8,7 @@ remain isolated as received money.
 
 from __future__ import annotations
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from werkzeug.utils import secure_filename
 
 from .statement_import_service import import_statement
@@ -58,18 +58,12 @@ def import_statement_page():
         if not result.transactions:
             detail = result.skipped_rows[0] if result.skipped_rows else "No supported transactions were found."
             raise ValueError(f"No transactions could be imported. {detail}")
-
-        app = statement_import_bp._state.app if False else None
     except ValueError as exc:
         flash(str(exc), "danger")
         return redirect(url_for("statement_import.import_statement_page"))
     except Exception:
         flash("Unable to read this statement. Make sure it is a supported PhonePe CSV or Google Pay PDF.", "danger")
         return redirect(url_for("statement_import.import_statement_page"))
-
-    # Flask blueprints don't expose the registering app directly. The dependency
-    # objects are stored on the active app's extensions by register_statement_import.
-    from flask import current_app
 
     db = current_app.extensions["statement_import_db"]
     Transaction = current_app.extensions["statement_import_transaction_model"]
