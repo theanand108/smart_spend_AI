@@ -18,10 +18,23 @@ class FakeTransaction:
     pass
 
 
-def test_statement_import_route_is_registered():
+def make_test_app():
     app = Flask(__name__, template_folder="../templates")
     app.secret_key = "test"
+
+    # The import template links back to the application's dashboard endpoint.
+    # Provide a minimal stand-in so the blueprint can be tested independently
+    # from the full Flask application.
+    @app.route("/dashboard")
+    def dashboard1():
+        return "dashboard"
+
     register_statement_import(app, FakeDB(), FakeTransaction)
+    return app
+
+
+def test_statement_import_route_is_registered():
+    app = make_test_app()
 
     with app.test_client() as client:
         response = client.get("/import")
@@ -31,9 +44,7 @@ def test_statement_import_route_is_registered():
 
 
 def test_statement_import_rejects_unsupported_extension():
-    app = Flask(__name__, template_folder="../templates")
-    app.secret_key = "test"
-    register_statement_import(app, FakeDB(), FakeTransaction)
+    app = make_test_app()
 
     with app.test_client() as client:
         response = client.post(
