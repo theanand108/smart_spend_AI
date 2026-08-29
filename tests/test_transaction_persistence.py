@@ -56,7 +56,7 @@ def test_generic_note_does_not_create_false_category():
     assert transaction.category == "Unknown"
 
 
-def test_edit_recalculates_and_does_not_leave_stale_category():
+def test_edit_recalculates_and_replaces_stale_category():
     session = make_session()
 
     transaction = Transaction(
@@ -72,7 +72,7 @@ def test_edit_recalculates_and_does_not_leave_stale_category():
     transaction.notes = "metro recharge for the week"
     session.commit()
 
-    # The changed note is re-evaluated. Because the entity's existing history
-    # now conflicts with the new purpose, V2 deliberately refuses to silently
-    # persist a new category instead of leaving the stale Food category behind.
-    assert transaction.category == "Unknown"
+    # The current transaction is excluded from its own history, so changing the
+    # note re-runs V2 against the new purpose rather than reusing the stale
+    # category from before the edit.
+    assert transaction.category == "Travel & Transport"
