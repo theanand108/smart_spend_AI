@@ -13,7 +13,6 @@ import io
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable
 
 
 @dataclass(frozen=True)
@@ -43,49 +42,17 @@ class StatementImportResult:
 
 
 _HEADER_ALIASES = {
-    "date": {
-        "date",
-        "transactiondate",
-        "datetime",
-        "dateandtime",
-    },
+    "date": {"date", "transactiondate", "datetime", "dateandtime"},
     "time": {"time", "transactiontime"},
     "details": {
-        "transactiondetails",
-        "transactiondetail",
-        "description",
-        "details",
-        "merchant",
-        "merchantname",
-        "payee",
-        "recipient",
+        "transactiondetails", "transactiondetail", "description", "details",
+        "merchant", "merchantname", "payee", "recipient",
     },
-    "amount": {
-        "amount",
-        "transactionamount",
-        "value",
-    },
-    "transaction_type": {
-        "transactiontype",
-        "type",
-        "direction",
-        "debitcredit",
-    },
-    "transaction_id": {
-        "transactionid",
-        "upiid",
-        "upitransactionid",
-        "referenceid",
-        "reference",
-    },
+    "amount": {"amount", "transactionamount", "value"},
+    "transaction_type": {"transactiontype", "type", "direction", "debitcredit"},
+    "transaction_id": {"transactionid", "upiid", "upitransactionid", "referenceid", "reference"},
     "utr": {"utr", "utrnumber"},
-    "payment_method": {
-        "paymentmethod",
-        "instrument",
-        "creditdebitinstrument",
-        "paidby",
-        "creditedto",
-    },
+    "payment_method": {"paymentmethod", "instrument", "creditdebitinstrument", "paidby", "creditedto"},
 }
 
 
@@ -120,7 +87,8 @@ def _parse_date(date_value: str, time_value: str | None = None) -> datetime:
     formats = (
         "%d %b, %Y %I:%M %p",
         "%d %b, %Y %I:%M%p",
-        "%d %b, %Y",
+        "%d%b,%Y %I:%M %p",
+        "%d%b,%Y %I:%M%p",
         "%d %B, %Y %I:%M %p",
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M",
@@ -146,7 +114,7 @@ def _direction_from_values(details: str, transaction_type: str) -> str | None:
 
 def _merchant_from_details(details: str) -> str:
     cleaned = _clean(details)
-    cleaned = re.sub(r"^(paid to|received from)\s+", "", cleaned, flags=re.I)
+    cleaned = re.sub(r"^(paid\s*to|received\s*from)\s+", "", cleaned, flags=re.I)
     return cleaned.strip()
 
 
@@ -232,7 +200,7 @@ def parse_phonepe_csv(text: str) -> StatementImportResult:
     return parse_csv_text(text, source="phonepe")
 
 
-_GPAY_DATE = re.compile(r"(\d{2}\s+[A-Za-z]{3},\s+\d{4})")
+_GPAY_DATE = re.compile(r"(\d{2}\s*[A-Za-z]{3},\s*\d{4})")
 _GPAY_TIME = re.compile(r"(\d{2}:\d{2}\s*(?:AM|PM))", re.I)
 _GPAY_UPI_ID = re.compile(r"UPI\s*Transaction\s*ID\s*:\s*([A-Za-z0-9]+)", re.I)
 _GPAY_AMOUNT = re.compile(r"₹\s*([\d,]+(?:\.\d+)?)")
@@ -257,10 +225,13 @@ def parse_google_pay_text(text: str) -> StatementImportResult:
             amount_matches = list(_GPAY_AMOUNT.finditer(block))
             if not amount_matches:
                 raise ValueError("amount not found")
-            amount_match = amount_matches[-1]
-            amount = _parse_amount(amount_match.group(1))
+            amount = _parse_amount(amount_matches[-1].group(1))
 
-            direction_match = re.search(r"\b(Paid to|Received from)\s+(.+?)\s+UPI\s*Transaction", block, re.I)
+            direction_match = re.search(
+                r"\b(Paid\s*to|Received\s*from)\s+(.+?)\s+UPI\s*Transaction",
+                block,
+                re.I,
+            )
             if not direction_match:
                 raise ValueError("Google Pay recipient/sender not found")
             direction = "credit" if direction_match.group(1).lower().startswith("received") else "debit"
