@@ -13,23 +13,23 @@ Date,Time,Transaction Details,Transaction ID,UTR,Transaction Type,Credit/debit i
 
 GPAY_SAMPLE = '''Transaction statement
 Date & time Transaction details Amount
-01Jul,2026
-02:20PM
-PaidtomukundKushwaha
-UPITransactionID:618266600033
-PaidbyUttarPradeshGraminBank2909
+01 Jul, 2026
+02:20 PM
+Paid to mukund Kushwaha
+UPI Transaction ID: 618266600033
+Paid by Uttar Pradesh Gramin Bank 2909
 ₹1,000
-01Jul,2026
-04:09PM
-PaidtoEKART
-UPITransactionID:654883594580
-PaidbyUttarPradeshGraminBank2909
+01 Jul, 2026
+04:09 PM
+Paid to EKART
+UPI Transaction ID: 654883594580
+Paid by Uttar Pradesh Gramin Bank 2909
 ₹369
-02Jul,2026
-05:00PM
-ReceivedfromMUKUNDKUSHWAHA
-UPITransactionID:999999999999
-ReceivedbyUttarPradeshGraminBank2909
+02 Jul, 2026
+05:00 PM
+Received from MUKUND KUSHWAHA
+UPI Transaction ID: 999999999999
+Received by Uttar Pradesh Gramin Bank 2909
 ₹2,500
 '''
 
@@ -57,12 +57,12 @@ def test_google_pay_pdf_text_normalizes_paid_and_received_transactions():
     assert len(result.expenses) == 2
     assert len(result.received) == 1
 
-    assert result.expenses[0].merchant_name == "mukundKushwaha"
+    assert result.expenses[0].merchant_name == "mukund Kushwaha"
     assert result.expenses[0].amount == 1000
     assert result.expenses[0].source_transaction_id == "618266600033"
 
     assert result.expenses[1].merchant_name == "EKART"
-    assert result.received[0].merchant_name == "MUKUNDKUSHWAHA"
+    assert result.received[0].merchant_name == "MUKUND KUSHWAHA"
     assert result.received[0].amount == 2500
 
 
