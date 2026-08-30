@@ -48,9 +48,14 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
     return 0.0, 0
 
 
-def collect_evidence(*, amount: float | int | None, note: str | None, payment_method: str | None, history: list[dict[str, Any]]) -> dict[str, Any]:
-    """Collect independent evidence without making the final decision."""
+def collect_evidence(*, amount: float | int | None, note: str | None, merchant_name: str | None = None, payment_method: str | None, history: list[dict[str, Any]]) -> dict[str, Any]:
+    """Collect independent evidence without making the final decision.
+
+    Current transaction language is evaluated from both the note/context and
+    merchant name. The categorizer decides how those signals are prioritized.
+    """
     note_signal = semantic_note_evidence(note)
+    merchant_signal = semantic_note_evidence(merchant_name)
     history_counts = history_categories(history)
     candidates: dict[str, float] = {}
     reasons: dict[str, list[str]] = {}
@@ -68,6 +73,11 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
     if note_category:
         add(str(note_category), 0.70 * note_confidence, "semantic transaction note")
 
+    merchant_category = merchant_signal.get("category")
+    merchant_confidence = float(merchant_signal.get("confidence") or 0.0)
+    if merchant_category:
+        add(str(merchant_category), 0.60 * merchant_confidence, "semantic merchant context")
+
     total_history = sum(history_counts.values())
     if total_history:
         for item in history:
@@ -80,9 +90,6 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
             if historical_category and historical_confidence >= 0.90:
                 category = str(historical_category)
                 historical_semantic_matches[category] = historical_semantic_matches.get(category, 0) + 1
-                # Historical notes are useful memory, but weaker than a current
-                # note. They can reinforce a repeated purpose without becoming
-                # a permanent merchant rule by themselves.
                 add(category, 0.12, "semantic purpose repeated in transaction history")
 
         for category, count in history_counts.items():
@@ -92,6 +99,9 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
             if close_matches:
                 amount_matches[category] = close_matches
             add(category, amount_signal, "repeated/similar historical amount")
+
+    # Known merchant mappings remain evidence, not an automatic early return.
+    # The categorizer supplies this deterministic signal separately when needed.
 
     # Payment method is intentionally weak: UPI alone does not reveal purpose.
     if payment_method and str(payment_method).strip().lower() == "upi":
@@ -104,8 +114,12 @@ def collect_evidence(*, amount: float | int | None, note: str | None, payment_me
         "reasons": reasons,
         "note_category": note_category,
         "note_confidence": note_confidence,
+        "merchant_category": merchant_category,
+        "merchant_confidence": merchant_confidence,
         "semantic_candidates": note_signal.get("candidates", []),
+        "merchant_semantic_candidates": merchant_signal.get("candidates", []),
         "semantic_reason": note_signal.get("reason", ""),
+        "merchant_semantic_reason": merchant_signal.get("reason", ""),
         "amount_matches": amount_matches,
         "historical_semantic_matches": historical_semantic_matches,
     }
