@@ -6,7 +6,7 @@
         <div>
           <h5 class="dashboard-section-title mb-1">Needs your attention</h5>
           <p class="dashboard-section-copy mb-0">
-            {{ attention|length }} transaction{{ '' if attention|length == 1 else 's' }} need{{ '' if attention|length == 1 else '' }} a decision.
+            {{ attention|length }} transaction{{ '' if attention|length == 1 else 's' }} need{{ 's' if attention|length == 1 else '' }} a decision.
           </p>
         </div>
       </div>
@@ -27,7 +27,7 @@
         <div class="dashboard-transaction-actions">
           <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
             <input type="hidden" name="next" value="{{ request.full_path }}">
-            <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}" style="min-width: 170px;">
+            <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
               <option value="">Choose category</option>
               {% for category in review_categories %}
               <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
@@ -57,7 +57,7 @@
             <div class="dashboard-transaction-actions">
               <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
                 <input type="hidden" name="next" value="{{ request.full_path }}">
-                <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}" style="min-width: 170px;">
+                <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
                   <option value="">Choose category</option>
                   {% for category in review_categories %}
                   <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
