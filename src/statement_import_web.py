@@ -70,8 +70,6 @@ def register_statement_import(app, db, Transaction) -> None:
                 {"year": str(year), "month": f"{month:02d}"},
             ).first()
         except Exception:
-            # The table is created on the first statement import. Until then,
-            # dashboard rendering must remain unchanged.
             return {"received_money_total": 0.0, "received_money_count": 0}
 
         return {
@@ -180,7 +178,7 @@ def resolve_dashboard_attention(transaction_id: int):
     if not next_url.startswith("/"):
         next_url = "/dashboard"
 
-    transaction = Transaction.query.filter_by(id=transaction_id).first()
+    transaction = db.session.get(Transaction, transaction_id)
     if not transaction:
         flash("That transaction could not be found.", "danger")
         return redirect(next_url)
@@ -191,6 +189,7 @@ def resolve_dashboard_attention(transaction_id: int):
 
     transaction.category = category
     try:
+        db.session.flush()
         db.session.commit()
         flash(f"{transaction.merchant_name} was categorized as {category}.", "success")
     except Exception:
