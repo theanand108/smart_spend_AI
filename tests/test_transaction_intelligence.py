@@ -125,14 +125,15 @@ def test_conflicting_history_requires_confirmation():
     assert result["needs_user_confirmation"] is True
 
 
-def test_current_context_can_flag_historical_conflict():
+def test_strong_current_note_overrides_conflicting_history():
     history = [
         {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining"},
+        {"merchant_name": "RAHUL KUMAR", "category": "Housing / Rent"},
     ]
     result = categorize_transaction("RAHUL KUMAR", 5000, "Monthly room rent", "UPI", history)
     assert result["category"] == "Housing / Rent"
-    assert result["status"] == "conflict"
-    assert result["needs_user_confirmation"] is True
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
 
 
 def test_ambiguous_gift_note_stays_unknown_without_context():
