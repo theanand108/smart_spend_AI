@@ -14,6 +14,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from sqlalchemy import text
 from werkzeug.utils import secure_filename
 
+from .intelligence.attention import build_attention_queue
 from .statement_import_service import import_statement
 from .statement_importer import parse_statement
 
@@ -22,6 +23,16 @@ statement_import_bp = Blueprint("statement_import", __name__)
 
 ALLOWED_EXTENSIONS = {"csv", "pdf"}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+REVIEW_CATEGORIES = (
+    "Food & Dining",
+    "Travel & Transport",
+    "Entertainment",
+    "Groceries",
+    "Bills & Utilities",
+    "Shopping",
+    "Health & Fitness",
+    "Others",
+)
 
 
 def _allowed_filename(filename: str) -> bool:
@@ -127,3 +138,63 @@ def import_statement_page():
     )
     flash(f"Imported {expense_text} and {received_text}.{duplicate_text}{skipped_text}", "success")
     return redirect(url_for("dashboard1"))
+
+
+@statement_import_bp.route("/dashboard/attention", methods=["GET"])
+def dashboard_attention():
+    """Return the dashboard's unresolved V2 intelligence states as a partial."""
+    db = current_app.extensions["statement_import_db"]
+    Transaction = current_app.extensions["statement_import_transaction_model"]
+
+    try:
+        month = int(request.args.get("month", datetime.now().month))
+    except (TypeError, ValueError):
+        month = datetime.now().month
+    if not 1 <= month <= 12:
+        month = datetime.now().month
+
+    year = datetime.now().year
+    transactions = (
+        Transaction.query.filter(
+            db.extract("month", Transaction.date) == month,
+            db.extract("year", Transaction.date) == year,
+        )
+        .order_by(Transaction.date.desc())
+        .all()
+    )
+    attention = build_attention_queue(transactions)
+    return render_template(
+        "_attention.html",
+        attention=attention,
+        review_categories=REVIEW_CATEGORIES,
+    )
+
+
+@statement_import_bp.route("/dashboard/attention/<int:transaction_id>", methods=["POST"])
+def resolve_dashboard_attention(transaction_id: int):
+    """Persist one explicit user category correction and return to the dashboard."""
+    db = current_app.extensions["statement_import_db"]
+    Transaction = current_app.extensions["statement_import_transaction_model"]
+    category = request.form.get("category", "").strip()
+    next_url = request.form.get("next") or "/dashboard"
+    if not next_url.startswith("/"):
+        next_url = "/dashboard"
+
+    transaction = Transaction.query.filter_by(id=transaction_id).first()
+    if not transaction:
+        flash("That transaction could not be found.", "danger")
+        return redirect(next_url)
+
+    if category not in REVIEW_CATEGORIES:
+        flash("Choose a valid category before saving.", "warning")
+        return redirect(next_url)
+
+    transaction.category = category
+    try:
+        db.session.commit()
+        flash(f"{transaction.merchant_name} was categorized as {category}.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Unable to save that category correction.", "danger")
+
+    return redirect(next_url)
