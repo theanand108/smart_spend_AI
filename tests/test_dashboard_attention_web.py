@@ -66,7 +66,11 @@ def test_dashboard_attention_partial_contains_only_unresolved_transactions():
 
 def test_dashboard_attention_correction_persists_category():
     app, db, Transaction = make_app()
-    transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
+
+    # Flask-SQLAlchemy's scoped session requires an active application context
+    # for ORM queries. Perform the lookup inside one before exercising the route.
+    with app.app_context():
+        transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
 
     with app.test_client() as client:
         response = client.post(
