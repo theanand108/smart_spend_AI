@@ -191,6 +191,7 @@ def parse_csv_text(text: str, source: str = "csv") -> StatementImportResult:
                     source=source,
                     source_transaction_id=source_id,
                     payment_method=payment_method,
+                    note=details,
                 )
             )
         except (IndexError, ValueError) as exc:
@@ -236,7 +237,8 @@ def parse_google_pay_text(text: str) -> StatementImportResult:
             )
             if not direction_match:
                 raise ValueError("Google Pay recipient/sender not found")
-            direction = "credit" if direction_match.group(1).lower().startswith("received") else "debit"
+            direction_phrase = _clean(direction_match.group(1))
+            direction = "credit" if direction_phrase.lower().startswith("received") else "debit"
             merchant = _clean(direction_match.group(2))
 
             upi_match = _GPAY_UPI_ID.search(block)
@@ -249,6 +251,7 @@ def parse_google_pay_text(text: str) -> StatementImportResult:
                     direction=direction,
                     source="google_pay",
                     source_transaction_id=source_id,
+                    note=f"{direction_phrase} {merchant}",
                 )
             )
         except ValueError as exc:
