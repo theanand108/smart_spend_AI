@@ -44,10 +44,12 @@ def test_phonepe_csv_normalizes_debits_and_credits():
     assert result.expenses[0].merchant_name == "Vishal Bhai 2"
     assert result.expenses[0].amount == 100
     assert result.expenses[0].source_transaction_id == "T2608290030197862671909"
+    assert result.expenses[0].note == "Paid to Vishal Bhai 2"
 
     assert result.received[0].merchant_name == "MUKUND KUSHWAHA"
     assert result.received[0].amount == 5000
     assert result.received[0].source_transaction_id == "T2608260900463826377542"
+    assert result.received[0].note == "Received from MUKUND KUSHWAHA"
 
 
 def test_google_pay_pdf_text_normalizes_paid_and_received_transactions():
@@ -60,10 +62,13 @@ def test_google_pay_pdf_text_normalizes_paid_and_received_transactions():
     assert result.expenses[0].merchant_name == "mukund Kushwaha"
     assert result.expenses[0].amount == 1000
     assert result.expenses[0].source_transaction_id == "618266600033"
+    assert result.expenses[0].note == "Paid to mukund Kushwaha"
 
     assert result.expenses[1].merchant_name == "EKART"
+    assert result.expenses[1].note == "Paid to EKART"
     assert result.received[0].merchant_name == "MUKUND KUSHWAHA"
     assert result.received[0].amount == 2500
+    assert result.received[0].note == "Received from MUKUND KUSHWAHA"
 
 
 def test_gpay_converted_flat_csv_is_not_treated_as_a_supported_transaction_table():
