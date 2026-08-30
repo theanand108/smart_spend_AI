@@ -74,6 +74,13 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
             return _result(category=category, confidence=0.82, status="conflict", reason="Current transaction context is strong but conflicts with this entity's history.", needs_user_confirmation=True, entity_memory=entity_profile)
         return _result(category=category, confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence.", needs_user_confirmation=False, entity_memory=entity_profile)
 
+    # Established V1 merchant mappings remain high-confidence defaults when
+    # there is no strong transaction-specific note to contradict them. This
+    # preserves trusted behavior for merchants such as Zomato and Swiggy while
+    # still allowing strong semantic transaction context to override them.
+    if known_category:
+        return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile)
+
     # A supplied note that carries no meaningful semantic signal is not a
     # reason to silently reuse historical behavior. Merchant evidence may still
     # be useful because it describes the transaction independently.
