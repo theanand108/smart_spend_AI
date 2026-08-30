@@ -113,6 +113,13 @@ SEMANTIC_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bbaby\s+food\b",
         r"\bgrocery\s+delivery\b",
         r"\bcleaning\s+consumables?\b",
+        r"\bfruit\s+shop\b",
+        r"\bfruit\s+store\b",
+        r"\bfruit\s+centre\b",
+        r"\bfruit\s+center\b",
+        r"\bgeneral\s+store\b",
+        r"\bgrocery\s+store\b",
+        r"\bprovision\s+store\b",
     ),
 
     "Food & Dining": (
