@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
-from sqlalchemy import text
+from sqlalchemy import text, update
 from werkzeug.utils import secure_filename
 
 from .intelligence.attention import build_attention_queue
@@ -187,9 +187,17 @@ def resolve_dashboard_attention(transaction_id: int):
         flash("Choose a valid category before saving.", "warning")
         return redirect(next_url)
 
-    transaction.category = category
     try:
-        db.session.flush()
+        result = db.session.execute(
+            update(Transaction)
+            .where(Transaction.id == transaction_id)
+            .values(category=category)
+        )
+        if result.rowcount != 1:
+            db.session.rollback()
+            flash("That transaction could not be updated.", "danger")
+            return redirect(next_url)
+
         db.session.commit()
         flash(f"{transaction.merchant_name} was categorized as {category}.", "success")
     except Exception:
