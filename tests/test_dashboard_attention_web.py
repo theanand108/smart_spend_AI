@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
+from src.intelligence.categorizer import categorize_transaction
 from src.statement_import_web import register_statement_import
 
 
@@ -82,3 +83,35 @@ def test_dashboard_attention_correction_persists_category():
     with app.app_context():
         transaction = db.session.get(Transaction, transaction_id)
         assert transaction.category == "Shopping"
+
+
+def test_dashboard_attention_correction_becomes_future_history_evidence():
+    app, db, Transaction = make_app()
+
+    with app.app_context():
+        transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
+
+    with app.test_client() as client:
+        response = client.post(
+            f"/dashboard/attention/{transaction_id}",
+            data={"category": "Shopping", "next": "/dashboard"},
+        )
+
+    assert response.status_code == 302
+
+    with app.app_context():
+        rows = Transaction.query.order_by(Transaction.id).all()
+        history = [
+            {
+                "merchant_name": row.merchant_name,
+                "category": row.category,
+                "amount": row.amount,
+                "note": row.notes,
+            }
+            for row in rows
+        ]
+
+    future = categorize_transaction("EKART", 673, None, "UPI", history)
+    assert future["category"] == "Shopping"
+    assert future["status"] == "categorized"
+    assert future["needs_user_confirmation"] is False
