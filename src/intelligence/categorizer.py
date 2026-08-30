@@ -49,9 +49,6 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     entity_profile = build_entity_profile(merchant, merchant_history)
     evidence = collect_evidence(amount=amount, note=note, merchant_name=merchant, payment_method=payment_method, history=merchant_history)
 
-    # Known merchant mappings remain deterministic evidence, but no longer
-    # terminate categorization. V2 gets to interpret the actual transaction
-    # context first and can disagree with a generic merchant mapping.
     known_category = _known_merchant_category(merchant)
     if known_category:
         evidence["known_merchant_category"] = known_category
@@ -65,25 +62,15 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     merchant_category = evidence.get("merchant_category")
     merchant_confidence = float(evidence.get("merchant_confidence") or 0.0)
 
-    # A strong current note describes the purpose of this specific transaction,
-    # so it takes precedence over merchant identity, generic merchant mappings,
-    # and historical behavior.
     if note_category and note_confidence >= 0.90:
         category = str(note_category)
         if historical_counts and category not in historical_counts:
             return _result(category=category, confidence=0.82, status="conflict", reason="Current transaction context is strong but conflicts with this entity's history.", needs_user_confirmation=True, entity_memory=entity_profile)
         return _result(category=category, confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence.", needs_user_confirmation=False, entity_memory=entity_profile)
 
-    # Established V1 merchant mappings remain high-confidence defaults when
-    # there is no strong transaction-specific note to contradict them. This
-    # preserves trusted behavior for merchants such as Zomato and Swiggy while
-    # still allowing strong semantic transaction context to override them.
     if known_category:
         return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile)
 
-    # A supplied note that carries no meaningful semantic signal is not a
-    # reason to silently reuse historical behavior. Merchant evidence may still
-    # be useful because it describes the transaction independently.
     if normalize_text(note) and not note_category:
         if merchant_category:
             return _result(category=str(merchant_category), confidence=min(0.84, max(0.35, merchant_confidence)), status="needs_confirmation", reason="The note is vague, so merchant semantic evidence is used as supporting context rather than silently reusing history.", needs_user_confirmation=True, entity_memory=entity_profile)
@@ -112,11 +99,13 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     second_score = ranked[1][1] if len(ranked) > 1 else 0.0
     margin = top_score - second_score
 
-    # Current semantic merchant evidence is useful even when it is below the
-    # strong-note threshold. It remains subject to the existing confirmation
-    # and abstention behavior rather than becoming a hard merchant rule.
     if merchant_category and top_category == merchant_category and merchant_confidence >= 0.90:
-        return _result(category=str(merchant_category), confidence=min(0.89, max(0.50, merchant_confidence)), status="needs_confirmation", reason="Merchant language provides strong semantic evidence for this transaction.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+        # Strong, unambiguous current merchant semantics should be resolved
+        # automatically. A direct conflict with established entity history is
+        # still surfaced for confirmation rather than silently overriding it.
+        if historical_counts and merchant_category not in historical_counts:
+            return _result(category=str(merchant_category), confidence=0.82, status="conflict", reason="Strong merchant evidence conflicts with this entity's historical categories.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+        return _result(category=str(merchant_category), confidence=merchant_confidence, status="categorized", reason="Merchant language provides strong, unambiguous semantic evidence for this transaction.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
     if note_category:
         return _result(category=str(note_category), confidence=min(0.89, max(0.35, note_confidence)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
