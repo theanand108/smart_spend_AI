@@ -12,6 +12,9 @@
       </div>
 
       {% for item in attention[:5] %}
+      {% if item.status != 'conflict' and (loop.first or attention[loop.index0 - 1].status == 'conflict') %}
+      <hr class="attention-group-divider" role="separator">
+      {% endif %}
       <div class="dashboard-transaction-item">
         <div class="dashboard-transaction-main">
           <div class="dashboard-transaction-title">{{ item.transaction.merchant_name }}</div>
@@ -44,6 +47,9 @@
         <summary class="btn btn-outline-secondary btn-sm">Show {{ attention|length - 5 }} more</summary>
         <div class="mt-3">
           {% for item in attention[5:] %}
+          {% if item.status != 'conflict' and (loop.first or attention[loop.index0 + 5 - 1].status == 'conflict') %}
+          <hr class="attention-group-divider" role="separator">
+          {% endif %}
           <div class="dashboard-transaction-item">
             <div class="dashboard-transaction-main">
               <div class="dashboard-transaction-title">{{ item.transaction.merchant_name }}</div>
