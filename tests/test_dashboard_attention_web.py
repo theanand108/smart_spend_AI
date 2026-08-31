@@ -68,8 +68,6 @@ def test_dashboard_attention_partial_contains_only_unresolved_transactions():
 def test_dashboard_attention_correction_persists_category():
     app, db, Transaction = make_app()
 
-    # Flask-SQLAlchemy's scoped session requires an active application context
-    # for ORM queries. Perform the lookup inside one before exercising the route.
     with app.app_context():
         transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
 
@@ -80,6 +78,26 @@ def test_dashboard_attention_correction_persists_category():
         )
 
     assert response.status_code == 302
+    assert response.headers["Location"] == "/dashboard"
+    with app.app_context():
+        transaction = db.session.get(Transaction, transaction_id)
+        assert transaction.category == "Shopping"
+
+
+def test_dashboard_attention_correction_from_partial_returns_to_dashboard():
+    app, db, Transaction = make_app()
+
+    with app.app_context():
+        transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
+
+    with app.test_client() as client:
+        response = client.post(
+            f"/dashboard/attention/{transaction_id}",
+            data={"category": "Shopping", "next": "/dashboard/attention?month=8"},
+        )
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/dashboard?month=8"
     with app.app_context():
         transaction = db.session.get(Transaction, transaction_id)
         assert transaction.category == "Shopping"
