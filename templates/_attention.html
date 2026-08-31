@@ -43,7 +43,7 @@
       {% endfor %}
 
       {% if attention|length > 5 %}
-      <details class="mt-3">
+      <details class="mt-3" id="attention-details">
         <div id="attention-additional">
           {% for item in attention[5:] %}
           {% if item.status != 'conflict' and (loop.first or attention[loop.index0 + 5 - 1].status == 'conflict') %}
@@ -76,6 +76,18 @@
         </div>
         <summary class="btn btn-outline-secondary btn-sm">Show {{ attention|length - 5 }} more</summary>
       </details>
+      <script>
+        (() => {
+          const details = document.getElementById('attention-details');
+          if (!details) return;
+          details.addEventListener('toggle', () => {
+            if (!details.open) return;
+            requestAnimationFrame(() => {
+              details.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            });
+          });
+        })();
+      </script>
       {% endif %}
     </div>
   </div>
