@@ -177,6 +177,11 @@ def resolve_dashboard_attention(transaction_id: int):
     next_url = request.form.get("next") or "/dashboard"
     if not next_url.startswith("/"):
         next_url = "/dashboard"
+    elif next_url.startswith("/dashboard/attention"):
+        # The attention section is rendered as a dashboard partial. If its form
+        # submits with the partial's own request path, return to the full
+        # dashboard while preserving query parameters such as the selected month.
+        next_url = "/dashboard" + next_url[len("/dashboard/attention"):]
 
     transaction = db.session.get(Transaction, transaction_id)
     if not transaction:
