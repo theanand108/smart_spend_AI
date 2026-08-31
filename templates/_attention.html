@@ -43,8 +43,8 @@
       {% endfor %}
 
       {% if attention|length > 5 %}
-      <details class="mt-3" id="attention-details">
-        <div id="attention-additional">
+      <details class="mt-3" id="attention-details" style="display: flex; flex-direction: column;">
+        <div id="attention-additional" style="order: 1;">
           {% for item in attention[5:] %}
           {% if item.status != 'conflict' and (loop.first or attention[loop.index0 + 5 - 1].status == 'conflict') %}
           <hr class="attention-group-divider" role="separator" style="border: 0; border-top: 1px solid var(--border-soft); opacity: 1; margin: 20px 0;">
@@ -74,20 +74,15 @@
           </div>
           {% endfor %}
         </div>
-        <summary class="btn btn-outline-secondary btn-sm">Show {{ attention|length - 5 }} more</summary>
+        <summary class="btn btn-outline-secondary btn-sm" style="order: 2; align-self: flex-start; margin-top: 12px;">
+          <span class="attention-show-more">Show {{ attention|length - 5 }} more</span>
+          <span class="attention-show-less" style="display: none;">Show less</span>
+        </summary>
       </details>
-      <script>
-        (() => {
-          const details = document.getElementById('attention-details');
-          if (!details) return;
-          details.addEventListener('toggle', () => {
-            if (!details.open) return;
-            requestAnimationFrame(() => {
-              details.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            });
-          });
-        })();
-      </script>
+      <style>
+        #attention-details[open] .attention-show-more { display: none; }
+        #attention-details[open] .attention-show-less { display: inline; }
+      </style>
       {% endif %}
     </div>
   </div>
