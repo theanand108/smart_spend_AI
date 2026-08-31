@@ -36,6 +36,16 @@ function showToast(message, type = 'info') {
   container.appendChild(wrapper);
 
   const toast = new bootstrap.Toast(wrapper, { delay: 3000 });
+  const closeButton = wrapper.querySelector('[data-bs-dismiss="toast"]');
+
+  // Keep the close control reliable even if Bootstrap's delegated dismiss
+  // handler is unavailable or overridden by another script/theme rule.
+  if (closeButton) {
+    closeButton.addEventListener('click', function () {
+      toast.hide();
+    });
+  }
+
   toast.show();
 
   wrapper.addEventListener('hidden.bs.toast', function () {
