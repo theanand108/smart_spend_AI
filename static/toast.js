@@ -38,19 +38,27 @@ function showToast(message, type = 'info') {
   const toast = new bootstrap.Toast(wrapper, { delay: 3000 });
   const closeButton = wrapper.querySelector('[data-bs-dismiss="toast"]');
 
-  // Keep the close control reliable even if Bootstrap's delegated dismiss
-  // handler is unavailable or overridden by another script/theme rule.
+  // Dismiss the toast directly instead of depending on Bootstrap's delegated
+  // data-bs-dismiss handler. This keeps the X reliable on the dashboard,
+  // including when other dashboard scripts are present.
   if (closeButton) {
-    closeButton.addEventListener('click', function () {
-      toast.hide();
+    closeButton.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Remove it immediately so the UI never depends on Bootstrap's hide
+      // transition/event machinery for the close action.
+      wrapper.classList.remove('show');
+      wrapper.remove();
+
+      // Clean up Bootstrap's instance after the DOM node is gone.
+      try {
+        toast.dispose();
+      } catch (e) {}
     });
   }
 
   toast.show();
-
-  wrapper.addEventListener('hidden.bs.toast', function () {
-    wrapper.remove();
-  });
 }
 
 // The dashboard is an app workspace, so unresolved V2 intelligence states
