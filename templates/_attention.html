@@ -43,7 +43,8 @@
       {% endfor %}
 
       {% if attention|length > 5 %}
-      <div id="attention-additional" class="mt-3" hidden>
+      <input type="checkbox" id="attention-toggle" class="attention-toggle-input" aria-controls="attention-additional">
+      <div id="attention-additional" class="attention-additional">
         {% for item in attention[5:] %}
         {% if item.status != 'conflict' and (loop.first or attention[loop.index0 + 5 - 1].status == 'conflict') %}
         <hr class="attention-group-divider" role="separator" style="border: 0; border-top: 1px solid var(--border-soft); opacity: 1; margin: 20px 0;">
@@ -74,35 +75,40 @@
         {% endfor %}
       </div>
 
-      <button type="button" id="attention-toggle" class="btn btn-outline-secondary btn-sm mt-3" aria-expanded="false" aria-controls="attention-additional">
-        <span id="attention-toggle-more">Show {{ attention|length - 5 }} more</span>
-        <span id="attention-toggle-less" hidden>Show less</span>
-      </button>
+      <label for="attention-toggle" class="btn btn-outline-secondary btn-sm mt-3 attention-toggle-button">
+        <span class="attention-toggle-more">Show {{ attention|length - 5 }} more</span>
+        <span class="attention-toggle-less">Show less</span>
+      </label>
 
-      <script>
-        (() => {
-          const additional = document.getElementById('attention-additional');
-          const toggle = document.getElementById('attention-toggle');
-          const moreLabel = document.getElementById('attention-toggle-more');
-          const lessLabel = document.getElementById('attention-toggle-less');
-          if (!additional || !toggle || !moreLabel || !lessLabel) return;
+      <style>
+        .attention-toggle-input {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          pointer-events: none;
+        }
 
-          toggle.addEventListener('click', () => {
-            const opening = additional.hidden;
-            additional.hidden = !opening;
-            toggle.setAttribute('aria-expanded', String(opening));
-            moreLabel.hidden = opening;
-            lessLabel.hidden = !opening;
+        .attention-additional {
+          display: none;
+        }
 
-            if (opening) {
-              requestAnimationFrame(() => {
-                toggle.scrollIntoView({ behavior: 'smooth', block: 'end' });
-              });
-            }
-          });
-        })();
-      </script>
-      {% endif %}
+        .attention-toggle-less {
+          display: none;
+        }
+
+        .attention-toggle-input:checked ~ .attention-additional {
+          display: block;
+        }
+
+        .attention-toggle-input:checked ~ .attention-toggle-button .attention-toggle-more {
+          display: none;
+        }
+
+        .attention-toggle-input:checked ~ .attention-toggle-button .attention-toggle-less {
+          display: inline;
+        }
+      </style>
     </div>
   </div>
 </section>
