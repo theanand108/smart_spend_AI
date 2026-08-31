@@ -43,54 +43,39 @@
       {% endfor %}
 
       {% if attention|length > 5 %}
-      <div id="attention-additional" hidden>
-        {% for item in attention[5:] %}
-        {% if item.status != 'conflict' and (loop.first or attention[loop.index0 + 5 - 1].status == 'conflict') %}
-        <hr class="attention-group-divider" role="separator" style="border: 0; border-top: 1px solid var(--border-soft); opacity: 1; margin: 20px 0;">
-        {% endif %}
-        <div class="dashboard-transaction-item">
-          <div class="dashboard-transaction-main">
-            <div class="dashboard-transaction-title">{{ item.transaction.merchant_name }}</div>
-            <div class="dashboard-transaction-meta">
-              <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
-              <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
-              {% if item.category %}<span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>{% endif %}
+      <details class="mt-3">
+        <div id="attention-additional">
+          {% for item in attention[5:] %}
+          {% if item.status != 'conflict' and (loop.first or attention[loop.index0 + 5 - 1].status == 'conflict') %}
+          <hr class="attention-group-divider" role="separator" style="border: 0; border-top: 1px solid var(--border-soft); opacity: 1; margin: 20px 0;">
+          {% endif %}
+          <div class="dashboard-transaction-item">
+            <div class="dashboard-transaction-main">
+              <div class="dashboard-transaction-title">{{ item.transaction.merchant_name }}</div>
+              <div class="dashboard-transaction-meta">
+                <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
+                <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
+                {% if item.category %}<span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>{% endif %}
+              </div>
+              <div class="dashboard-transaction-notes">{{ item.reason }}</div>
             </div>
-            <div class="dashboard-transaction-notes">{{ item.reason }}</div>
+            <div class="dashboard-transaction-actions">
+              <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
+                  <option value="">Choose category</option>
+                  {% for category in review_categories %}
+                  <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              </form>
+            </div>
           </div>
-          <div class="dashboard-transaction-actions">
-            <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-              <input type="hidden" name="next" value="{{ request.full_path }}">
-              <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
-                <option value="">Choose category</option>
-                {% for category in review_categories %}
-                <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
-                {% endfor %}
-              </select>
-              <button type="submit" class="btn btn-primary btn-sm">Save</button>
-            </form>
-          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
-      <div class="mt-3 text-center">
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="attention-toggle" aria-expanded="false" aria-controls="attention-additional">
-          Show {{ attention|length - 5 }} more
-        </button>
-      </div>
-      <script>
-        (() => {
-          const toggle = document.getElementById('attention-toggle');
-          const additional = document.getElementById('attention-additional');
-          if (!toggle || !additional) return;
-          toggle.addEventListener('click', () => {
-            const expanded = toggle.getAttribute('aria-expanded') === 'true';
-            additional.hidden = expanded;
-            toggle.setAttribute('aria-expanded', String(!expanded));
-            toggle.textContent = expanded ? 'Show {{ attention|length - 5 }} more' : 'Show less';
-          });
-        })();
-      </script>
+        <summary class="btn btn-outline-secondary btn-sm">Show {{ attention|length - 5 }} more</summary>
+      </details>
       {% endif %}
     </div>
   </div>
