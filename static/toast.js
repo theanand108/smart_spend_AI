@@ -29,36 +29,37 @@ function showToast(message, type = 'info') {
         <i class="bi ${getToastIcon(type)}"></i>
         <span>${message}</span>
       </div>
-      <button type="button" class="btn-close btn-close-dark me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      <button
+        type="button"
+        class="toast-close-btn btn-close btn-close-dark me-2 m-auto"
+        aria-label="Close notification"
+        title="Close notification"
+        style="position: relative; z-index: 10; pointer-events: auto; cursor: pointer;"
+      ></button>
     </div>
   `;
 
   container.appendChild(wrapper);
 
-  const toast = new bootstrap.Toast(wrapper, { delay: 3000 });
-  const closeButton = wrapper.querySelector('[data-bs-dismiss="toast"]');
+  const closeButton = wrapper.querySelector('.toast-close-btn');
 
-  // Dismiss the toast directly instead of depending on Bootstrap's delegated
-  // data-bs-dismiss handler. This keeps the X reliable on the dashboard,
-  // including when other dashboard scripts are present.
+  // Toast dismissal is intentionally handled without Bootstrap. Bootstrap's
+  // Toast/data-api lifecycle has caused the close control to become inert on
+  // the dashboard, so the notification owns its own DOM lifecycle instead.
   if (closeButton) {
     closeButton.addEventListener('click', function (event) {
       event.preventDefault();
       event.stopPropagation();
-
-      // Remove it immediately so the UI never depends on Bootstrap's hide
-      // transition/event machinery for the close action.
-      wrapper.classList.remove('show');
       wrapper.remove();
-
-      // Clean up Bootstrap's instance after the DOM node is gone.
-      try {
-        toast.dispose();
-      } catch (e) {}
-    });
+    }, true);
   }
 
-  toast.show();
+  // Keep the existing automatic dismissal behaviour.
+  window.setTimeout(function () {
+    if (document.body.contains(wrapper)) {
+      wrapper.remove();
+    }
+  }, 3000);
 }
 
 // The dashboard is an app workspace, so unresolved V2 intelligence states
