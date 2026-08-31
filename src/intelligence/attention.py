@@ -9,6 +9,7 @@ from .categorizer import categorize_transaction
 
 ATTENTION_STATUSES = {"conflict", "unknown", "varies"}
 STATUS_PRIORITY = {"conflict": 0, "varies": 1, "unknown": 2}
+RESOLVED_CATEGORIES = {"Food & Dining", "Travel & Transport", "Entertainment", "Groceries", "Bills & Utilities", "Shopping", "Health & Fitness", "Others"}
 
 
 def _history_rows(transactions: Iterable[Any]) -> list[dict[str, Any]]:
@@ -29,15 +30,19 @@ def _history_rows(transactions: Iterable[Any]) -> list[dict[str, Any]]:
 def build_attention_queue(transactions: Iterable[Any]) -> list[dict[str, Any]]:
     """Evaluate transactions and return only unresolved intelligence states.
 
-    This function deliberately does not mutate transactions. The dashboard can
-    use it to surface conflicts and unknowns while leaving normal categorized
-    transactions completely out of the attention queue.
+    Explicitly categorized transactions have already been resolved by the user
+    or by the persistence layer and must not re-enter the attention queue merely
+    because re-evaluating them without their own row produces an unknown state.
     """
     transaction_list = list(transactions)
     history = _history_rows(transaction_list)
     attention: list[dict[str, Any]] = []
 
     for transaction in transaction_list:
+        stored_category = getattr(transaction, "category", None)
+        if stored_category in RESOLVED_CATEGORIES:
+            continue
+
         result = categorize_transaction(
             getattr(transaction, "merchant_name", ""),
             getattr(transaction, "amount", None),
