@@ -33,6 +33,12 @@ def build_attention_queue(transactions: Iterable[Any]) -> list[dict[str, Any]]:
     Explicitly categorized transactions have already been resolved by the user
     or by the persistence layer and must not re-enter the attention queue merely
     because re-evaluating them without their own row produces an unknown state.
+
+    Stored ``Unknown`` transactions are different: they represent an unresolved
+    decision and must remain reviewable even if a later intelligence pass can
+    now produce a category suggestion from the surrounding history. In that
+    case the suggestion is shown as supporting evidence, while the transaction
+    remains in the queue until the user explicitly resolves it.
     """
     transaction_list = list(transactions)
     history = _history_rows(transaction_list)
@@ -51,6 +57,12 @@ def build_attention_queue(transactions: Iterable[Any]) -> list[dict[str, Any]]:
             history,
         )
         status = result.get("status")
+
+        # An explicitly stored Unknown is still unresolved. Never let a later
+        # re-evaluation silently remove it from the user's review queue.
+        if stored_category == "Unknown" and status not in ATTENTION_STATUSES:
+            status = "unknown"
+
         if status not in ATTENTION_STATUSES:
             continue
 
