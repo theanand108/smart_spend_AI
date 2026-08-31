@@ -46,7 +46,7 @@
       <input type="checkbox" id="attention-toggle" class="attention-toggle-input" aria-controls="attention-additional">
       <div id="attention-additional" class="attention-additional">
         {% for item in attention[5:] %}
-        {% if item.status != 'conflict' and (loop.first or attention[loop.index0 + 5 - 1].status == 'conflict') %}
+        {% if item.status != 'conflict' and attention[loop.index0 + 4].status == 'conflict' %}
         <hr class="attention-group-divider" role="separator" style="border: 0; border-top: 1px solid var(--border-soft); opacity: 1; margin: 20px 0;">
         {% endif %}
         <div class="dashboard-transaction-item">
