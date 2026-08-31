@@ -71,10 +71,9 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     if known_category:
         return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile)
 
-    if normalize_text(note) and not note_category:
-        if merchant_category:
-            return _result(category=str(merchant_category), confidence=min(0.84, max(0.35, merchant_confidence)), status="needs_confirmation", reason="The note is vague, so merchant semantic evidence is used as supporting context rather than silently reusing history.", needs_user_confirmation=True, entity_memory=entity_profile)
-        return _result(category=None, confidence=0.05, status="unknown", reason="The note is too vague to identify transaction purpose; historical category memory is not strong enough to override it silently.", needs_user_confirmation=True, entity_memory=entity_profile)
+    # Weak/vague notes are not contradictory evidence. They should not prevent
+    # merchant history and other evidence from resolving the transaction. A
+    # useful merchant signal can still remain supporting evidence below.
 
     personal_category_candidate = None
     if should_create_personal_category(entity_profile):
