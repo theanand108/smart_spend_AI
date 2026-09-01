@@ -30,9 +30,7 @@ def test_weak_note_does_not_create_false_confidence():
 
 
 def test_history_can_resolve_repeated_personal_merchant():
-    history = [
-        {"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 60}
-    ]
+    history = [{"merchant_name": "RAHUL KUMAR", "category": "Food & Dining", "amount": 60}]
     result = categorize_transaction("RAHUL KUMAR", 55, "", "UPI", history)
     assert result["category"] == "Food & Dining"
     assert result["status"] == "categorized"
@@ -162,3 +160,27 @@ def test_personal_self_note_is_transfer_personal():
     assert result["category"] == "Transfer / Personal"
     assert result["status"] == "categorized"
     assert result["needs_user_confirmation"] is False
+
+
+def test_simple_personal_transfer_notes_are_transfer_personal():
+    notes = [
+        "self",
+        "personal",
+        "self transaction",
+        "personal transaction",
+        "self transfer",
+        "personal transfer",
+        "transfer to self",
+        "transfer to my account",
+        "own account",
+    ]
+    for note in notes:
+        result = categorize_transaction("Anand bank", 5000, note, "UPI")
+        assert result["category"] == "Transfer / Personal", note
+        assert result["status"] == "categorized", note
+        assert result["needs_user_confirmation"] is False, note
+
+
+def test_personal_word_inside_longer_purchase_note_is_not_a_personal_transfer():
+    result = categorize_transaction("Amazon", 1500, "personal shopping for clothes", "UPI")
+    assert result["category"] != "Transfer / Personal"
