@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .context import history_categories, history_profile, normalize_text
@@ -37,6 +38,26 @@ def _result(*, category: str | None, confidence: float, status: str, reason: str
     return result
 
 
+def _specific_note_override(note: str | None) -> tuple[str, str] | None:
+    """Handle high-precision phrases that deserve deterministic precedence.
+
+    These are intentionally narrow boundary cases rather than broad keyword
+    rules. They prevent generic merchant mappings from hiding explicit purpose
+    expressed in the user's note.
+    """
+    text = normalize_text(note)
+    if not text:
+        return None
+
+    if re.search(r"\b(?:book|books)\b", text):
+        return "Education", "The current transaction note explicitly refers to books, indicating an education purchase."
+
+    if re.search(r"\bpersonal\s+self\b", text) or re.search(r"\bself\s+personal\b", text):
+        return "Transfer / Personal", "The current transaction note explicitly identifies the transaction as personal/self."
+
+    return None
+
+
 def categorize_transaction(merchant_name: str, amount: float | int | None = None, note: str | None = None, payment_method: str | None = None, history: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """Categorize a transaction using independent evidence sources."""
     merchant = normalize_text(merchant_name)
@@ -67,6 +88,20 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     # for many purposes, while the note explains what happened this time.
     if note_category and note_confidence >= 0.90:
         return _result(category=str(note_category), confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence and takes precedence over historical entity behavior.", needs_user_confirmation=False, entity_memory=entity_profile)
+
+    # A small set of high-precision boundary phrases belongs above generic
+    # merchant mappings as well. This covers explicit purposes that are more
+    # informative than a broad merchant identity such as Amazon.
+    specific_note = _specific_note_override(note)
+    if specific_note:
+        category, reason = specific_note
+        return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
+
+    # A qualified merchant name can contain stronger purpose information than a
+    # generic known-merchant mapping. Example: "Amazon Pay Groceries" should be
+    # Groceries, while plain "Amazon" remains Shopping.
+    if known_category and merchant_category and merchant_confidence >= 0.90 and merchant_category != known_category:
+        return _result(category=str(merchant_category), confidence=min(0.96, merchant_confidence), status="categorized", reason="Qualified merchant wording provides stronger transaction-purpose evidence than the generic known merchant mapping.", needs_user_confirmation=False, entity_memory=entity_profile)
 
     if known_category:
         return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile)
