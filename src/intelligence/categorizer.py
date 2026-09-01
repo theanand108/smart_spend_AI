@@ -47,6 +47,11 @@ def _specific_note_override(note: str | None) -> tuple[str, str] | None:
     if re.search(r"\b(?:book|books)\b", text):
         return "Education", "The current transaction note explicitly refers to books, indicating an education purchase."
 
+    # Generic electronics wording is a strong Shopping-purpose signal, but it is
+    # intentionally kept below the cross-source conflict check in the categorizer.
+    if re.search(r"\belectronics?\b", text):
+        return "Shopping", "The current transaction note explicitly identifies an electronics purchase."
+
     personal_note_patterns = (
         r"personal\s+self",
         r"self\s+personal",
@@ -62,6 +67,18 @@ def _specific_note_override(note: str | None) -> tuple[str, str] | None:
     )
     if any(re.fullmatch(pattern, text) for pattern in personal_note_patterns):
         return "Transfer / Personal", "The current transaction note explicitly identifies the transaction as personal/self."
+
+    return None
+
+
+def _specific_merchant_override(merchant_name: str) -> tuple[str, str] | None:
+    """Handle high-precision merchant descriptors that carry transaction purpose."""
+    text = normalize_text(merchant_name)
+    if not text:
+        return None
+
+    if re.search(r"\b(?:book\s+shop|bookstore|book\s+store)\b", text):
+        return "Education", "The merchant descriptor explicitly identifies a book-selling business."
 
     return None
 
@@ -91,12 +108,44 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     merchant_category = evidence.get("merchant_category")
     merchant_confidence = float(evidence.get("merchant_confidence") or 0.0)
 
+    specific_merchant = _specific_merchant_override(merchant)
+    if specific_merchant:
+        merchant_category, merchant_reason = specific_merchant
+        merchant_confidence = 0.96
+        evidence["merchant_category"] = merchant_category
+        evidence["merchant_confidence"] = merchant_confidence
+        evidence.setdefault("reasons", {}).setdefault(merchant_category, []).append(merchant_reason)
+
+    # A strong current note is normally authoritative for this transaction.
+    # However, when the current merchant descriptor independently carries strong
+    # purpose information and directly disagrees with the note, the two signals
+    # are genuinely ambiguous and must be surfaced as a conflict instead of
+    # silently choosing either side.
+    if (
+        note_category
+        and note_confidence >= 0.90
+        and merchant_category
+        and merchant_confidence >= 0.90
+        and str(note_category) != str(merchant_category)
+    ):
+        return _result(
+            category=None,
+            confidence=0.20,
+            status="conflict",
+            reason="Current transaction note and merchant context provide strong but conflicting category evidence.",
+            needs_user_confirmation=True,
+            entity_memory=entity_profile,
+            conflicting_categories=[str(merchant_category), str(note_category)],
+        )
+
     if note_category and note_confidence >= 0.90:
         return _result(category=str(note_category), confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence and takes precedence over historical entity behavior.", needs_user_confirmation=False, entity_memory=entity_profile)
 
     specific_note = _specific_note_override(note)
     if specific_note:
         category, reason = specific_note
+        if merchant_category and merchant_confidence >= 0.90 and category != str(merchant_category):
+            return _result(category=None, confidence=0.20, status="conflict", reason="Current transaction note and merchant context provide strong but conflicting category evidence.", needs_user_confirmation=True, entity_memory=entity_profile, conflicting_categories=[str(merchant_category), category])
         return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
 
     if known_category and merchant_category and merchant_confidence >= 0.90 and merchant_category != known_category:
