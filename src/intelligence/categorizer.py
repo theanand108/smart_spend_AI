@@ -32,6 +32,12 @@ def _history_for_merchant(merchant_name: str, history: list[dict[str, Any]] | No
     return [item for item in (history or []) if normalize_text(item.get("merchant_name")) == normalized]
 
 
+def _result(*, category: str | None, confidence: float, status: str, reason: str, needs_user_confirmation: bool, **extra: Any) -> dict[str, Any]:
+    result = {"category": category, "confidence": round(max(0.0, min(1.0, confidence)), 2), "status": status, "reason": reason, "needs_user_confirmation": needs_user_confirmation}
+    result.update(extra)
+    return result
+
+
 def _specific_note_override(note: str | None) -> tuple[str, str] | None:
     """Handle high-precision phrases that deserve deterministic precedence.
 
@@ -48,26 +54,6 @@ def _specific_note_override(note: str | None) -> tuple[str, str] | None:
 
     if re.search(r"\bpersonal\s+self\b", text) or re.search(r"\bself\s+personal\b", text):
         return "Transfer / Personal", "The current transaction note explicitly identifies the transaction as personal/self."
-
-    return None
-
-
-def _qualified_merchant_override(merchant_name: str) -> tuple[str, str] | None:
-    """Recognize explicit purpose words embedded in a merchant descriptor.
-
-    A generic merchant identity such as Amazon is intentionally broad. When
-    the same descriptor contains an explicit purchase purpose, that purpose
-    is stronger evidence for the current transaction.
-    """
-    merchant = normalize_text(merchant_name)
-    if not merchant:
-        return None
-
-    if re.search(r"\b(?:grocer(?:y|ies)|kirana|vegetables?|milk|ration)\b", merchant):
-        return "Groceries", "Qualified merchant wording explicitly identifies groceries, overriding the generic merchant identity."
-
-    if re.search(r"\b(?:book|books|textbook|textbooks)\b", merchant):
-        return "Education", "Qualified merchant wording explicitly identifies books/textbooks, indicating an education purchase."
 
     return None
 
@@ -109,14 +95,6 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     specific_note = _specific_note_override(note)
     if specific_note:
         category, reason = specific_note
-        return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
-
-    # Explicit purpose words in a merchant descriptor are stronger than a
-    # generic known-merchant mapping. This is deliberately narrow so a broad
-    # merchant such as Amazon remains Shopping when no purpose is specified.
-    qualified_merchant = _qualified_merchant_override(merchant)
-    if qualified_merchant:
-        category, reason = qualified_merchant
         return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
 
     # A qualified merchant name can contain stronger purpose information than a
