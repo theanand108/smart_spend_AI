@@ -52,7 +52,10 @@ def _specific_note_override(note: str | None) -> tuple[str, str] | None:
     if re.search(r"\b(?:book|books)\b", text):
         return "Education", "The current transaction note explicitly refers to books, indicating an education purchase."
 
-    if re.search(r"\bpersonal\s+self\b", text) or re.search(r"\bself\s+personal\b", text):
+    # Explicit self/personal-transfer language is a high-precision purpose
+    # signal. Keep the patterns phrase-aware so unrelated uses of "personal"
+    # do not get forced into Transfer / Personal.
+    if re.search(r"\b(?:personal\s+self|self\s+personal|self|personal)(?:\s+(?:transaction|transfer))?\b", text):
         return "Transfer / Personal", "The current transaction note explicitly identifies the transaction as personal/self."
 
     return None
@@ -83,32 +86,19 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     merchant_category = evidence.get("merchant_category")
     merchant_confidence = float(evidence.get("merchant_confidence") or 0.0)
 
-    # A strong current note is the user's explicit description of this specific
-    # transaction. It outranks entity history: a person/merchant can be used
-    # for many purposes, while the note explains what happened this time.
     if note_category and note_confidence >= 0.90:
         return _result(category=str(note_category), confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence and takes precedence over historical entity behavior.", needs_user_confirmation=False, entity_memory=entity_profile)
 
-    # A small set of high-precision boundary phrases belongs above generic
-    # merchant mappings as well. This covers explicit purposes that are more
-    # informative than a broad merchant identity such as Amazon.
     specific_note = _specific_note_override(note)
     if specific_note:
         category, reason = specific_note
         return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
 
-    # A qualified merchant name can contain stronger purpose information than a
-    # generic known-merchant mapping. Example: "Amazon Pay Groceries" should be
-    # Groceries, while plain "Amazon" remains Shopping.
     if known_category and merchant_category and merchant_confidence >= 0.90 and merchant_category != known_category:
         return _result(category=str(merchant_category), confidence=min(0.96, merchant_confidence), status="categorized", reason="Qualified merchant wording provides stronger transaction-purpose evidence than the generic known merchant mapping.", needs_user_confirmation=False, entity_memory=entity_profile)
 
     if known_category:
         return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile)
-
-    # Weak/vague notes are not contradictory evidence. They should not prevent
-    # merchant history and other evidence from resolving the transaction. A
-    # useful merchant signal can still remain supporting evidence below.
 
     personal_category_candidate = None
     if should_create_personal_category(entity_profile):
