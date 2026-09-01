@@ -39,12 +39,7 @@ def _result(*, category: str | None, confidence: float, status: str, reason: str
 
 
 def _specific_note_override(note: str | None) -> tuple[str, str] | None:
-    """Handle high-precision phrases that deserve deterministic precedence.
-
-    These are intentionally narrow boundary cases rather than broad keyword
-    rules. They prevent generic merchant mappings from hiding explicit purpose
-    expressed in the user's note.
-    """
+    """Handle high-precision phrases that deserve deterministic precedence."""
     text = normalize_text(note)
     if not text:
         return None
@@ -52,10 +47,20 @@ def _specific_note_override(note: str | None) -> tuple[str, str] | None:
     if re.search(r"\b(?:book|books)\b", text):
         return "Education", "The current transaction note explicitly refers to books, indicating an education purchase."
 
-    # Explicit self/personal-transfer language is a high-precision purpose
-    # signal. Keep the patterns phrase-aware so unrelated uses of "personal"
-    # do not get forced into Transfer / Personal.
-    if re.search(r"\b(?:personal\s+self|self\s+personal|self|personal)(?:\s+(?:transaction|transfer))?\b", text):
+    personal_note_patterns = (
+        r"personal\s+self",
+        r"self\s+personal",
+        r"self",
+        r"personal",
+        r"self\s+transaction",
+        r"personal\s+transaction",
+        r"self\s+transfer",
+        r"personal\s+transfer",
+        r"transfer\s+to\s+self",
+        r"transfer\s+to\s+my\s+account",
+        r"own\s+account",
+    )
+    if any(re.fullmatch(pattern, text) for pattern in personal_note_patterns):
         return "Transfer / Personal", "The current transaction note explicitly identifies the transaction as personal/self."
 
     return None
