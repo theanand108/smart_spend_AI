@@ -1,4 +1,10 @@
 {% if attention %}
+{% set dashboard_month = request.args.get('month')|int %}
+{% if dashboard_month >= 1 and dashboard_month <= 12 %}
+{% set dashboard_return_url = url_for('dashboard1', month=dashboard_month) %}
+{% else %}
+{% set dashboard_return_url = url_for('dashboard1') %}
+{% endif %}
 <section class="container dashboard-section-block" id="dashboard-needs-attention">
   <div class="card dashboard-card">
     <div class="card-body">
@@ -29,7 +35,7 @@
         </div>
         <div class="dashboard-transaction-actions">
           <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <input type="hidden" name="next" value="{{ dashboard_return_url }}">
             <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
               <option value="">Choose category</option>
               {% for category in review_categories %}
@@ -61,7 +67,7 @@
           </div>
           <div class="dashboard-transaction-actions">
             <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <input type="hidden" name="next" value="{{ dashboard_return_url }}">
               <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
                 <option value="">Choose category</option>
                 {% for category in review_categories %}
