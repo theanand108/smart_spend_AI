@@ -184,3 +184,18 @@ def test_simple_personal_transfer_notes_are_transfer_personal():
 def test_personal_word_inside_longer_purchase_note_is_not_a_personal_transfer():
     result = categorize_transaction("Amazon", 1500, "personal shopping for clothes", "UPI")
     assert result["category"] != "Transfer / Personal"
+
+
+def test_strong_merchant_and_note_disagreement_is_conflict():
+    result = categorize_transaction("Book shop", 1000, "purchased an electronics", "UPI")
+    assert result["category"] is None
+    assert result["status"] == "conflict"
+    assert result["needs_user_confirmation"] is True
+    assert set(result["conflicting_categories"]) == {"Education", "Shopping"}
+
+
+def test_strong_merchant_note_agreement_still_categorizes():
+    result = categorize_transaction("Book shop", 1000, "purchased some books", "UPI")
+    assert result["category"] == "Education"
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
