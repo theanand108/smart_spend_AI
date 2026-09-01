@@ -141,3 +141,24 @@ def test_ambiguous_gift_note_stays_unknown_without_context():
     assert result["category"] is None
     assert result["status"] == "unknown"
     assert result["needs_user_confirmation"] is True
+
+
+def test_amazon_books_note_overrides_generic_amazon_shopping_mapping():
+    result = categorize_transaction("Amazon", 650, "for books", "UPI")
+    assert result["category"] == "Education"
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
+
+
+def test_qualified_amazon_groceries_merchant_overrides_generic_amazon_mapping():
+    result = categorize_transaction("Amazon Pay Groceries", 1200, None, "UPI")
+    assert result["category"] == "Groceries"
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
+
+
+def test_personal_self_note_is_transfer_personal():
+    result = categorize_transaction("Anand bank", 5000, "personal self", "UPI")
+    assert result["category"] == "Transfer / Personal"
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
