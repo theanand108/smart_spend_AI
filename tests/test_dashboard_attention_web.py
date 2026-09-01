@@ -24,7 +24,8 @@ def make_app():
         notes = db.Column(db.String(200))
 
     @app.route("/dashboard")
-    def dashboard1():
+    @app.route("/dashboard/<int:month>")
+    def dashboard1(month=None):
         return "dashboard"
 
     register_statement_import(app, db, Transaction)
@@ -63,6 +64,7 @@ def test_dashboard_attention_partial_contains_only_unresolved_transactions():
     assert b"Needs your attention" in response.data
     assert b"EKART" in response.data
     assert b"DEEPAK FRUIT CENTRE" not in response.data
+    assert b'value="/dashboard/8"' in response.data
 
 
 def test_dashboard_attention_correction_persists_category():
@@ -84,7 +86,7 @@ def test_dashboard_attention_correction_persists_category():
         assert transaction.category == "Shopping"
 
 
-def test_dashboard_attention_correction_from_partial_returns_to_dashboard():
+def test_dashboard_attention_correction_from_partial_returns_to_canonical_dashboard():
     app, db, Transaction = make_app()
 
     with app.app_context():
@@ -93,11 +95,11 @@ def test_dashboard_attention_correction_from_partial_returns_to_dashboard():
     with app.test_client() as client:
         response = client.post(
             f"/dashboard/attention/{transaction_id}",
-            data={"category": "Shopping", "next": "/dashboard/attention?month=8"},
+            data={"category": "Shopping", "next": "/dashboard/8"},
         )
 
     assert response.status_code == 302
-    assert response.headers["Location"] == "/dashboard?month=8"
+    assert response.headers["Location"] == "/dashboard/8"
     with app.app_context():
         transaction = db.session.get(Transaction, transaction_id)
         assert transaction.category == "Shopping"
