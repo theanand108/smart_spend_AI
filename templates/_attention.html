@@ -37,7 +37,11 @@
           <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
             <input type="hidden" name="next" value="{{ dashboard_return_url }}">
             <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
-              <option value="">Choose category</option>
+              {% if item.category and item.category not in review_categories %}
+              <option value="{{ item.category }}" selected>{{ item.category }}</option>
+              {% else %}
+              <option value="" {% if not item.category %}selected{% endif %}>Choose category</option>
+              {% endif %}
               {% for category in review_categories %}
               <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
               {% endfor %}
@@ -69,7 +73,11 @@
             <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
               <input type="hidden" name="next" value="{{ dashboard_return_url }}">
               <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
-                <option value="">Choose category</option>
+                {% if item.category and item.category not in review_categories %}
+                <option value="{{ item.category }}" selected>{{ item.category }}</option>
+                {% else %}
+                <option value="" {% if not item.category %}selected{% endif %}>Choose category</option>
+                {% endif %}
                 {% for category in review_categories %}
                 <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
                 {% endfor %}
