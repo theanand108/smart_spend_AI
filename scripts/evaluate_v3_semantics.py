@@ -7,16 +7,15 @@ policy, so model-language performance can be measured independently.
 from __future__ import annotations
 
 import csv
-from collections import Counter
-from pathlib import Path
-
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from src.intelligence.semantic_ml import learned_semantic_evidence
+
 BENCHMARK = ROOT / "data" / "v3_semantic_benchmark.csv"
 
 
@@ -34,7 +33,8 @@ def main() -> None:
     unknown_total = 0
     unknown_correct = 0
     by_case_type: dict[str, list[int]] = {}
-    errors: list[tuple[str, str, str, str, float, float]] = []
+    errors: list[dict[str, object]] = []
+    coverage_resolved = 0
 
     for case in cases:
         expected = case["expected_category"]
@@ -42,6 +42,7 @@ def main() -> None:
         predicted = result["category"] or "Unknown"
         confidence = float(result["confidence"])
         margin = float(result["margin"])
+        candidates = result.get("candidates", [])
 
         is_correct = predicted == expected
         correct += int(is_correct)
@@ -55,24 +56,22 @@ def main() -> None:
         else:
             resolved_total += 1
             resolved_correct += int(is_correct)
+            coverage_resolved += int(result["category"] is not None)
 
         if not is_correct:
             errors.append(
-                (
-                    case["id"],
-                    expected,
-                    predicted,
-                    case["note"],
-                    confidence,
-                    margin,
-                )
+                {
+                    "id": case["id"],
+                    "expected": expected,
+                    "predicted": predicted,
+                    "note": case["note"],
+                    "confidence": confidence,
+                    "margin": margin,
+                    "candidates": candidates,
+                }
             )
 
-    coverage = resolved_total and sum(
-        1 for case in cases
-        if case["expected_category"] != "Unknown"
-        and learned_semantic_evidence(case["note"])["category"] is not None
-    ) / resolved_total or 0.0
+    coverage = coverage_resolved / resolved_total if resolved_total else 0.0
 
     print(f"V3 semantic benchmark: {total} cases")
     print(f"Overall accuracy: {correct / total:.1%} ({correct}/{total})")
@@ -93,10 +92,19 @@ def main() -> None:
     if errors:
         print()
         print(f"Failures: {len(errors)}")
-        for case_id, expected, predicted, note, confidence, margin in errors:
+        for error in errors:
+            candidates = error["candidates"] or []
+            candidate_text = ", ".join(
+                f"{category}={probability:.3f}"
+                for category, probability in candidates
+            )
             print(
-                f"  #{case_id}: expected={expected!r} predicted={predicted!r} "
-                f"confidence={confidence:.3f} margin={margin:.3f} note={note!r}"
+                f"  #{error['id']}: expected={error['expected']!r} "
+                f"predicted={error['predicted']!r} "
+                f"confidence={error['confidence']:.3f} "
+                f"margin={error['margin']:.3f} "
+                f"top3=[{candidate_text}] "
+                f"note={error['note']!r}"
             )
     else:
         print("Failures: 0")
