@@ -10,9 +10,13 @@ import csv
 from collections import Counter
 from pathlib import Path
 
-from src.intelligence.semantic_ml import learned_semantic_evidence
+import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from src.intelligence.semantic_ml import learned_semantic_evidence
 BENCHMARK = ROOT / "data" / "v3_semantic_benchmark.csv"
 
 
