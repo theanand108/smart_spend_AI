@@ -31,6 +31,7 @@ REVIEW_CATEGORIES = (
     "Bills & Utilities",
     "Shopping",
     "Health & Fitness",
+    "Transfer / Personal",
     "Others",
 )
 
