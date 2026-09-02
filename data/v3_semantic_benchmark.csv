@@ -1,0 +1,121 @@
+id,expected_category,note,case_type
+1,Health & Fitness,"grabbed my prescription refill from the chemist",paraphrase
+2,Health & Fitness,"doctor checkup this morning",paraphrase
+3,Health & Fitness,"picked up meds for dad",paraphrase
+4,Health & Fitness,"paid the clinic for my blood work",paraphrase
+5,Health & Fitness,"got an inhaler from the pharmacy",paraphrase
+6,Health & Fitness,"my medicine was refilled today",paraphrase
+7,Health & Fitness,"dentist appointment fee",paraphrase
+8,Health & Fitness,"bought cough syrup at the medical store",paraphrase
+9,Health & Fitness,"paid chemist for tablets",weird_language
+10,Health & Fitness,"pharmacy run - prescription stuff",weird_language
+11,Groceries,"restocked the kitchen with rice and dal",paraphrase
+12,Groceries,"picked up veggies n milk",weird_language
+13,Groceries,"monthly ration from the kirana",paraphrase
+14,Groceries,"got flour, oil and spices for home",paraphrase
+15,Groceries,"pantry was empty so I stocked up",paraphrase
+16,Groceries,"quick grocery run after college",paraphrase
+17,Groceries,"bought fruits for the house",paraphrase
+18,Groceries,"kirana stuff for the flat",weird_language
+19,Groceries,"milk bread and eggs",weird_language
+20,Groceries,"food supplies for the kitchen",paraphrase
+21,Food & Dining,"grabbed lunch after class",paraphrase
+22,Food & Dining,"chai and snacks with friends",paraphrase
+23,Food & Dining,"ordered a biryani for dinner",paraphrase
+24,Food & Dining,"cafe bill from this afternoon",paraphrase
+25,Food & Dining,"quick breakfast before college",paraphrase
+26,Food & Dining,"went out for dinner with classmates",paraphrase
+27,Food & Dining,"food delivery tonight",paraphrase
+28,Food & Dining,"paid my share of the restaurant bill",paraphrase
+29,Food & Dining,"coffee n sandwich",weird_language
+30,Food & Dining,"grabbed some chai",weird_language
+31,Travel & Transport,"uber to campus",paraphrase
+32,Travel & Transport,"filled petrol in my bike",paraphrase
+33,Travel & Transport,"auto ride back home",paraphrase
+34,Travel & Transport,"metro fare to the office",paraphrase
+35,Travel & Transport,"cab for the airport",paraphrase
+36,Travel & Transport,"bus ticket for tomorrow",paraphrase
+37,Travel & Transport,"topped up fuel before the trip",paraphrase
+38,Travel & Transport,"ola ride home",weird_language
+39,Travel & Transport,"rickshaw to the station",paraphrase
+40,Travel & Transport,"paid for my ride",ambiguous
+41,Housing / Rent,"sent this month's rent to the landlord",paraphrase
+42,Housing / Rent,"flat rent payment",paraphrase
+43,Housing / Rent,"paid for my hostel room",paraphrase
+44,Housing / Rent,"monthly apartment rental",paraphrase
+45,Housing / Rent,"rent due for the room",paraphrase
+46,Housing / Rent,"landlord payment for August",paraphrase
+47,Housing / Rent,"cleared my house rent",paraphrase
+48,Housing / Rent,"room rent",weird_language
+49,Housing / Rent,"payment for my rented flat",paraphrase
+50,Housing / Rent,"sent money for accommodation",paraphrase
+51,Education,"bought textbooks for this semester",paraphrase
+52,Education,"paid my college tuition",paraphrase
+53,Education,"pens and notebooks for class",paraphrase
+54,Education,"university registration fee",paraphrase
+55,Education,"course enrollment payment",paraphrase
+56,Education,"study material for my exams",paraphrase
+57,Education,"lab fee this semester",paraphrase
+58,Education,"college supplies",weird_language
+59,Education,"bought a textbook",weird_language
+60,Education,"paid semester dues",paraphrase
+61,Shopping,"ordered a new pair of sneakers",paraphrase
+62,Shopping,"bought an electrical item for home",paraphrase
+63,Shopping,"picked up a shirt from the store",paraphrase
+64,Shopping,"shopping at the mall",paraphrase
+65,Shopping,"got a backpack for college",paraphrase
+66,Shopping,"household appliance purchase",paraphrase
+67,Shopping,"bought a phone accessory",paraphrase
+68,Shopping,"new clothes",weird_language
+69,Shopping,"picked up a kitchen item",paraphrase
+70,Shopping,"gift item for my friend",paraphrase
+71,Bills & Utilities,"renewed my mobile plan",paraphrase
+72,Bills & Utilities,"paid this month's electricity bill",paraphrase
+73,Bills & Utilities,"recharged mom's phone",paraphrase
+74,Bills & Utilities,"cleared the broadband charge",paraphrase
+75,Bills & Utilities,"water bill for the house",paraphrase
+76,Bills & Utilities,"home internet payment",paraphrase
+77,Bills & Utilities,"phone recharge",weird_language
+78,Bills & Utilities,"wifi bill",weird_language
+79,Bills & Utilities,"monthly power charges",paraphrase
+80,Bills & Utilities,"renewed my internet subscription",paraphrase
+81,Entertainment,"renewed my Netflix subscription",paraphrase
+82,Entertainment,"paid for a cinema ticket",paraphrase
+83,Entertainment,"Spotify renewal",weird_language
+84,Entertainment,"ticket for a live concert",paraphrase
+85,Entertainment,"streaming plan this month",paraphrase
+86,Entertainment,"movie night with friends",paraphrase
+87,Entertainment,"subscribed to a music service",paraphrase
+88,Entertainment,"went out to watch a film",paraphrase
+89,Entertainment,"cinema visit",weird_language
+90,Entertainment,"paid for a movie show",paraphrase
+91,Transfer / Personal,"sent some money to my brother",paraphrase
+92,Transfer / Personal,"paid my friend back",paraphrase
+93,Transfer / Personal,"returned the cash I borrowed",paraphrase
+94,Transfer / Personal,"monthly allowance for my parents",paraphrase
+95,Transfer / Personal,"reimbursed my cousin for the shared bill",paraphrase
+96,Transfer / Personal,"loaned some money to a friend",paraphrase
+97,Transfer / Personal,"sent money to mom",weird_language
+98,Transfer / Personal,"money I owed my brother",paraphrase
+99,Transfer / Personal,"paid back the loan",weird_language
+100,Transfer / Personal,"personal transfer to dad",paraphrase
+101,Unknown,"just a payment",ambiguous
+102,Unknown,"something for home",ambiguous
+103,Unknown,"personal",ambiguous
+104,Unknown,"misc stuff",ambiguous
+105,Unknown,"cash",ambiguous
+106,Unknown,"payment made",ambiguous
+107,Unknown,"not sure what this was for",ambiguous
+108,Unknown,"urgent",ambiguous
+109,Unknown,"for later",ambiguous
+110,Unknown,"something",ambiguous
+111,Unknown,"home",ambiguous
+112,Unknown,"transfer",ambiguous
+113,Education,"amazon order for my textbooks",cross_context
+114,Groceries,"amazon pay for my weekly groceries",cross_context
+115,Shopping,"amazon order for a phone charger",cross_context
+116,Education,"book shop - bought textbooks",cross_context
+117,Shopping,"book shop - bought a phone accessory",cross_context
+118,Transfer / Personal,"sent money to myself for my own account",cross_context
+119,Transfer / Personal,"paid myself back from another account",cross_context
+120,Unknown,"amazon payment",ambiguous
