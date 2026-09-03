@@ -90,8 +90,8 @@ def _build_model() -> Any:
 def learned_semantic_evidence(
     note: str | None,
     *,
-    min_confidence: float = 0.72,
-    min_margin: float = 0.18,
+    min_confidence: float = 0.40,
+    min_margin: float = 0.20,
 ) -> dict[str, Any]:
     text = str(note or "").strip()
 
@@ -144,11 +144,10 @@ def learned_semantic_evidence(
             "reason": "Learned model identifies the note as unknown/vague; abstaining.",
         }
 
-    # Preserve the conservative default gate, but allow a strong separation
-    # signal to count as learned evidence even when TF-IDF probabilities are
-    # diluted across many classes. This is deliberately stricter on margin
-    # than on probability: the model must clearly prefer one class over the
-    # runner-up before this rescue path is allowed.
+    # A clear separation signal is useful because TF-IDF probabilities are
+    # naturally diluted across many classes. The calibrated default gate uses
+    # both probability and margin: enough evidence must exist, and the model
+    # must meaningfully prefer the winner over its runner-up.
     high_margin_confidence = 0.45
     high_margin_threshold = 0.35
     if (
