@@ -17,11 +17,80 @@ if str(ROOT) not in sys.path:
 from src.intelligence.semantic_ml import learned_semantic_evidence
 
 BENCHMARK = ROOT / "data" / "v3_semantic_benchmark.csv"
+THRESHOLDS = (0.70, 0.60, 0.55, 0.50, 0.45, 0.40, 0.35)
 
 
 def _load_cases() -> list[dict[str, str]]:
     with BENCHMARK.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def _hypothetical_prediction(
+    result: dict[str, object],
+    confidence_threshold: float,
+) -> str:
+    """Apply only a hypothetical probability threshold to raw top-1 output.
+
+    The runtime gate is deliberately untouched. This lets the evaluator answer
+    whether current misses are primarily caused by conservative acceptance.
+    """
+    candidates = result.get("candidates", [])
+    if not candidates:
+        return "Unknown"
+
+    top_category, top_probability = candidates[0]
+    if top_category == "Unknown" or float(top_probability) < confidence_threshold:
+        return "Unknown"
+    return str(top_category)
+
+
+def _evaluate_threshold(
+    cases: list[dict[str, str]],
+    results: list[dict[str, object]],
+    threshold: float,
+) -> dict[str, float | int]:
+    total = len(cases)
+    correct = 0
+    known_total = 0
+    known_correct = 0
+    known_accepted = 0
+    unknown_total = 0
+    unknown_correct = 0
+    false_positives = 0
+
+    for case, result in zip(cases, results):
+        expected = case["expected_category"]
+        predicted = _hypothetical_prediction(result, threshold)
+        is_correct = predicted == expected
+        correct += int(is_correct)
+
+        if expected == "Unknown":
+            unknown_total += 1
+            unknown_correct += int(is_correct)
+            false_positives += int(predicted != "Unknown")
+        else:
+            known_total += 1
+            known_correct += int(is_correct)
+            known_accepted += int(predicted != "Unknown")
+
+    return {
+        "threshold": threshold,
+        "accuracy": correct / total if total else 0.0,
+        "known_coverage": known_accepted / known_total if known_total else 0.0,
+        "known_accuracy": known_correct / known_total if known_total else 0.0,
+        "accepted_accuracy": (
+            known_correct / known_accepted if known_accepted else 0.0
+        ),
+        "unknown_recall": unknown_correct / unknown_total if unknown_total else 0.0,
+        "false_positives": false_positives,
+        "recoverable_failures": sum(
+            1
+            for case, result in zip(cases, results)
+            if case["expected_category"] != "Unknown"
+            and case["expected_category"]
+            == _hypothetical_prediction(result, threshold)
+        ),
+    }
 
 
 def main() -> None:
@@ -35,10 +104,12 @@ def main() -> None:
     by_case_type: dict[str, list[int]] = {}
     errors: list[dict[str, object]] = []
     coverage_resolved = 0
+    results: list[dict[str, object]] = []
 
     for case in cases:
         expected = case["expected_category"]
         result = learned_semantic_evidence(case["note"])
+        results.append(result)
         predicted = result["category"] or "Unknown"
         confidence = float(result["confidence"])
         margin = float(result["margin"])
@@ -108,6 +179,25 @@ def main() -> None:
             )
     else:
         print("Failures: 0")
+
+    print()
+    print("Offline threshold sweep (raw top-1 probability only):")
+    print(
+        "  threshold | accuracy | known coverage | known accuracy | "
+        "accepted accuracy | unknown recall | false positives | recoverable"
+    )
+    for threshold in THRESHOLDS:
+        metrics = _evaluate_threshold(cases, results, threshold)
+        print(
+            f"  {threshold:9.2f} | "
+            f"{metrics['accuracy']:8.1%} | "
+            f"{metrics['known_coverage']:14.1%} | "
+            f"{metrics['known_accuracy']:14.1%} | "
+            f"{metrics['accepted_accuracy']:17.1%} | "
+            f"{metrics['unknown_recall']:14.1%} | "
+            f"{metrics['false_positives']:15d} | "
+            f"{metrics['recoverable_failures']:10d}"
+        )
 
 
 if __name__ == "__main__":
