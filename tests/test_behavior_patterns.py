@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from types import SimpleNamespace
 
 from src.analytics.behavior_patterns import detect_behavior_patterns
@@ -24,7 +25,7 @@ def test_detects_frequency_driven_increase_when_average_stays_stable():
     current = [tx(500, "Cafe", "Food & Dining")] * 3
     result = patterns(current, previous)
     frequency = next(item for item in result if item["pattern_type"] == "frequency_driven_increase")
-    assert frequency["confidence"] >= 0.80
+    assert frequency["confidence"] >= Decimal("0.80")
     assert "Transaction count increased by 2." in frequency["evidence"]
 
 
