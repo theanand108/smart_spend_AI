@@ -96,8 +96,8 @@ def test_corrected_category_becomes_future_entity_history_evidence():
     result = categorize_transaction("COLLEGE BOOK SHOP", 1050, "payment", "UPI", history)
 
     assert result["category"] == "Transfer / Personal"
-    assert result["status"] == "needs_confirmation"
-    assert result["needs_user_confirmation"] is True
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
     assert result["entity_memory"]["memory_label"] == "STABLE"
     assert result["entity_memory"]["dominant_category"] == "Transfer / Personal"
 
