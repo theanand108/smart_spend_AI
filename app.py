@@ -195,16 +195,94 @@ def format_signed_percentage(percent):
     return f"{sign}{percent:.0f}%"
 
 
-RECOMMENDATION_COPY = {
-    "review_driver": "Review what drove the change.",
-    "review_category": "Review this category for avoidable spend.",
-    "review_merchant": "Review this merchant's recent transactions.",
-    "maintain_pattern": "Keep this pattern going.",
-    "reduce_frequency": "Try reducing repeat transactions.",
-    "review_large_purchases": "Check whether larger purchases were planned.",
-    "review_new_category": "Review whether this new area was expected.",
-    "review_overall_spending": "Review spending across categories.",
-}
+def format_natural_change(amount, percent=None):
+    amount_text = format_currency(abs(float(amount or 0)))
+    percent_text = format_signed_percentage(percent).lstrip("+-")
+    return f"{amount_text} ({percent_text})" if percent_text else amount_text
+
+
+def format_financial_insight_supporting_text(insight):
+    insight_type = insight.get("insight_type")
+    driver = insight.get("driver")
+    category = insight.get("category")
+    merchant = insight.get("merchant")
+    amount = insight.get("change_amount")
+    percent = insight.get("change_percent")
+    amount_text = format_natural_change(amount, percent)
+
+    if insight_type == "spending_increase":
+        if driver == "category_and_merchant" and category and merchant:
+            return (
+                f"{merchant} contributed most of the increase in {category}, "
+                f"which rose by {amount_text}. Review whether the extra spend was planned."
+            )
+        if category:
+            return (
+                f"{category} spending rose by {amount_text}, making it the "
+                "biggest contributor to the increase."
+            )
+        if merchant:
+            return (
+                f"{merchant} spending rose by {amount_text}, making it the "
+                "biggest contributor to the increase."
+            )
+        return (
+            f"Total spending rose by {amount_text} from last month. Review "
+            "where the extra spend came from."
+        )
+
+    if insight_type == "spending_decrease":
+        if driver == "category_and_merchant" and category and merchant:
+            return (
+                f"{merchant} contributed most to the reduction in {category}, "
+                f"which fell by {amount_text}. Keep the lower-spend pattern going."
+            )
+        if category:
+            return (
+                f"{category} spending fell by {amount_text} from last month, "
+                "making it the biggest contributor to the overall reduction."
+            )
+        if merchant:
+            return (
+                f"{merchant} spending fell by {amount_text} from last month, "
+                "making it the biggest contributor to the overall reduction."
+            )
+        return (
+            f"Total spending fell by {amount_text} from last month. Keep the "
+            "lower-spend pattern going."
+        )
+
+    if insight_type == "new_spending_area" and category:
+        merchant_text = f" through {merchant}" if merchant else ""
+        return (
+            f"{category} is a new spending area this month{merchant_text}, adding "
+            f"{format_currency(amount)} to your spending. Check whether it was expected."
+        )
+
+    if insight_type == "frequency_increase":
+        focus = f" for {merchant}" if merchant else f" in {category}" if category else ""
+        return (
+            f"Transaction frequency increased{focus}, contributing "
+            f"{amount_text} to the monthly change."
+        )
+
+    if insight_type in {"basket_size_increase", "average_transaction_increase"}:
+        focus = f" in {category}" if category else f" at {merchant}" if merchant else ""
+        return (
+            f"Your typical transaction got larger{focus} by {amount_text}. Check "
+            "whether the bigger purchases were planned."
+        )
+
+    if insight_type == "distributed_increase":
+        return (
+            f"Spending increased by {amount_text} across several areas, with "
+            "no single category explaining most of the change."
+        )
+
+    return (
+        f"Spending changed by {amount_text}. Review the categories and merchants "
+        "behind the shift."
+    )
 
 
 def format_financial_insight_card(insight):
@@ -212,44 +290,53 @@ def format_financial_insight_card(insight):
     if not title:
         return None
 
-    context_parts = []
-    category = insight.get("category")
-    merchant = insight.get("merchant")
-    if category:
-        context_parts.append(category)
-    if merchant:
-        context_parts.append(merchant)
-
-    percent = format_signed_percentage(insight.get("change_percent"))
-    if percent:
-        context_parts.append(f"{percent} vs last month")
-
-    recommendation = RECOMMENDATION_COPY.get(insight.get("recommendation"))
-    if recommendation:
-        context_parts.append(recommendation)
-
     return {
         "title": title,
         "value": format_signed_currency(insight.get("change_amount")),
-        "supporting_text": " · ".join(context_parts),
+        "supporting_text": format_financial_insight_supporting_text(insight),
     }
+
+
+def append_distinct_insight(cards, insight, limit):
+    if not insight or len(cards) >= limit:
+        return
+
+    signature = (
+        insight.get("title"),
+        insight.get("value"),
+        insight.get("supporting_text"),
+    )
+    existing = {
+        (
+            card.get("title"),
+            card.get("value"),
+            card.get("supporting_text"),
+        )
+        for card in cards
+    }
+    if signature not in existing:
+        cards.append(insight)
 
 
 def build_structured_financial_insight_cards(
     current_transactions,
     previous_transactions,
+    fallback_insights=None,
     limit=3,
 ):
     facts = build_financial_facts(current_transactions, previous_transactions)
     structured_insights = generate_financial_insights(facts, limit=limit)
-    insight_cards = [
-        card
-        for card in (
-            format_financial_insight_card(insight)
-            for insight in structured_insights
+    insight_cards = []
+    for insight in structured_insights:
+        append_distinct_insight(
+            insight_cards,
+            format_financial_insight_card(insight),
+            limit,
         )
-        if card
-    ]
+
+    for insight in fallback_insights or []:
+        append_distinct_insight(insight_cards, insight, limit)
+
     return insight_cards
 
 
@@ -980,15 +1067,49 @@ def dashboard1(month=None):
         "calendar_avg_daily_spend": (float(filtered_total_expense or 0) / days_in_month),
     }
     key_insights = build_key_insights(insight_context)
+    month_largest_transaction = max(
+        month_transactions,
+        key=lambda transaction: float(transaction.amount or 0),
+        default=None,
+    )
+    month_merchant_amounts: dict[str, float] = {}
+    for t in month_transactions:
+        name = t.merchant_name or "N/A"
+        month_merchant_amounts[name] = month_merchant_amounts.get(name, 0.0) + float(
+            t.amount or 0
+        )
+    month_insight_context = {
+        "transactions": month_transactions,
+        "total_expense": float(total_expense or 0),
+        "total_transactions": total_transactions,
+        "top_category": top_category,
+        "top_category_amount": float(top_category_amount or 0),
+        "merchant_counts": month_merchant_counts,
+        "merchant_amounts": month_merchant_amounts,
+        "largest_transaction": month_largest_transaction,
+        "weekend_spending_ratio": month_weekend_spending_ratio,
+        "small_tx_count": sum(
+            1 for t in month_transactions if float(t.amount or 0) < 100
+        ),
+        "small_tx_ratio": (
+            sum(1 for t in month_transactions if float(t.amount or 0) < 100)
+            / total_transactions
+            if total_transactions
+            else 0
+        ),
+        "calendar_avg_daily_spend": (float(total_expense or 0) / days_in_month),
+    }
+    financial_insight_fallbacks = build_key_insights(month_insight_context)
     try:
         financial_insights = build_structured_financial_insight_cards(
             month_transactions,
             previous_month_transactions,
+            fallback_insights=financial_insight_fallbacks,
         )
     except Exception:
         financial_insights = []
     if not financial_insights:
-        financial_insights = key_insights
+        financial_insights = financial_insight_fallbacks
 
     month_comparison_summary = build_month_comparison_summary(
         current_total_expense=float(filtered_total_expense or 0),

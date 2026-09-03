@@ -155,13 +155,14 @@ block body %}
 
 <!-- Financial Insights -->
 {% if financial_insights %}
+{% set financial_insight_cards = financial_insights[:3] %}
 <div class="container dashboard-highlights-container dashboard-section-block">
   <div class="mb-3">
     <h5 class="dashboard-section-title">Financial Insights</h5>
   </div>
 
   <div class="insight-briefing">
-    {% for insight in financial_insights %}
+    {% for insight in financial_insight_cards %}
       {% if loop.first %}
       <div class="insight-card insight-card-primary">
         <p class="insight-eyebrow">{{ insight.title }}</p>
@@ -171,9 +172,9 @@ block body %}
       {% endif %}
     {% endfor %}
 
-    {% if financial_insights|length > 1 %}
+    {% if financial_insight_cards|length > 1 %}
     <div class="insight-secondary-row">
-      {% for insight in financial_insights %}
+      {% for insight in financial_insight_cards %}
         {% if not loop.first %}
         <div class="insight-card insight-card-secondary">
           <p class="insight-eyebrow">{{ insight.title }}</p>
