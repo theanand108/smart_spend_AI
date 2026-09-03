@@ -92,8 +92,8 @@ def _build_model() -> Any:
 def learned_semantic_evidence(
     note: str | None,
     *,
-    min_confidence: float = 0.40,
-    min_margin: float = 0.20,
+    min_confidence: float = 0.35,
+    min_margin: float = 0.10,
 ) -> dict[str, Any]:
     text = str(note or "").strip()
 
