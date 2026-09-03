@@ -52,7 +52,7 @@ def test_detects_merchant_driven_increase_when_one_merchant_dominates():
     result = patterns(current, previous)
     merchant = next(item for item in result if item["pattern_type"] == "merchant_driven_increase")
     assert merchant["merchant"] == "Cafe"
-    assert merchant["confidence"] > 0.90
+    assert merchant["confidence"] > Decimal("0.90")
 
 
 def test_detects_distributed_increase_without_naming_a_single_category():
