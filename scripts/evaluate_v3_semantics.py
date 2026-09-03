@@ -18,6 +18,7 @@ from src.intelligence.semantic_ml import learned_semantic_evidence
 
 BENCHMARK = ROOT / "data" / "v3_semantic_benchmark.csv"
 THRESHOLDS = (0.70, 0.60, 0.55, 0.50, 0.45, 0.40, 0.35)
+MARGIN_THRESHOLDS = (0.35, 0.25, 0.20, 0.18, 0.15, 0.10, 0.05, 0.00)
 
 
 def _load_cases() -> list[dict[str, str]]:
@@ -28,18 +29,24 @@ def _load_cases() -> list[dict[str, str]]:
 def _hypothetical_prediction(
     result: dict[str, object],
     confidence_threshold: float,
+    margin_threshold: float = 0.0,
 ) -> str:
-    """Apply only a hypothetical probability threshold to raw top-1 output.
-
-    The runtime gate is deliberately untouched. This lets the evaluator answer
-    whether current misses are primarily caused by conservative acceptance.
-    """
+    """Apply hypothetical confidence + margin gates to raw top-1 output."""
     candidates = result.get("candidates", [])
     if not candidates:
         return "Unknown"
 
     top_category, top_probability = candidates[0]
-    if top_category == "Unknown" or float(top_probability) < confidence_threshold:
+    margin = (
+        float(top_probability) - float(candidates[1][1])
+        if len(candidates) > 1
+        else float(top_probability)
+    )
+    if (
+        top_category == "Unknown"
+        or float(top_probability) < confidence_threshold
+        or margin < margin_threshold
+    ):
         return "Unknown"
     return str(top_category)
 
@@ -91,6 +98,63 @@ def _evaluate_threshold(
             == _hypothetical_prediction(result, threshold)
         ),
     }
+
+
+def _evaluate_matrix(
+    cases: list[dict[str, str]],
+    results: list[dict[str, object]],
+) -> list[dict[str, float | int]]:
+    rows: list[dict[str, float | int]] = []
+    for confidence_threshold in THRESHOLDS:
+        for margin_threshold in MARGIN_THRESHOLDS:
+            total = len(cases)
+            correct = 0
+            known_total = 0
+            known_correct = 0
+            known_accepted = 0
+            unknown_total = 0
+            unknown_correct = 0
+            false_positives = 0
+
+            for case, result in zip(cases, results):
+                expected = case["expected_category"]
+                predicted = _hypothetical_prediction(
+                    result, confidence_threshold, margin_threshold
+                )
+                is_correct = predicted == expected
+                correct += int(is_correct)
+
+                if expected == "Unknown":
+                    unknown_total += 1
+                    unknown_correct += int(is_correct)
+                    false_positives += int(predicted != "Unknown")
+                else:
+                    known_total += 1
+                    known_correct += int(is_correct)
+                    known_accepted += int(predicted != "Unknown")
+
+            rows.append(
+                {
+                    "confidence": confidence_threshold,
+                    "margin": margin_threshold,
+                    "accuracy": correct / total if total else 0.0,
+                    "known_coverage": known_accepted / known_total
+                    if known_total
+                    else 0.0,
+                    "known_accuracy": known_correct / known_total
+                    if known_total
+                    else 0.0,
+                    "accepted_accuracy": known_correct / known_accepted
+                    if known_accepted
+                    else 0.0,
+                    "unknown_recall": unknown_correct / unknown_total
+                    if unknown_total
+                    else 0.0,
+                    "false_positives": false_positives,
+                    "recoverable_failures": known_correct,
+                }
+            )
+    return rows
 
 
 def main() -> None:
@@ -197,6 +261,37 @@ def main() -> None:
             f"{metrics['unknown_recall']:14.1%} | "
             f"{metrics['false_positives']:15d} | "
             f"{metrics['recoverable_failures']:10d}"
+        )
+
+    matrix = _evaluate_matrix(cases, results)
+    print()
+    print("Confidence × margin sweep (raw top-1 probability + margin):")
+    print(
+        "  confidence | margin | accuracy | known coverage | "
+        "known accuracy | accepted accuracy | unknown recall | false positives"
+    )
+    for row in matrix:
+        print(
+            f"  {row['confidence']:10.2f} | "
+            f"{row['margin']:6.2f} | "
+            f"{row['accuracy']:8.1%} | "
+            f"{row['known_coverage']:14.1%} | "
+            f"{row['known_accuracy']:14.1%} | "
+            f"{row['accepted_accuracy']:17.1%} | "
+            f"{row['unknown_recall']:14.1%} | "
+            f"{row['false_positives']:15d}"
+        )
+
+    safe_rows = [row for row in matrix if row["false_positives"] == 0]
+    if safe_rows:
+        best = max(safe_rows, key=lambda row: (row["accuracy"], row["accepted_accuracy"]))
+        print()
+        print(
+            "Best zero-false-positive configuration: "
+            f"confidence={best['confidence']:.2f}, margin={best['margin']:.2f}, "
+            f"accuracy={best['accuracy']:.1%}, "
+            f"known coverage={best['known_coverage']:.1%}, "
+            f"accepted accuracy={best['accepted_accuracy']:.1%}"
         )
 
 
