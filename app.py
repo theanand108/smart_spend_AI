@@ -6,7 +6,9 @@ from flask import Flask, request, render_template, redirect, flash, get_flashed_
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
 from datetime import datetime
+from src.analytics.financial_facts import build_financial_facts
 from src.analytics.financial_pulse import generate_financial_pulse
+from src.analytics.insight_engine import generate_financial_insights
 from src.statement_import_web import register_statement_import
 
 app = Flask(__name__)
@@ -173,6 +175,82 @@ def make_insight(title, value, supporting_text, priority_score, insight_type):
         "priority_score": priority_score,
         "type": insight_type,
     }
+
+
+def format_signed_currency(amount):
+    amount = float(amount or 0)
+    if amount > 0:
+        return f"+{format_currency(amount)}"
+    if amount < 0:
+        return f"-{format_currency(abs(amount))}"
+    return format_currency(0)
+
+
+def format_signed_percentage(percent):
+    if percent is None:
+        return ""
+
+    percent = float(percent)
+    sign = "+" if percent > 0 else ""
+    return f"{sign}{percent:.0f}%"
+
+
+RECOMMENDATION_COPY = {
+    "review_driver": "Review what drove the change.",
+    "review_category": "Review this category for avoidable spend.",
+    "review_merchant": "Review this merchant's recent transactions.",
+    "maintain_pattern": "Keep this pattern going.",
+    "reduce_frequency": "Try reducing repeat transactions.",
+    "review_large_purchases": "Check whether larger purchases were planned.",
+    "review_new_category": "Review whether this new area was expected.",
+    "review_overall_spending": "Review spending across categories.",
+}
+
+
+def format_financial_insight_card(insight):
+    title = insight.get("title")
+    if not title:
+        return None
+
+    context_parts = []
+    category = insight.get("category")
+    merchant = insight.get("merchant")
+    if category:
+        context_parts.append(category)
+    if merchant:
+        context_parts.append(merchant)
+
+    percent = format_signed_percentage(insight.get("change_percent"))
+    if percent:
+        context_parts.append(f"{percent} vs last month")
+
+    recommendation = RECOMMENDATION_COPY.get(insight.get("recommendation"))
+    if recommendation:
+        context_parts.append(recommendation)
+
+    return {
+        "title": title,
+        "value": format_signed_currency(insight.get("change_amount")),
+        "supporting_text": " · ".join(context_parts),
+    }
+
+
+def build_structured_financial_insight_cards(
+    current_transactions,
+    previous_transactions,
+    limit=3,
+):
+    facts = build_financial_facts(current_transactions, previous_transactions)
+    structured_insights = generate_financial_insights(facts, limit=limit)
+    insight_cards = [
+        card
+        for card in (
+            format_financial_insight_card(insight)
+            for insight in structured_insights
+        )
+        if card
+    ]
+    return insight_cards
 
 
 def biggest_money_destination_insight(context):
@@ -829,6 +907,9 @@ def dashboard1(month=None):
     month_merchant_counts: dict[str, int] = {}
     month_weekend_spend = 0.0
     month_transactions = month_transaction_query.order_by(Transaction.date.desc()).all()
+    previous_month_transactions = (
+        previous_month_transaction_query.order_by(Transaction.date.desc()).all()
+    )
     for t in month_transactions:
         name = t.merchant_name or "N/A"
         amt = float(t.amount or 0)
@@ -899,6 +980,16 @@ def dashboard1(month=None):
         "calendar_avg_daily_spend": (float(filtered_total_expense or 0) / days_in_month),
     }
     key_insights = build_key_insights(insight_context)
+    try:
+        financial_insights = build_structured_financial_insight_cards(
+            month_transactions,
+            previous_month_transactions,
+        )
+    except Exception:
+        financial_insights = []
+    if not financial_insights:
+        financial_insights = key_insights
+
     month_comparison_summary = build_month_comparison_summary(
         current_total_expense=float(filtered_total_expense or 0),
         current_total_transactions=filtered_total_transactions,
@@ -973,6 +1064,7 @@ def dashboard1(month=None):
         financial_pulse_summary=financial_pulse_summary,
         prev_month_Transaction_amount = prev_month_Transaction_amount,
         key_insights=key_insights,
+        financial_insights=financial_insights,
         month_comparison_summary=month_comparison_summary,
         weekly_labels=weekly_labels,
         weekly_values=weekly_values,
