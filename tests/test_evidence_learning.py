@@ -12,7 +12,8 @@ def test_entity_history_is_real_evidence_for_future_transaction():
     result = categorize_transaction("RAHUL KUMAR", 425, "payment", "UPI", history)
 
     assert result["category"] == "Food & Dining"
-    assert result["status"] == "categorized"
+    assert result["status"] == "needs_confirmation"
+    assert result["needs_user_confirmation"] is True
     assert result["entity_memory"]["memory_label"] == "STABLE"
 
 
