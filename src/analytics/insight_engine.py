@@ -1,7 +1,8 @@
 """Evidence-backed financial insight generation.
 
-This module sits above ``financial_facts``. It reasons over deterministic facts
-without recalculating financial metrics, touching the database, or generating
+This module sits above ``financial_facts`` and ``behavior_patterns``. It
+reasons over deterministic facts and explainable behavioral evidence without
+recalculating financial metrics, touching the database, or generating
 presentation copy. The output is structured so the dashboard (or a future AI
 language layer) can decide how to present it.
 """
@@ -10,6 +11,7 @@ from dataclasses import asdict, dataclass
 from decimal import Decimal
 from typing import Iterable
 
+from src.analytics.behavior_patterns import detect_behavior_patterns
 from src.analytics.financial_facts import FinancialFacts
 
 
@@ -172,31 +174,36 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
     )
 
 
+def _behavior_pattern(facts: FinancialFacts, pattern_type: str):
+    return next(
+        (pattern for pattern in detect_behavior_patterns(facts) if pattern["pattern_type"] == pattern_type),
+        None,
+    )
+
+
 def _build_frequency_insight(facts: FinancialFacts) -> FinancialInsight | None:
-    if facts.spending_change <= 0 or facts.transaction_count_change < MIN_FREQUENCY_CHANGE:
-        return None
-    if facts.previous_transaction_count == 0:
+    pattern = _behavior_pattern(facts, "frequency_driven_increase")
+    if pattern is None:
         return None
 
     return FinancialInsight(
         insight_type="frequency_increase",
         severity="observation",
         title="More transactions drove spending",
-        category=None,
-        merchant=None,
+        category=pattern["category"],
+        merchant=pattern["merchant"],
         change_amount=facts.spending_change,
         change_percent=facts.spending_change_percent,
         driver="frequency_increase",
         recommendation="reduce_frequency",
-        evidence=(
-            f"Transaction count increased by {facts.transaction_count_change}.",
-            f"Average transaction changed by {facts.average_transaction_change}.",
-        ),
+        evidence=tuple(pattern["evidence"]),
         priority=65,
     )
 
 
 def _build_average_transaction_insight(facts: FinancialFacts) -> FinancialInsight | None:
+    if _behavior_pattern(facts, "basket_size_driven_increase") is not None:
+        return None
     if facts.spending_change <= 0:
         return None
     if not _meaningful_change(
@@ -224,6 +231,70 @@ def _build_average_transaction_insight(facts: FinancialFacts) -> FinancialInsigh
     )
 
 
+def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
+    insights: list[FinancialInsight] = []
+
+    basket = _behavior_pattern(facts, "basket_size_driven_increase")
+    if basket is not None:
+        insights.append(
+            FinancialInsight(
+                insight_type="basket_size_increase",
+                severity="observation",
+                title="Larger purchases drove spending",
+                category=basket["category"],
+                merchant=basket["merchant"],
+                change_amount=facts.average_transaction_change,
+                change_percent=facts.average_transaction_change_percent,
+                driver="basket_size_increase",
+                recommendation="review_large_purchases",
+                evidence=tuple(basket["evidence"]),
+                priority=64,
+            )
+        )
+
+    new_area = _behavior_pattern(facts, "new_spending_area")
+    if new_area is not None:
+        insights.append(
+            FinancialInsight(
+                insight_type="new_spending_area",
+                severity="observation",
+                title="A new spending area appeared",
+                category=new_area["category"],
+                merchant=new_area["merchant"],
+                change_amount=next(
+                    item.current_amount
+                    for item in facts.category_changes
+                    if item.category == new_area["category"]
+                ),
+                change_percent=None,
+                driver="new_spending_area",
+                recommendation="review_new_category",
+                evidence=tuple(new_area["evidence"]),
+                priority=63,
+            )
+        )
+
+    distributed = _behavior_pattern(facts, "distributed_increase")
+    if distributed is not None:
+        insights.append(
+            FinancialInsight(
+                insight_type="distributed_increase",
+                severity="observation",
+                title="Spending increased across several areas",
+                category=None,
+                merchant=None,
+                change_amount=facts.spending_change,
+                change_percent=facts.spending_change_percent,
+                driver="distributed_increase",
+                recommendation="review_overall_spending",
+                evidence=tuple(distributed["evidence"]),
+                priority=62,
+            )
+        )
+
+    return insights
+
+
 def generate_financial_insights(facts: FinancialFacts, limit: int = 3) -> list[dict[str, object]]:
     """Generate a small set of ranked insights from deterministic facts."""
 
@@ -231,6 +302,7 @@ def generate_financial_insights(facts: FinancialFacts, limit: int = 3) -> list[d
         _build_change_insight(facts),
         _build_frequency_insight(facts),
         _build_average_transaction_insight(facts),
+        *_build_behavior_insights(facts),
     ]
     insights = [item for item in candidates if item is not None]
     insights.sort(key=lambda item: item.priority, reverse=True)
