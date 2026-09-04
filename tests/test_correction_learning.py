@@ -47,6 +47,7 @@ class FakeDB:
 class FakeTransaction:
     id = 7
     merchant_name = "College Book Shop"
+    category = "Unknown"
 
 
 def test_user_correction_path_commits_and_propagates_to_matching_unknowns(monkeypatch):
@@ -90,13 +91,13 @@ def test_user_correction_path_commits_and_propagates_to_matching_unknowns(monkey
 def test_corrected_category_becomes_future_entity_history_evidence():
     """A concrete user correction should help future transactions for that entity."""
     history = [
-        {"merchant_name": "COLLEGE BOOK SHOP", "category": "Transfer / Personal", "amount": 900, "note": "payment"},
-        {"merchant_name": "COLLEGE BOOK SHOP", "category": "Transfer / Personal", "amount": 1100, "note": "payment"},
-        {"merchant_name": "COLLEGE BOOK SHOP", "category": "Transfer / Personal", "amount": 950, "note": "payment"},
-        {"merchant_name": "COLLEGE BOOK SHOP", "category": "Transfer / Personal", "amount": 1000, "note": "payment"},
+        {"merchant_name": "ANAND BANK", "category": "Transfer / Personal", "amount": 900, "note": "payment"},
+        {"merchant_name": "ANAND BANK", "category": "Transfer / Personal", "amount": 1100, "note": "payment"},
+        {"merchant_name": "ANAND BANK", "category": "Transfer / Personal", "amount": 950, "note": "payment"},
+        {"merchant_name": "ANAND BANK", "category": "Transfer / Personal", "amount": 1000, "note": "payment"},
     ]
 
-    result = categorize_transaction("COLLEGE BOOK SHOP", 1050, "payment", "UPI", history)
+    result = categorize_transaction("ANAND BANK", 1050, "payment", "UPI", history)
 
     assert result["category"] == "Transfer / Personal"
     assert result["status"] == "categorized"
