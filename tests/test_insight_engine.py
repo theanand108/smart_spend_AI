@@ -55,6 +55,25 @@ def test_category_spike_is_prioritized_as_a_discovery():
     assert insights[0]["recommendation"] == "review_category_spike"
 
 
+def test_category_spike_suppresses_redundant_new_area_and_change_insights():
+    previous = [
+        tx(1000, "Amazon", "Shopping"),
+    ]
+    current = [
+        tx(1000, "Amazon", "Shopping"),
+        tx(948, "Show", "Entertainment"),
+    ]
+
+    facts = build_financial_facts(current, previous)
+    insights = generate_financial_insights(facts)
+    types = [item["insight_type"] for item in insights]
+
+    assert types[0] == "category_spike"
+    assert "new_spending_area" not in types
+    assert "spending_increase" not in types
+    assert len(insights) == len(set((item["insight_type"], item["category"], item["merchant"]) for item in insights))
+
+
 def test_frequency_change_is_detected_even_when_total_spending_decreases():
     previous = [
         tx(800, "Cafe", "Food & Dining"),
