@@ -171,7 +171,7 @@ def dashboard_attention():
 
 @statement_import_bp.route("/dashboard/attention/<int:transaction_id>", methods=["POST"])
 def resolve_dashboard_attention(transaction_id: int):
-    """Persist one explicit user category correction and return to the dashboard."""
+    """Persist one explicit user category correction and propagate it to matching unresolved transactions."""
     db = current_app.extensions["statement_import_db"]
     Transaction = current_app.extensions["statement_import_transaction_model"]
     category = request.form.get("category", "").strip()
@@ -204,8 +204,30 @@ def resolve_dashboard_attention(transaction_id: int):
             flash("That transaction could not be updated.", "danger")
             return redirect(next_url)
 
+        # A direct correction is an explicit user decision, not merely another
+        # model-generated history row. Propagate it immediately to unresolved
+        # transactions for the same merchant so one correction teaches the
+        # current statement instead of forcing the user to repeat themselves.
+        propagation = db.session.execute(
+            update(Transaction)
+            .where(
+                Transaction.id != transaction_id,
+                Transaction.merchant_name == transaction.merchant_name,
+                Transaction.category == "Unknown",
+            )
+            .values(category=category)
+        )
+
         db.session.commit()
-        flash(f"{transaction.merchant_name} was categorized as {category}.", "success")
+        propagated_count = int(propagation.rowcount or 0)
+        if propagated_count:
+            flash(
+                f"{transaction.merchant_name} was categorized as {category}. "
+                f"Applied the correction to {propagated_count} other unresolved matching transactions.",
+                "success",
+            )
+        else:
+            flash(f"{transaction.merchant_name} was categorized as {category}.", "success")
     except Exception:
         db.session.rollback()
         flash("Unable to save that category correction.", "danger")
