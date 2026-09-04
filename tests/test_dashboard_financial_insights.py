@@ -68,12 +68,11 @@ def test_dashboard_renders_structured_financial_insights(dashboard_app):
     html = response.data.decode("utf-8")
     assert response.status_code == 200
     assert "Financial Insights" in html
-    assert "Spending increased" in html
-    assert "+₹1,000" in html
+    assert "A spending area jumped" in html
     assert "Food &amp; Dining" in html
-    assert "Food App" in html
-    assert "contributed most of the increase" in html
-    assert "₹1,000 (67%)" in html
+    assert "+₹1,000" in html
+    assert "Food &amp; Dining increased by ₹1,000" in html
+    assert "Education" in html
 
 
 def test_dashboard_preserves_v1_three_card_composition(dashboard_app):
@@ -98,7 +97,8 @@ def test_search_filter_does_not_change_financial_insights(dashboard_app):
     html = response.data.decode("utf-8")
     assert response.status_code == 200
     assert "Bookstore" in html
-    assert "Food App" in html
+    assert "A spending area jumped" in html
+    assert "Food &amp; Dining" in html
     assert "+₹1,000" in html
 
 
