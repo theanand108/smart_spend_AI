@@ -28,15 +28,51 @@ def test_generates_change_driver_and_actionable_recommendation():
     facts = build_financial_facts(current, previous)
     insights = generate_financial_insights(facts)
 
-    assert insights
-    insight = insights[0]
-    assert insight["insight_type"] == "spending_increase"
-    assert insight["severity"] == "attention"
-    assert insight["category"] == "Food & Dining"
-    assert insight["merchant"] == "Food App"
-    assert insight["driver"] == "category_and_merchant"
-    assert insight["recommendation"] == "review_category"
-    assert len(insight["evidence"]) == 3
+    change = next(item for item in insights if item["insight_type"] == "spending_increase")
+    assert change["severity"] == "attention"
+    assert change["category"] == "Food & Dining"
+    assert change["merchant"] == "Food App"
+    assert change["driver"] == "category_and_merchant"
+    assert change["recommendation"] == "review_category"
+    assert len(change["evidence"]) == 3
+
+
+def test_category_spike_is_prioritized_as_a_discovery():
+    previous = [
+        tx(1000, "Food App", "Food & Dining"),
+        tx(1000, "Amazon", "Shopping"),
+    ]
+    current = [
+        tx(1800, "Food App", "Food & Dining"),
+        tx(1000, "Amazon", "Shopping"),
+    ]
+
+    facts = build_financial_facts(current, previous)
+    insights = generate_financial_insights(facts)
+
+    assert insights[0]["insight_type"] == "category_spike"
+    assert insights[0]["category"] == "Food & Dining"
+    assert insights[0]["recommendation"] == "review_category_spike"
+
+
+def test_frequency_change_is_detected_even_when_total_spending_decreases():
+    previous = [
+        tx(800, "Cafe", "Food & Dining"),
+        tx(700, "Cafe", "Food & Dining"),
+    ]
+    current = [
+        tx(400, "Cafe", "Food & Dining"),
+        tx(400, "Cafe", "Food & Dining"),
+        tx(400, "Cafe", "Food & Dining"),
+        tx(400, "Cafe", "Food & Dining"),
+    ]
+
+    facts = build_financial_facts(current, previous)
+    insights = generate_financial_insights(facts)
+
+    frequency = next(item for item in insights if item["insight_type"] == "frequency_increase")
+    assert frequency["driver"] == "frequency_increase"
+    assert frequency["recommendation"] == "review_purchase_frequency"
 
 
 def test_frequency_pattern_is_distinguished_from_larger_transactions():
@@ -52,7 +88,7 @@ def test_frequency_pattern_is_distinguished_from_larger_transactions():
 
     frequency = next(item for item in insights if item["insight_type"] == "frequency_increase")
     assert frequency["driver"] == "frequency_increase"
-    assert frequency["recommendation"] == "reduce_frequency"
+    assert frequency["recommendation"] == "review_purchase_frequency"
 
 
 def test_spending_decrease_gets_positive_maintenance_recommendation():
@@ -62,9 +98,9 @@ def test_spending_decrease_gets_positive_maintenance_recommendation():
     facts = build_financial_facts(current, previous)
     insights = generate_financial_insights(facts)
 
-    assert insights[0]["insight_type"] == "spending_decrease"
-    assert insights[0]["severity"] == "positive"
-    assert insights[0]["recommendation"] == "maintain_pattern"
+    decrease = next(item for item in insights if item["insight_type"] == "spending_decrease")
+    assert decrease["severity"] == "positive"
+    assert decrease["recommendation"] == "maintain_pattern"
 
 
 def test_small_change_does_not_create_noise():
