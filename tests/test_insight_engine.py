@@ -20,7 +20,7 @@ def test_generates_change_driver_and_actionable_recommendation():
         tx(500, "Amazon", "Shopping"),
     ]
     current = [
-        tx(1200, "Food App", "Food & Dining"),
+        tx(700, "Food App", "Food & Dining"),
         tx(700, "Food App", "Food & Dining"),
         tx(500, "Amazon", "Shopping"),
     ]
