@@ -209,11 +209,12 @@ def resolve_dashboard_attention(transaction_id: int):
         # model-generated history row. Propagate it immediately to unresolved
         # transactions for the same merchant so one correction teaches the
         # current statement instead of forcing the user to repeat themselves.
+        merchant_name = transaction.merchant_name
         propagation = db.session.execute(
             update(Transaction)
             .where(
                 Transaction.id != transaction_id,
-                Transaction.merchant_name == transaction.merchant_name,
+                Transaction.merchant_name == merchant_name,
                 Transaction.category == "Unknown",
             )
             .values(category=category)
