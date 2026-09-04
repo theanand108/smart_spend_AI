@@ -71,7 +71,7 @@ def test_dashboard_renders_structured_financial_insights(dashboard_app):
     assert "A spending area jumped" in html
     assert "Food &amp; Dining" in html
     assert "+₹1,000" in html
-    assert "Food &amp; Dining increased by ₹1,000" in html
+    assert "Spending changed by ₹1,000 (100%)" in html
     assert "Education" in html
 
 
