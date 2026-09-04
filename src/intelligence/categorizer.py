@@ -47,8 +47,6 @@ def _specific_note_override(note: str | None) -> tuple[str, str] | None:
     if re.search(r"\b(?:book|books)\b", text):
         return "Education", "The current transaction note explicitly refers to books, indicating an education purchase."
 
-    # Generic electronics wording is a strong Shopping-purpose signal, but it is
-    # intentionally kept below the cross-source conflict check in the categorizer.
     if re.search(r"\belectronics?\b", text):
         return "Shopping", "The current transaction note explicitly identifies an electronics purchase."
 
@@ -79,6 +77,9 @@ def _specific_merchant_override(merchant_name: str) -> tuple[str, str] | None:
 
     if re.search(r"\b(?:book\s+shop|bookstore|book\s+store)\b", text):
         return "Education", "The merchant descriptor explicitly identifies a book-selling business."
+
+    if re.search(r"\b(?:barber|barbershop|haircut|salon)\b", text):
+        return "Personal Care", "The merchant descriptor explicitly identifies a personal-care service."
 
     return None
 
@@ -116,11 +117,6 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
         evidence["merchant_confidence"] = merchant_confidence
         evidence.setdefault("reasons", {}).setdefault(merchant_category, []).append(merchant_reason)
 
-    # A strong current note is normally authoritative for this transaction.
-    # However, when the current merchant descriptor independently carries strong
-    # purpose information and directly disagrees with the note, the two signals
-    # are genuinely ambiguous and must be surfaced as a conflict instead of
-    # silently choosing either side.
     if (
         note_category
         and note_confidence >= 0.90
