@@ -10,8 +10,8 @@ class FakeUpdate:
         self.where_clause = None
         self.updated_values = None
 
-    def where(self, clause):
-        self.where_clause = clause
+    def where(self, *clauses):
+        self.where_clause = clauses
         return self
 
     def values(self, **values):
