@@ -1,5 +1,4 @@
-{% extends 'base.html' %} {% block title %} Dashboard {% endblock title %} {%
-block body %}
+{% extends 'base.html' %} {% block title %} Dashboard {% endblock title %} {% block body %}
 
 <section class="dashboard-top-section">
   <div class="container dashboard-top-container">
@@ -113,7 +112,7 @@ block body %}
             </a>
             {% endif %}
             <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="dashboard-export-btn">
-              <i class="bi bi-download" aria-hidden="true"></i> Export
+              <i class="bi bi-upload" aria-hidden="true"></i> Export
             </a>
           </div>
         </div>
