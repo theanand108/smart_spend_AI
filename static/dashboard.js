@@ -1,9 +1,7 @@
 // Dashboard chart initialization
 const chartCanvas = document.getElementById('myPieChart');
-const ctx = chartCanvas.getContext('2d');
-
-const labels = JSON.parse(chartCanvas.dataset.labels);
-const values = JSON.parse(chartCanvas.dataset.values);
+const labels = chartCanvas ? JSON.parse(chartCanvas.dataset.labels || "[]") : [];
+const values = chartCanvas ? JSON.parse(chartCanvas.dataset.values || "[]") : [];
 
 // Restrained, categorical palette shared by the pie slices and the legend,
 // so every category gets a consistent color by position rather than a
@@ -18,44 +16,87 @@ function getThemeColor(varName) {
 let pieChartInstance = null;
 let barChartInstance = null;
 
-// ======== Month Logic ======== 
+// ======== Month Logic ========
 const months = Array.from({ length: 12 }, (_, i) => {
   return new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2000, i));
 });
 
-
 const monthDropdown = document.getElementById("monthDropdown");
+const DASHBOARD_MONTH_STORAGE_KEY = "ssai.dashboard.month";
 
-window.addEventListener("DOMContentLoaded", ()=>{
+window.addEventListener("DOMContentLoaded", () => {
   if (!monthDropdown) return;
-  // If server rendered options exist, don't repopulate; just ensure selected value is numeric month
-  if (monthDropdown.options.length === 0) {
-    months.forEach(month =>{
-      const option = document.createElement("option")
-      option.text = month
-      monthDropdown.appendChild(option);
-    })
-    monthDropdown.value = months[curr_month-1];
-  } else {
-    // Server-rendered options use numeric values
-    monthDropdown.value = String(curr_month);
+
+  const currentMonth = parseInt(window.curr_month, 10);
+  let storedMonth = null;
+
+  try {
+    const parsedMonth = parseInt(localStorage.getItem(DASHBOARD_MONTH_STORAGE_KEY), 10);
+    if (parsedMonth >= 1 && parsedMonth <= 12) {
+      storedMonth = parsedMonth;
+    }
+  } catch (e) {}
+
+  // `/dashboard` is the generic entry point used by the navbar. If the user
+  // already selected a month, return them to that month instead of resetting
+  // to the server's default month.
+  if (
+    (window.location.pathname === "/dashboard" || window.location.pathname === "/dashboard/") &&
+    storedMonth &&
+    storedMonth !== currentMonth
+  ) {
+    window.location.replace(`/dashboard/${storedMonth}`);
+    return;
   }
-})
+
+  // Always make all calendar months available. The server may only render
+  // months up to the latest transaction, but a selected/current month can be
+  // later than that and must still be represented in the dropdown.
+  const existingValues = new Set(
+    Array.from(monthDropdown.options).map((option) => String(option.value))
+  );
+
+  months.forEach((month, index) => {
+    const monthNumber = String(index + 1);
+    if (existingValues.has(monthNumber)) return;
+
+    const option = document.createElement("option");
+    option.value = monthNumber;
+    option.text = month;
+    monthDropdown.appendChild(option);
+  });
+
+  if (currentMonth >= 1 && currentMonth <= 12) {
+    monthDropdown.value = String(currentMonth);
+  }
+
+  // Direct visits to `/dashboard/<month>` are also remembered, including
+  // explicit dropdown selections and browser reloads.
+  if (currentMonth >= 1 && currentMonth <= 12) {
+    try {
+      localStorage.setItem(DASHBOARD_MONTH_STORAGE_KEY, String(currentMonth));
+    } catch (e) {}
+  }
+});
+
 function navigateToMonth(selectedMonth) {
   if (!selectedMonth) return;
 
-  // If the selected value is numeric (server-rendered), use it directly
+  // If the selected value is numeric (server-rendered), use it directly.
   const asNum = parseInt(selectedMonth, 10);
-  let monthNumber = !isNaN(asNum) ? asNum : (months.indexOf(selectedMonth) + 1);
-  if (!monthNumber) return;
+  const monthNumber = !isNaN(asNum) ? asNum : (months.indexOf(selectedMonth) + 1);
+  if (!monthNumber || monthNumber < 1 || monthNumber > 12) return;
+
+  try {
+    localStorage.setItem(DASHBOARD_MONTH_STORAGE_KEY, String(monthNumber));
+  } catch (e) {}
+
   window.location.href = `/dashboard/${monthNumber}`;
 }
 
 // console.log(month_spending)
 // console.log(prev_month_Transaction_amount)
 
-
-    
 const legendContainer = document.querySelector(".dashboard-legend");
 window.addEventListener("DOMContentLoaded", ()=>{
     if (!legendContainer) return;
@@ -116,7 +157,7 @@ function getSmartInsights(label, value) {
     if(label === "Groceries" && value > 2500){
         elm.textContent = `You have spent ${((value/monthlySpending * 100).toFixed(2))}%(₹${value}) on ${label} this month. Make sure to check for discounts and offers to save money.`;
     }
-    elm.style.fontWeight = "bold"; 
+    elm.style.fontWeight = "bold";
     elm.style.fontSize = "18px";
     elm.style.display = "block";
     elm.style.marginBottom = "0.3rem"
@@ -161,7 +202,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
 
 
 // const trendCtx = document.getElementById('trendChart').getContext('2d');
-    
+
 //     new Chart(trendCtx, {
 //         type: 'line', // This tells Chart.js to make a trend line chart
 //         data: {
@@ -194,7 +235,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
 
 // Wait for the DOM to load to ensure elements are ready
 document.addEventListener("DOMContentLoaded", () => {
-    
+
     // =========================================================
     // 1. RENDER PIE CHART
     // =========================================================
@@ -203,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Read the JSON strings from HTML data attributes and parse them back to JS arrays
         const pieLabels = JSON.parse(pieCanvas.dataset.labels || "[]");
         const pieValues = JSON.parse(pieCanvas.dataset.values || "[]");
-        
+
         const ctx = pieCanvas.getContext('2d');
         pieChartInstance = new Chart(ctx, {
             type: 'pie',
@@ -255,8 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
 //         const trendLabels = JSON.parse(trendCanvas.dataset.labels || "[]");
 //         const trendValues = JSON.parse(trendCanvas.dataset.values || "[]");
 
-        
-        
+
 //         const trendCtx = trendCanvas.getContext('2d');
 //         new Chart(trendCtx, {
 //             type: 'line',
