@@ -97,24 +97,23 @@ def _merchant_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
 
 
 def _frequency_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
-    if facts.spending_change <= 0:
-        return None
     if facts.previous_transaction_count == 0:
         return None
     if facts.transaction_count_change < 2:
         return None
     if not _average_is_stable(facts):
         return None
+
     confidence = Decimal("0.80")
     if facts.transaction_count_change >= 4:
         confidence += Decimal("0.10")
     return BehaviorPattern(
-        pattern_type="frequency_driven_increase",
+        pattern_type="frequency_change",
         confidence=min(confidence, Decimal("1")),
         category=None,
         merchant=None,
         evidence=(
-            f"Transaction count increased by {facts.transaction_count_change}.",
+            f"Transaction count changed by {facts.transaction_count_change}.",
             f"Average transaction changed by {facts.average_transaction_change}.",
         ),
     )
