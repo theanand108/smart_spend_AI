@@ -9,7 +9,7 @@ from .categorizer import categorize_transaction
 
 ATTENTION_STATUSES = {"conflict", "unknown", "varies"}
 STATUS_PRIORITY = {"conflict": 0, "varies": 1, "unknown": 2}
-RESOLVED_CATEGORIES = {"Food & Dining", "Travel & Transport", "Entertainment", "Groceries", "Bills & Utilities", "Shopping", "Health & Fitness", "Others"}
+RESOLVED_CATEGORIES = {"Food & Dining", "Travel & Transport", "Entertainment", "Groceries", "Bills & Utilities", "Shopping", "Health & Fitness", "Personal Care", "Transfer / Personal", "Others"}
 
 
 def _history_rows(transactions: Iterable[Any]) -> list[dict[str, Any]]:

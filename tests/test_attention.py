@@ -61,3 +61,19 @@ def test_attention_summary_counts_statuses():
         "unknown": 2,
         "varies": 1,
     }
+
+
+def test_attention_queue_excludes_explicit_transfer_personal_correction():
+    transactions = [
+        FakeTransaction("ANAND BANK", 1000, "Transfer / Personal", "payment"),
+    ]
+
+    assert build_attention_queue(transactions) == []
+
+
+def test_attention_queue_excludes_explicit_personal_care_category():
+    transactions = [
+        FakeTransaction("sajir", 350, "Personal Care", "paid to sajir barber"),
+    ]
+
+    assert build_attention_queue(transactions) == []
