@@ -180,7 +180,6 @@ def _build_category_spike_insight(facts: FinancialFacts) -> FinancialInsight | N
         return None
 
     item = max(candidates, key=lambda change: change.amount_change)
-    percent = item.change_percent
     return FinancialInsight(
         insight_type="category_spike",
         severity="attention",
@@ -188,7 +187,7 @@ def _build_category_spike_insight(facts: FinancialFacts) -> FinancialInsight | N
         category=item.category,
         merchant=None,
         change_amount=item.amount_change,
-        change_percent=percent,
+        change_percent=item.change_percent,
         driver="category_spike",
         recommendation="review_category_spike",
         evidence=(
@@ -207,27 +206,20 @@ def _behavior_pattern(facts: FinancialFacts, pattern_type: str):
 
 
 def _build_frequency_insight(facts: FinancialFacts) -> FinancialInsight | None:
-    pattern = _behavior_pattern(facts, "frequency_change")
-    if pattern is None:
-        return None
-
-    change = facts.transaction_count_change
-    if change > 0:
-        title = "You made more purchases"
-        recommendation = "review_purchase_frequency"
-    else:
+    pattern = _behavior_pattern(facts, "frequency_driven_increase")
+    if pattern is None or facts.transaction_count_change <= 0:
         return None
 
     return FinancialInsight(
         insight_type="frequency_increase",
         severity="observation",
-        title=title,
+        title="You made more purchases",
         category=None,
         merchant=None,
         change_amount=facts.spending_change,
         change_percent=facts.spending_change_percent,
         driver="frequency_increase",
-        recommendation=recommendation,
+        recommendation="review_purchase_frequency",
         evidence=tuple(pattern["evidence"]),
         priority=82,
     )
