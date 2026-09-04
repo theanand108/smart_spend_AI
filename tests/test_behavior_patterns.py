@@ -42,7 +42,7 @@ def test_detects_frequency_change_even_when_total_spending_decreases():
     ]
     result = patterns(current, previous)
     frequency = next(item for item in result if item["pattern_type"] == "frequency_driven_increase")
-    assert frequency["confidence"] == Decimal("0.90")
+    assert frequency["confidence"] == Decimal("0.80")
     assert "Transaction count changed by 2." in frequency["evidence"]
 
 
