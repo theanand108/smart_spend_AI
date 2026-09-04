@@ -50,6 +50,9 @@ def _specific_note_override(note: str | None) -> tuple[str, str] | None:
     if re.search(r"\belectronics?\b", text):
         return "Shopping", "The current transaction note explicitly identifies an electronics purchase."
 
+    if re.search(r"\b(?:barber|barbershop|haircut|salon)\b", text):
+        return "Personal Care", "The current transaction note explicitly identifies a personal-care service."
+
     personal_note_patterns = (
         r"personal\s+self",
         r"self\s+personal",
