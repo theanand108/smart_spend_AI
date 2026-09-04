@@ -60,7 +60,7 @@ def test_category_spike_suppresses_redundant_new_area_and_change_insights():
         tx(1000, "Amazon", "Shopping"),
     ]
     current = [
-        tx(1000, "Amazon", "Shopping"),
+        tx(1800, "Amazon", "Shopping"),
         tx(948, "Show", "Entertainment"),
     ]
 
