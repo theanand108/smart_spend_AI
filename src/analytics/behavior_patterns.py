@@ -108,7 +108,7 @@ def _frequency_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
     if facts.transaction_count_change >= 4:
         confidence += Decimal("0.10")
     return BehaviorPattern(
-        pattern_type="frequency_change",
+        pattern_type="frequency_driven_increase",
         confidence=min(confidence, Decimal("1")),
         category=None,
         merchant=None,
