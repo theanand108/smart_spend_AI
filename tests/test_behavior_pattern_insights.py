@@ -19,14 +19,15 @@ def insights(current, previous):
     return generate_financial_insights(facts, limit=10)
 
 
-def test_new_spending_area_becomes_an_actionable_insight():
+def test_new_spending_area_is_represented_by_the_distinct_discovery():
     previous = [tx(1000, "Cafe", "Food & Dining")]
     current = [tx(1000, "Cafe", "Food & Dining"), tx(800, "Bookstore", "Education")]
     result = insights(current, previous)
-    insight = next(item for item in result if item["insight_type"] == "new_spending_area")
+    insight = next(item for item in result if item["insight_type"] == "category_spike")
     assert insight["category"] == "Education"
-    assert insight["recommendation"] == "review_new_category"
-    assert insight["severity"] == "observation"
+    assert insight["recommendation"] == "review_category_spike"
+    assert insight["severity"] == "attention"
+    assert not any(item["insight_type"] == "new_spending_area" for item in result)
 
 
 def test_basket_size_pattern_becomes_an_actionable_insight():

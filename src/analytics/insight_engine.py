@@ -109,7 +109,6 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
     if change > 0:
         severity = "attention"
         recommendation = "review_driver"
-        title = "Spending increased"
         insight_type = "spending_increase"
         driver = "overall_increase"
         evidence = (f"Spending changed by {change} compared with the previous period.",)
@@ -117,7 +116,6 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
     else:
         severity = "positive"
         recommendation = "maintain_pattern"
-        title = "Spending decreased"
         insight_type = "spending_decrease"
         driver = "overall_decrease"
         evidence = (f"Spending changed by {change} compared with the previous period.",)
@@ -126,10 +124,12 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
     category = None
     merchant = None
     change_amount = change
+    main_subject = "Overall spending"
 
     if category_driver:
         item, share = category_driver
         category = item.category
+        main_subject = category
         driver = "category_increase" if change > 0 else "category_reduction"
         change_amount = item.amount_change
         evidence = evidence + (
@@ -142,6 +142,8 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
     if merchant_driver:
         item, share = merchant_driver
         merchant = item.merchant
+        if not category_driver:
+            main_subject = merchant
         evidence = evidence + (
             f"{merchant} accounts for {share * Decimal('100'):.0f}% of the net change.",
         )
@@ -152,10 +154,11 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
             change_amount = item.amount_change
             recommendation = "review_merchant" if change > 0 else "maintain_pattern"
 
+    eyebrow = "Spending increased" if change > 0 else "Spending decreased"
     return FinancialInsight(
         insight_type=insight_type,
         severity=severity,
-        title=title,
+        title=f"{eyebrow} :: {main_subject}",
         category=category,
         merchant=merchant,
         change_amount=change_amount,
@@ -183,7 +186,7 @@ def _build_category_spike_insight(facts: FinancialFacts) -> FinancialInsight | N
     return FinancialInsight(
         insight_type="category_spike",
         severity="attention",
-        title="A spending area jumped",
+        title=f"A spending area jumped :: {item.category}",
         category=item.category,
         merchant=None,
         change_amount=item.amount_change,
@@ -210,10 +213,11 @@ def _build_frequency_insight(facts: FinancialFacts) -> FinancialInsight | None:
     if pattern is None or facts.transaction_count_change <= 0:
         return None
 
+    count_change = facts.transaction_count_change
     return FinancialInsight(
         insight_type="frequency_increase",
         severity="observation",
-        title="You made more purchases",
+        title=f"You made more purchases :: {count_change} more purchases",
         category=None,
         merchant=None,
         change_amount=facts.spending_change,
@@ -240,7 +244,7 @@ def _build_average_transaction_insight(facts: FinancialFacts) -> FinancialInsigh
     return FinancialInsight(
         insight_type="average_transaction_increase",
         severity="observation",
-        title="Your typical transaction got larger",
+        title="Your typical transaction got larger :: Typical transaction",
         category=None,
         merchant=None,
         change_amount=facts.average_transaction_change,
@@ -260,11 +264,12 @@ def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
 
     basket = _behavior_pattern(facts, "basket_size_driven_increase")
     if basket is not None:
+        main_subject = basket["category"] or basket["merchant"] or "Larger purchases"
         insights.append(
             FinancialInsight(
                 insight_type="basket_size_increase",
                 severity="observation",
-                title="Larger purchases drove spending",
+                title=f"Larger purchases drove spending :: {main_subject}",
                 category=basket["category"],
                 merchant=basket["merchant"],
                 change_amount=facts.average_transaction_change,
@@ -278,11 +283,12 @@ def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
 
     new_area = _behavior_pattern(facts, "new_spending_area")
     if new_area is not None:
+        main_subject = new_area["category"] or new_area["merchant"] or "New spending area"
         insights.append(
             FinancialInsight(
                 insight_type="new_spending_area",
                 severity="observation",
-                title="A new spending area appeared",
+                title=f"A new spending area appeared :: {main_subject}",
                 category=new_area["category"],
                 merchant=new_area["merchant"],
                 change_amount=next(
@@ -304,7 +310,7 @@ def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
             FinancialInsight(
                 insight_type="distributed_increase",
                 severity="observation",
-                title="Spending increased across several areas",
+                title="Spending increased across several areas :: Several spending areas",
                 category=None,
                 merchant=None,
                 change_amount=facts.spending_change,
@@ -319,8 +325,51 @@ def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
     return insights
 
 
+def _insight_redundancy_key(insight: FinancialInsight):
+    """Return the underlying subject used to suppress overlapping discoveries."""
+    if insight.insight_type in {"category_spike", "new_spending_area"}:
+        return "category", insight.category
+
+    if insight.insight_type in {"spending_increase", "spending_decrease"}:
+        if insight.category:
+            return "category", insight.category
+        if insight.merchant:
+            return "merchant", insight.merchant
+        return "overall", None
+
+    if insight.insight_type == "frequency_increase":
+        return "frequency", None
+
+    if insight.insight_type == "basket_size_increase":
+        return "basket", insight.category, insight.merchant
+
+    if insight.insight_type == "average_transaction_increase":
+        return "average", None
+
+    if insight.insight_type == "distributed_increase":
+        return "distributed", None
+
+    return "type", insight.insight_type
+
+
+def _select_distinct_insights(insights: list[FinancialInsight], limit: int) -> list[FinancialInsight]:
+    selected: list[FinancialInsight] = []
+    seen: set[tuple[object, ...]] = set()
+
+    for insight in sorted(insights, key=lambda item: item.priority, reverse=True):
+        key = _insight_redundancy_key(insight)
+        if key in seen:
+            continue
+        seen.add(key)
+        selected.append(insight)
+        if len(selected) >= max(0, limit):
+            break
+
+    return selected
+
+
 def generate_financial_insights(facts: FinancialFacts, limit: int = 3) -> list[dict[str, object]]:
-    """Generate a small set of ranked, non-redundant financial discoveries."""
+    """Generate a small set of ranked, distinct financial discoveries."""
 
     candidates = [
         _build_category_spike_insight(facts),
@@ -330,5 +379,4 @@ def generate_financial_insights(facts: FinancialFacts, limit: int = 3) -> list[d
         _build_change_insight(facts),
     ]
     insights = [item for item in candidates if item is not None]
-    insights.sort(key=lambda item: item.priority, reverse=True)
-    return [item.to_dict() for item in insights[: max(0, limit)]]
+    return [item.to_dict() for item in _select_distinct_insights(insights, limit)]

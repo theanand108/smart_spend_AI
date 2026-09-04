@@ -138,9 +138,6 @@ def get_spending_analytics(transaction_query):
         top_merchant = "N/A"
         top_merchant_amount = 0
     
-    
-    
-    
     return {
         "top_merchant": top_merchant,
         "top_merchant_amount": top_merchant_amount,
@@ -335,7 +332,9 @@ def build_structured_financial_insight_cards(
         )
 
     for insight in fallback_insights or []:
-        append_distinct_insight(insight_cards, insight, limit)
+        fallback_card = dict(insight)
+        fallback_card["title"] = f"{insight.get('title')} :: {insight.get('value')}"
+        append_distinct_insight(insight_cards, fallback_card, limit)
 
     return insight_cards
 
@@ -860,7 +859,6 @@ def submit():
         db.session.commit()
 
         flash("Transaction added successfully.", "success")
-        # redirect back to simulate page and indicate the newly created transaction id
         return redirect(f"/simulateATransaction?new_id={transaction.id}")
     except Exception:
         flash("Something went wrong.", "danger")
@@ -875,12 +873,10 @@ def home():
 
 @app.route("/simulateATransaction", methods=["POST", "GET"])
 def simulate_transaction():
-    # Show only the latest 10 transactions (newest first) on the simulate page
     allTransactions = (
         Transaction.query.order_by(Transaction.date.desc()).limit(10).all()
     )
     flash_messages = get_flashed_messages(with_categories=True)
-    # Pass through any new_id query param so the template can scroll/highlight
     new_id = request.args.get('new_id')
     return render_template(
         "index2.html",
@@ -901,8 +897,6 @@ def dashboard1(month=None):
             return redirect("/dashboard")
         curr_month = normalized_month
 
-    # Build months dropdown up to the latest month that has transaction data for the current year.
-    # If there are no transactions for the current year, fall back to current month.
     latest_tx_current_year = (
         Transaction.query.filter(db.extract('year', Transaction.date) == curr_year)
         .order_by(Transaction.date.desc())
@@ -947,8 +941,7 @@ def dashboard1(month=None):
     filtered_top_category, filtered_top_category_amount = get_top_category_for_query(
         transaction_query
     )
-    # print("Analytics = ", analytics)
-    
+
     prev_month, prev_year = get_previous_month(curr_month, curr_year)
     previous_month_transaction_query = build_transaction_query(prev_month, prev_year)
     previous_transaction_query = build_transaction_query(
@@ -962,9 +955,7 @@ def dashboard1(month=None):
         ).scalar()
         or 0
     )
-    prev_month_Transaction_amount = (
-        previous_month_total_expense
-    )
+    prev_month_Transaction_amount = previous_month_total_expense
     filtered_previous_total_expense = (
         previous_transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
         or 0
@@ -975,7 +966,6 @@ def dashboard1(month=None):
         previous_month_transaction_query
     )
 
-    # Compute lightweight signals from the already-loaded `transactions` list
     merchant_counts: dict[str, int] = {}
     merchant_amounts: dict[str, float] = {}
     weekend_spend = 0.0
@@ -1029,7 +1019,6 @@ def dashboard1(month=None):
         default=None,
     )
 
-    # Weekly spending totals for the selected month
     days_in_month = monthrange(curr_year, curr_month)[1]
     previous_days_in_month = monthrange(prev_year, prev_month)[1]
     number_of_weeks = (days_in_month + 6) // 7
@@ -1142,8 +1131,6 @@ def dashboard1(month=None):
         previous_category_totals=previous_month_category_totals,
     )
 
-
-    # Split the query tuple results into distinct arrays
     labels = [row[0] for row in category_data]
     values = [float(row[1]) for row in category_data]
 
@@ -1157,10 +1144,8 @@ def dashboard1(month=None):
         .all()
     )
 
-
-    # 2. Split the results into parallel arrays for JavaScript
-    trend_labels = [row[0] for row in trend_data]  # e.g., ['2026-05', '2026-06']
-    trend_values = [float(row[1]) for row in trend_data]  # e.g., [1520.0, 4680.0]
+    trend_labels = [row[0] for row in trend_data]
+    trend_values = [float(row[1]) for row in trend_data]
 
     curr_month_name = datetime(curr_year, curr_month, 1).strftime("%B")
     flash_messages = get_flashed_messages(with_categories=True)
@@ -1279,7 +1264,6 @@ def exportCSV(month=None):
 
     export_date = datetime.now().strftime("%d-%b-%Y")
     month_name = datetime(curr_year, curr_month, 1).strftime("%B")
-    # Create CSV content
 
     csv_content = ""
 
@@ -1293,16 +1277,13 @@ def exportCSV(month=None):
     csv_content += f"Search: {search_query if search_query else 'None'}\n"
 
     csv_content += f"Total Transactions: {total_transactions}\n"
-
     csv_content += f"Total Amount: ₹{total_amount:.2f}\n"
-
     csv_content += "-" * 60 + "\n\n"
 
     csv_content += "S.No,Date,Merchant Name,Category,Amount,Payment Method,Notes\n"
     for index, transaction in enumerate(transactions, start=1):
         csv_content += f"{index},{transaction.date},{transaction.merchant_name},{transaction.amount},{transaction.category},{transaction.payment_method},{transaction.notes}\n"
 
-    # Create a response with the CSV content
     response = app.response_class(response=csv_content, status=200, mimetype="text/csv")
     response.headers["Content-Disposition"] = (
         f"attachment; filename=SmartSpend_{arrayMonths[curr_month - 1]}_{curr_year}_{search_query}.csv"
