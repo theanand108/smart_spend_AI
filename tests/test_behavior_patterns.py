@@ -29,6 +29,23 @@ def test_detects_frequency_driven_increase_when_average_stays_stable():
     assert "Transaction count increased by 2." in frequency["evidence"]
 
 
+def test_detects_frequency_change_even_when_total_spending_decreases():
+    previous = [
+        tx(800, "Cafe", "Food & Dining"),
+        tx(700, "Cafe", "Food & Dining"),
+    ]
+    current = [
+        tx(400, "Cafe", "Food & Dining"),
+        tx(400, "Cafe", "Food & Dining"),
+        tx(400, "Cafe", "Food & Dining"),
+        tx(400, "Cafe", "Food & Dining"),
+    ]
+    result = patterns(current, previous)
+    frequency = next(item for item in result if item["pattern_type"] == "frequency_driven_increase")
+    assert frequency["confidence"] == Decimal("0.90")
+    assert "Transaction count changed by 2." in frequency["evidence"]
+
+
 def test_does_not_call_a_larger_basket_a_frequency_pattern():
     previous = [tx(600, "Store", "Shopping"), tx(600, "Store", "Shopping")]
     current = [tx(1200, "Store", "Shopping"), tx(1200, "Store", "Shopping")]
