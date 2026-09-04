@@ -165,9 +165,14 @@ block body %}
     {% for insight in financial_insight_cards %}
       {% if loop.first %}
       <div class="insight-card insight-card-primary">
-        <p class="insight-eyebrow">{{ insight.title }}</p>
-        <p class="insight-value">{{ insight.value }}</p>
-        <p class="insight-context">{{ insight.supporting_text }}</p>
+        {% set insight_parts = insight.title.split(' :: ', 1) %}
+        <p class="insight-eyebrow">{{ insight_parts[0] }}</p>
+        <p class="insight-value">
+          {% if insight_parts|length > 1 %}{{ insight_parts[1] }}{% else %}{{ insight.title }}{% endif %}
+        </p>
+        <p class="insight-context">
+          {% if insight_parts|length > 1 %}{{ insight.value }} · {% endif %}{{ insight.supporting_text }}
+        </p>
       </div>
       {% endif %}
     {% endfor %}
@@ -177,9 +182,14 @@ block body %}
       {% for insight in financial_insight_cards %}
         {% if not loop.first %}
         <div class="insight-card insight-card-secondary">
-          <p class="insight-eyebrow">{{ insight.title }}</p>
-          <p class="insight-value">{{ insight.value }}</p>
-          <p class="insight-context">{{ insight.supporting_text }}</p>
+          {% set insight_parts = insight.title.split(' :: ', 1) %}
+          <p class="insight-eyebrow">{{ insight_parts[0] }}</p>
+          <p class="insight-value">
+            {% if insight_parts|length > 1 %}{{ insight_parts[1] }}{% else %}{{ insight.title }}{% endif %}
+          </p>
+          <p class="insight-context">
+            {% if insight_parts|length > 1 %}{{ insight.value }} · {% endif %}{{ insight.supporting_text }}
+          </p>
         </div>
         {% endif %}
       {% endfor %}
