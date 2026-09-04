@@ -9,7 +9,6 @@ language layer) can decide how to present it.
 
 from dataclasses import asdict, dataclass
 from decimal import Decimal
-from typing import Iterable
 
 from src.analytics.behavior_patterns import detect_behavior_patterns
 from src.analytics.financial_facts import FinancialFacts
@@ -19,6 +18,8 @@ MEANINGFUL_CHANGE_RATIO = Decimal("0.10")
 MEANINGFUL_CHANGE_AMOUNT = Decimal("500")
 MIN_DRIVER_SHARE = Decimal("0.25")
 MIN_FREQUENCY_CHANGE = 2
+MIN_CATEGORY_SPIKE_AMOUNT = Decimal("500")
+MIN_CATEGORY_SPIKE_RATIO = Decimal("0.25")
 
 
 @dataclass(frozen=True)
@@ -55,11 +56,7 @@ def _category_driver(facts: FinancialFacts):
     if facts.spending_change == 0:
         return None
 
-    candidates = [
-        item
-        for item in facts.category_changes
-        if item.amount_change != 0
-    ]
+    candidates = [item for item in facts.category_changes if item.amount_change != 0]
     if not candidates:
         return None
 
@@ -115,20 +112,16 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
         title = "Spending increased"
         insight_type = "spending_increase"
         driver = "overall_increase"
-        evidence = (
-            f"Spending changed by {change} compared with the previous period.",
-        )
-        priority = 80
+        evidence = (f"Spending changed by {change} compared with the previous period.",)
+        priority = 50
     else:
         severity = "positive"
         recommendation = "maintain_pattern"
         title = "Spending decreased"
         insight_type = "spending_decrease"
         driver = "overall_decrease"
-        evidence = (
-            f"Spending changed by {change} compared with the previous period.",
-        )
-        priority = 70
+        evidence = (f"Spending changed by {change} compared with the previous period.",)
+        priority = 45
 
     category = None
     merchant = None
@@ -174,6 +167,37 @@ def _build_change_insight(facts: FinancialFacts) -> FinancialInsight | None:
     )
 
 
+def _build_category_spike_insight(facts: FinancialFacts) -> FinancialInsight | None:
+    candidates = []
+    for item in facts.category_changes:
+        if item.amount_change < MIN_CATEGORY_SPIKE_AMOUNT:
+            continue
+        if item.previous_amount > 0 and item.amount_change / item.previous_amount < MIN_CATEGORY_SPIKE_RATIO:
+            continue
+        candidates.append(item)
+
+    if not candidates:
+        return None
+
+    item = max(candidates, key=lambda change: change.amount_change)
+    return FinancialInsight(
+        insight_type="category_spike",
+        severity="attention",
+        title="A spending area jumped",
+        category=item.category,
+        merchant=None,
+        change_amount=item.amount_change,
+        change_percent=item.change_percent,
+        driver="category_spike",
+        recommendation="review_category_spike",
+        evidence=(
+            f"{item.category} increased by {item.amount_change} compared with the previous period.",
+            f"Current spending in {item.category} is {item.current_amount}.",
+        ),
+        priority=86,
+    )
+
+
 def _behavior_pattern(facts: FinancialFacts, pattern_type: str):
     return next(
         (pattern for pattern in detect_behavior_patterns(facts) if pattern["pattern_type"] == pattern_type),
@@ -183,21 +207,21 @@ def _behavior_pattern(facts: FinancialFacts, pattern_type: str):
 
 def _build_frequency_insight(facts: FinancialFacts) -> FinancialInsight | None:
     pattern = _behavior_pattern(facts, "frequency_driven_increase")
-    if pattern is None:
+    if pattern is None or facts.transaction_count_change <= 0:
         return None
 
     return FinancialInsight(
         insight_type="frequency_increase",
         severity="observation",
-        title="More transactions drove spending",
-        category=pattern["category"],
-        merchant=pattern["merchant"],
+        title="You made more purchases",
+        category=None,
+        merchant=None,
         change_amount=facts.spending_change,
         change_percent=facts.spending_change_percent,
         driver="frequency_increase",
-        recommendation="reduce_frequency",
+        recommendation="review_purchase_frequency",
         evidence=tuple(pattern["evidence"]),
-        priority=65,
+        priority=82,
     )
 
 
@@ -227,7 +251,7 @@ def _build_average_transaction_insight(facts: FinancialFacts) -> FinancialInsigh
             f"Average transaction changed by {facts.average_transaction_change}.",
             f"Transaction count changed by {facts.transaction_count_change}.",
         ),
-        priority=60,
+        priority=72,
     )
 
 
@@ -248,7 +272,7 @@ def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
                 driver="basket_size_increase",
                 recommendation="review_large_purchases",
                 evidence=tuple(basket["evidence"]),
-                priority=64,
+                priority=70,
             )
         )
 
@@ -270,7 +294,7 @@ def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
                 driver="new_spending_area",
                 recommendation="review_new_category",
                 evidence=tuple(new_area["evidence"]),
-                priority=63,
+                priority=78,
             )
         )
 
@@ -296,13 +320,14 @@ def _build_behavior_insights(facts: FinancialFacts) -> list[FinancialInsight]:
 
 
 def generate_financial_insights(facts: FinancialFacts, limit: int = 3) -> list[dict[str, object]]:
-    """Generate a small set of ranked insights from deterministic facts."""
+    """Generate a small set of ranked, non-redundant financial discoveries."""
 
     candidates = [
-        _build_change_insight(facts),
+        _build_category_spike_insight(facts),
         _build_frequency_insight(facts),
         _build_average_transaction_insight(facts),
         *_build_behavior_insights(facts),
+        _build_change_insight(facts),
     ]
     insights = [item for item in candidates if item is not None]
     insights.sort(key=lambda item: item.priority, reverse=True)
