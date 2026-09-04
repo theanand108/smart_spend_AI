@@ -38,6 +38,12 @@
               <a class="nav-link" href="/dashboard">Dashboard</a>
             </li>
             <li class="nav-item ms-2">
+              <a class="nav-link d-flex align-items-center" href="/import">
+                <i class="bi bi-download me-1" aria-hidden="true"></i>
+                Import Statement
+              </a>
+            </li>
+            <li class="nav-item ms-2">
               <a class="btn btn-outline-primary btn-sm rounded-pill" href="/simulateATransaction">+ Add Transaction</a>
             </li>
             {% if request.endpoint in ['dashboard1', 'home'] %}
