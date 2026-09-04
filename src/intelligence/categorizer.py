@@ -112,13 +112,23 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     merchant_category = evidence.get("merchant_category")
     merchant_confidence = float(evidence.get("merchant_confidence") or 0.0)
 
+    specific_note = _specific_note_override(note)
     specific_merchant = _specific_merchant_override(merchant)
+
+    if specific_note:
+        category, reason = specific_note
+        if specific_merchant:
+            merchant_override_category, merchant_reason = specific_merchant
+            evidence.setdefault("reasons", {}).setdefault(merchant_override_category, []).append(merchant_reason)
+            if category != merchant_override_category:
+                return _result(category=None, confidence=0.20, status="conflict", reason="Current transaction note and merchant descriptor provide strong but conflicting purpose evidence.", needs_user_confirmation=True, entity_memory=entity_profile, conflicting_categories=[merchant_override_category, category])
+        evidence.setdefault("reasons", {}).setdefault(category, []).append(reason)
+        return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
+
     if specific_merchant:
-        merchant_category, merchant_reason = specific_merchant
-        merchant_confidence = 0.96
-        evidence["merchant_category"] = merchant_category
-        evidence["merchant_confidence"] = merchant_confidence
-        evidence.setdefault("reasons", {}).setdefault(merchant_category, []).append(merchant_reason)
+        category, reason = specific_merchant
+        evidence.setdefault("reasons", {}).setdefault(category, []).append(reason)
+        return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
 
     if (
         note_category
@@ -139,13 +149,6 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
 
     if note_category and note_confidence >= 0.90:
         return _result(category=str(note_category), confidence=note_confidence, status="categorized", reason="Current transaction note provides strong semantic evidence and takes precedence over historical entity behavior.", needs_user_confirmation=False, entity_memory=entity_profile)
-
-    specific_note = _specific_note_override(note)
-    if specific_note:
-        category, reason = specific_note
-        if merchant_category and merchant_confidence >= 0.90 and category != str(merchant_category):
-            return _result(category=None, confidence=0.20, status="conflict", reason="Current transaction note and merchant context provide strong but conflicting category evidence.", needs_user_confirmation=True, entity_memory=entity_profile, conflicting_categories=[str(merchant_category), category])
-        return _result(category=category, confidence=0.96, status="categorized", reason=reason, needs_user_confirmation=False, entity_memory=entity_profile)
 
     if known_category and merchant_category and merchant_confidence >= 0.90 and merchant_category != known_category:
         return _result(category=str(merchant_category), confidence=min(0.96, merchant_confidence), status="categorized", reason="Qualified merchant wording provides stronger transaction-purpose evidence than the generic known merchant mapping.", needs_user_confirmation=False, entity_memory=entity_profile)
