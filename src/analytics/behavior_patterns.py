@@ -39,9 +39,7 @@ def _average_is_stable(facts: FinancialFacts) -> bool:
         return True
     if facts.previous_average_transaction == 0:
         return False
-    return (
-        change / facts.previous_average_transaction
-    ) <= SMALL_AVERAGE_CHANGE_RATIO
+    return change / facts.previous_average_transaction <= SMALL_AVERAGE_CHANGE_RATIO
 
 
 def _meaningful_average_increase(facts: FinancialFacts) -> bool:
@@ -63,7 +61,6 @@ def _new_category_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
     ]
     if not new_categories:
         return None
-
     item = max(new_categories, key=lambda change: change.current_amount)
     return BehaviorPattern(
         pattern_type="new_spending_area",
@@ -80,18 +77,13 @@ def _new_category_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
 def _merchant_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
     if facts.spending_change <= 0:
         return None
-    if facts.spending_change == 0:
-        return None
-
     positive = [item for item in facts.merchant_changes if item.amount_change > 0]
     if not positive:
         return None
-
     item = max(positive, key=lambda change: change.amount_change)
     share = item.amount_change / facts.spending_change
     if share < MIN_MERCHANT_DRIVER_SHARE:
         return None
-
     return BehaviorPattern(
         pattern_type="merchant_driven_increase",
         confidence=min(Decimal("1"), Decimal("0.60") + share),
@@ -105,8 +97,6 @@ def _merchant_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
 
 
 def _frequency_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
-    if facts.spending_change <= 0:
-        return None
     if facts.previous_transaction_count == 0:
         return None
     if facts.transaction_count_change < 2:
@@ -118,13 +108,18 @@ def _frequency_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
     if facts.transaction_count_change >= 4:
         confidence += Decimal("0.10")
 
+    count_change_text = (
+        f"Transaction count increased by {facts.transaction_count_change}."
+        if facts.transaction_count_change > 0
+        else f"Transaction count changed by {facts.transaction_count_change}."
+    )
     return BehaviorPattern(
         pattern_type="frequency_driven_increase",
         confidence=min(confidence, Decimal("1")),
         category=None,
         merchant=None,
         evidence=(
-            f"Transaction count increased by {facts.transaction_count_change}.",
+            count_change_text,
             f"Average transaction changed by {facts.average_transaction_change}.",
         ),
     )
@@ -137,7 +132,6 @@ def _basket_size_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
         return None
     if not _meaningful_average_increase(facts):
         return None
-
     return BehaviorPattern(
         pattern_type="basket_size_driven_increase",
         confidence=Decimal("0.85"),
@@ -153,18 +147,15 @@ def _basket_size_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
 def _distributed_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
     if facts.spending_change <= 0:
         return None
-
     positive_categories = [
         item for item in facts.category_changes if item.amount_change > 0
     ]
     if not positive_categories:
         return None
-
     largest = max(positive_categories, key=lambda item: item.amount_change)
     share = largest.amount_change / facts.spending_change
     if share >= Decimal("0.40"):
         return None
-
     return BehaviorPattern(
         pattern_type="distributed_increase",
         confidence=Decimal("0.80"),
@@ -179,7 +170,6 @@ def _distributed_pattern(facts: FinancialFacts) -> BehaviorPattern | None:
 
 def detect_behavior_patterns(facts: FinancialFacts) -> list[dict[str, object]]:
     """Detect a small, explainable set of behavioral patterns."""
-
     candidates = [
         _frequency_pattern(facts),
         _basket_size_pattern(facts),

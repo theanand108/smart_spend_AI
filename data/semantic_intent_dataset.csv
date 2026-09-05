@@ -1,0 +1,421 @@
+label,split,note
+"Health & Fitness","train","bought medicine for mom"
+"Health & Fitness","train","picked up tablets from the pharmacy"
+"Health & Fitness","train","paid for a doctor visit"
+"Health & Fitness","train","hospital bill for dad"
+"Health & Fitness","train","got some medical supplies"
+"Health & Fitness","train","medicine for fever"
+"Health & Fitness","train","paid the chemist"
+"Health & Fitness","train","doctor consultation fee"
+"Health & Fitness","train","bought prescription medicine"
+"Health & Fitness","train","pharmacy purchase"
+"Health & Fitness","train","paid for blood test"
+"Health & Fitness","train","medical checkup"
+"Health & Fitness","train","bought vitamins from pharmacy"
+"Health & Fitness","train","medicine refill"
+"Health & Fitness","train","healthcare appointment"
+"Health & Fitness","test","ordered my prescribed tablets"
+"Health & Fitness","test","paid the clinic for a checkup"
+"Health & Fitness","test","bought cough medicine"
+"Health & Fitness","test","collected prescription drugs"
+"Health & Fitness","test","money spent at the chemist"
+"Groceries","train","bought vegetables for us"
+"Groceries","train","weekly grocery shopping"
+"Groceries","train","picked up milk and bread"
+"Groceries","train","kirana shop groceries"
+"Groceries","train","bought rice and dal"
+"Groceries","train","monthly ration"
+"Groceries","train","vegetables and fruits"
+"Groceries","train","stocked up the kitchen"
+"Groceries","train","bought household groceries"
+"Groceries","train","milk for home"
+"Groceries","train","fresh vegetables from market"
+"Groceries","train","grocery run"
+"Groceries","train","bought cooking ingredients"
+"Groceries","train","kitchen supplies from kirana"
+"Groceries","train","weekly food supplies"
+"Groceries","test","restocked rice and lentils"
+"Groceries","test","bought fruits for the house"
+"Groceries","test","picked up groceries on the way home"
+"Groceries","test","monthly kitchen ration"
+"Groceries","test","got milk and vegetables"
+"Food & Dining","train","had dinner with Rahul"
+"Food & Dining","train","paid for lunch"
+"Food & Dining","train","tea and snacks"
+"Food & Dining","train","coffee at the cafe"
+"Food & Dining","train","breakfast before college"
+"Food & Dining","train","ordered food"
+"Food & Dining","train","dinner at a restaurant"
+"Food & Dining","train","canteen lunch"
+"Food & Dining","train","birthday cake"
+"Food & Dining","train","grabbed some chai"
+"Food & Dining","train","meal with friends"
+"Food & Dining","train","ate at the bakery"
+"Food & Dining","train","food delivery for dinner"
+"Food & Dining","train","went out for coffee"
+"Food & Dining","train","paid my share of the meal"
+"Food & Dining","test","bought lunch after class"
+"Food & Dining","test","had a quick breakfast"
+"Food & Dining","test","ordered dinner from a restaurant"
+"Food & Dining","test","chai with friends"
+"Food & Dining","test","paid for our food"
+"Travel & Transport","train","auto ride to college"
+"Travel & Transport","train","paid for an Uber ride"
+"Travel & Transport","train","cab to the station"
+"Travel & Transport","train","petrol for my bike"
+"Travel & Transport","train","bus ticket"
+"Travel & Transport","train","travel ticket home"
+"Travel & Transport","train","ride to the airport"
+"Travel & Transport","train","fuel for the car"
+"Travel & Transport","train","ola ride"
+"Travel & Transport","train","rickshaw fare"
+"Travel & Transport","train","train ticket for the trip"
+"Travel & Transport","train","metro ride"
+"Travel & Transport","train","paid for transport"
+"Travel & Transport","train","cab fare home"
+"Travel & Transport","train","travel expenses"
+"Travel & Transport","test","booked a ride to campus"
+"Travel & Transport","test","filled petrol in the bike"
+"Travel & Transport","test","paid the metro fare"
+"Travel & Transport","test","ticket for my journey"
+"Travel & Transport","test","took an auto home"
+"Housing / Rent","train","monthly room rent"
+"Housing / Rent","train","paid the landlord"
+"Housing / Rent","train","rent for the apartment"
+"Housing / Rent","train","house rent this month"
+"Housing / Rent","train","room rent payment"
+"Housing / Rent","train","monthly rental payment"
+"Housing / Rent","train","paid my landlord"
+"Housing / Rent","train","rent due for August"
+"Housing / Rent","train","apartment rent"
+"Housing / Rent","train","hostel room rent"
+"Housing / Rent","train","flat rent"
+"Housing / Rent","train","rental payment for home"
+"Housing / Rent","train","paid rent for my room"
+"Housing / Rent","train","monthly house payment"
+"Housing / Rent","train","landlord payment"
+"Housing / Rent","test","transferred this month's apartment rent"
+"Housing / Rent","test","paid for my rented room"
+"Housing / Rent","test","rent payment for the flat"
+"Housing / Rent","test","monthly payment to the landlord"
+"Housing / Rent","test","cleared the house rent"
+"Education","train","college semester fee"
+"Education","train","paid tuition fees"
+"Education","train","bought notebooks and pens"
+"Education","train","stationery for college"
+"Education","train","semester payment"
+"Education","train","college fee payment"
+"Education","train","tuition for this term"
+"Education","train","bought study notebooks"
+"Education","train","education expenses"
+"Education","train","paid my university fees"
+"Education","train","exam fee"
+"Education","train","college supplies"
+"Education","train","new notebooks for class"
+"Education","train","course tuition"
+"Education","train","school stationery"
+"Education","test","paid my semester dues"
+"Education","test","bought pens for class"
+"Education","test","university tuition payment"
+"Education","test","study materials for college"
+"Education","test","education fee this month"
+"Shopping","train","bought new clothes"
+"Shopping","train","went shopping"
+"Shopping","train","bought a kurti"
+"Shopping","train","household purchase"
+"Shopping","train","extension board for home"
+"Shopping","train","bought a plumbing item"
+"Shopping","train","clothing purchase"
+"Shopping","train","shopping for a shirt"
+"Shopping","train","new shoes"
+"Shopping","train","hardware for the house"
+"Shopping","train","bought a backpack"
+"Shopping","train","purchased a household item"
+"Shopping","train","bought a gift item"
+"Shopping","train","new clothes for college"
+"Shopping","train","shopping at the mall"
+"Shopping","test","purchased a jacket"
+"Shopping","test","bought something for the kitchen"
+"Shopping","test","picked up a pair of shoes"
+"Shopping","test","shopping for clothes"
+"Shopping","test","bought an electrical item"
+"Bills & Utilities","train","mobile recharge"
+"Bills & Utilities","train","paid electricity bill"
+"Bills & Utilities","train","water bill payment"
+"Bills & Utilities","train","internet bill"
+"Bills & Utilities","train","recharged my phone"
+"Bills & Utilities","train","monthly mobile bill"
+"Bills & Utilities","train","paid the broadband bill"
+"Bills & Utilities","train","electricity payment"
+"Bills & Utilities","train","phone recharge for mom"
+"Bills & Utilities","train","utility bill"
+"Bills & Utilities","train","wifi bill"
+"Bills & Utilities","train","paid the water charges"
+"Bills & Utilities","train","mobile plan recharge"
+"Bills & Utilities","train","internet subscription bill"
+"Bills & Utilities","train","monthly electricity payment"
+"Bills & Utilities","test","renewed my phone plan"
+"Bills & Utilities","test","cleared the broadband payment"
+"Bills & Utilities","test","paid this month's power bill"
+"Bills & Utilities","test","recharged the mobile number"
+"Bills & Utilities","test","water charges for the house"
+"Entertainment","train","watched a movie"
+"Entertainment","train","Netflix subscription"
+"Entertainment","train","Spotify payment"
+"Entertainment","train","concert ticket"
+"Entertainment","train","movie night"
+"Entertainment","train","paid for streaming"
+"Entertainment","train","monthly Netflix bill"
+"Entertainment","train","music subscription"
+"Entertainment","train","booked movie tickets"
+"Entertainment","train","concert entry"
+"Entertainment","train","streaming service payment"
+"Entertainment","train","went to the cinema"
+"Entertainment","train","Spotify renewal"
+"Entertainment","train","movie show"
+"Entertainment","train","entertainment subscription"
+"Entertainment","test","paid for a cinema ticket"
+"Entertainment","test","renewed my music subscription"
+"Entertainment","test","streaming payment this month"
+"Entertainment","test","ticket for the concert"
+"Entertainment","test","movie outing"
+"Transfer / Personal","train","lent money to Rahul"
+"Transfer / Personal","train","sent money to my brother"
+"Transfer / Personal","train","monthly allowance for home"
+"Transfer / Personal","train","paid back what I owed"
+"Transfer / Personal","train","returned borrowed money"
+"Transfer / Personal","train","reimbursement for the shared purchase"
+"Transfer / Personal","train","sent money to mom"
+"Transfer / Personal","train","gave my friend some cash"
+"Transfer / Personal","train","loaned money to a friend"
+"Transfer / Personal","train","paid back the loan"
+"Transfer / Personal","train","money I owed Rahul"
+"Transfer / Personal","train","refund for a shared purchase"
+"Transfer / Personal","train","sent money for my sister's travel"
+"Transfer / Personal","train","monthly pocket money"
+"Transfer / Personal","train","transferred money to dad"
+"Transfer / Personal","test","loaned some cash to my cousin"
+"Transfer / Personal","test","returned the money I borrowed"
+"Transfer / Personal","test","sent allowance to my parents"
+"Transfer / Personal","test","reimbursed my friend"
+"Transfer / Personal","test","paid back what I owed my brother"
+"Unknown","train","personal"
+"Unknown","train","home"
+"Unknown","train","payment"
+"Unknown","train","something"
+"Unknown","train","urgent"
+"Unknown","train","gift"
+"Unknown","train","misc"
+"Unknown","train","stuff"
+"Unknown","train","done"
+"Unknown","train","ok"
+"Unknown","train","for later"
+"Unknown","train","important"
+"Unknown","train","cash"
+"Unknown","train","needed"
+"Unknown","train","transfer"
+"Unknown","train","paid"
+"Unknown","test","just a payment"
+"Unknown","test","something for now"
+"Unknown","test","personal expense"
+"Unknown","test","not sure"
+"Unknown","test","miscellaneous"
+"Unknown","test","for home"
+"Unknown","test","an urgent payment"
+"Unknown","test","some stuff"
+Health & Fitness,train,"prescription refill from the chemist"
+Health & Fitness,train,"scheduled a dental checkup"
+Health & Fitness,train,"paid for a lab test"
+Health & Fitness,train,"bought an inhaler at the pharmacy"
+Health & Fitness,train,"consultation with my doctor"
+Groceries,train,"weekly vegetables and milk"
+Groceries,train,"bought flour and cooking oil"
+Groceries,train,"restocked pantry items"
+Groceries,train,"market run for household food"
+Groceries,train,"picked up pulses and spices"
+Food & Dining,train,"grabbed snacks after class"
+Food & Dining,train,"ordered a meal for lunch"
+Food & Dining,train,"paid the cafe bill"
+Food & Dining,train,"dinner with classmates"
+Food & Dining,train,"bought pastries from the bakery"
+Travel & Transport,train,"booked a cab for the airport"
+Travel & Transport,train,"paid the bus fare"
+Travel & Transport,train,"refilled fuel before the trip"
+Travel & Transport,train,"metro trip to the office"
+Travel & Transport,train,"rickshaw back home"
+Housing / Rent,train,"rent for my shared flat"
+Housing / Rent,train,"paid this month's room rent"
+Housing / Rent,train,"sent rent to the landlord"
+Housing / Rent,train,"apartment lease payment"
+Housing / Rent,train,"hostel accommodation fee"
+Education,train,"paid the college registration fee"
+Education,train,"bought textbooks for class"
+Education,train,"course enrollment payment"
+Education,train,"lab fee for the semester"
+Education,train,"study supplies for university"
+Shopping,train,"bought a new backpack"
+Shopping,train,"purchased a household appliance"
+Shopping,train,"ordered a pair of sneakers"
+Shopping,train,"bought a phone accessory"
+Shopping,train,"picked up a shirt from the store"
+Bills & Utilities,train,"paid my broadband charge"
+Bills & Utilities,train,"recharged the family phone"
+Bills & Utilities,train,"settled the electricity charges"
+Bills & Utilities,train,"renewed my mobile plan"
+Bills & Utilities,train,"paid the home internet bill"
+Entertainment,train,"bought a ticket for the cinema"
+Entertainment,train,"paid for a live music show"
+Entertainment,train,"renewed my video streaming plan"
+Entertainment,train,"went out to watch a film"
+Entertainment,train,"subscribed to a music service"
+Transfer / Personal,train,"sent money back to my cousin"
+Transfer / Personal,train,"paid my friend back"
+Transfer / Personal,train,"transferred some cash to my parents"
+Transfer / Personal,train,"returned a personal loan"
+Transfer / Personal,train,"sent money to cover what I owed"
+Unknown,train,"no details"
+Unknown,train,"general expense"
+Unknown,train,"for something"
+Unknown,train,"payment made"
+Unknown,train,"not sure what this was for"
+Health & Fitness,train,"prescription medicine refill"
+Health & Fitness,train,"chemist for my prescription"
+Health & Fitness,train,"refilled my prescribed medicine"
+Health & Fitness,train,"pharmacy refill for tablets"
+Health & Fitness,train,"medical prescription pickup"
+Entertainment,train,"cinema visit"
+Entertainment,train,"evening at the cinema"
+Entertainment,train,"movie theatre outing"
+Entertainment,train,"went out for a film"
+Entertainment,train,"paid for a movie show"
+Health & Fitness,train,got madecina for mom
+Health & Fitness,train,bought medcine from the chemist
+Health & Fitness,train,dr appointment today
+Health & Fitness,train,picked up meds
+Health & Fitness,train,chemist run for tablets
+Health & Fitness,train,refilled my prescription
+Health & Fitness,train,paid the clinic
+Health & Fitness,train,got tablets for dad
+Health & Fitness,train,medical check up
+Health & Fitness,train,bought cough syrup
+Health & Fitness,train,pharmacy bill
+Health & Fitness,train,doctor visit for mom
+Groceries,train,bought vegitables for dinner
+Groceries,train,got milk n bread
+Groceries,train,kirana run
+Groceries,train,restocked rice
+Groceries,train,bought atta n dal
+Groceries,train,monthly groceries
+Groceries,train,veggies for home
+Groceries,train,pantry refill
+Groceries,train,got cooking oil
+Groceries,train,bought fruits n veg
+Groceries,train,grocerys for the flat
+Groceries,train,picked up household food
+Food & Dining,train,lunch wit frnds
+Food & Dining,train,grabbed chai
+Food & Dining,train,ordered dinner
+Food & Dining,train,cafe bill
+Food & Dining,train,ate out with classmates
+Food & Dining,train,breakfast on campus
+Food & Dining,train,food delivery
+Food & Dining,train,paid for dinner
+Food & Dining,train,snacks after class
+Food & Dining,train,coffee n sandwich
+Food & Dining,train,restaurant bill
+Food & Dining,train,got some biryani
+Travel & Transport,train,uber to college
+Travel & Transport,train,auto back home
+Travel & Transport,train,petrol for scooty
+Travel & Transport,train,metro to office
+Travel & Transport,train,cab to station
+Travel & Transport,train,bus pass
+Travel & Transport,train,fuel top up
+Travel & Transport,train,ola ride home
+Travel & Transport,train,rickshaw fare
+Travel & Transport,train,train ticket home
+Travel & Transport,train,ride to campus
+Travel & Transport,train,filled petrol
+Housing / Rent,train,paid room rent
+Housing / Rent,train,rent for flat
+Housing / Rent,train,sent rent to landlord
+Housing / Rent,train,hostel rent
+Housing / Rent,train,monthly room payment
+Housing / Rent,train,rent due
+Housing / Rent,train,flat rent this month
+Housing / Rent,train,paid my lease
+Housing / Rent,train,shared flat rent
+Housing / Rent,train,landlord payment
+Housing / Rent,train,apartment rent
+Housing / Rent,train,room rent
+Education,train,college fee
+Education,train,uni tuition
+Education,train,paid sem fees
+Education,train,notebooks for class
+Education,train,stationary for college
+Education,train,exam fee payment
+Education,train,course fee
+Education,train,bought textbooks
+Education,train,lab fee
+Education,train,semester dues
+Education,train,study material
+Education,train,college registration
+Shopping,train,bought a shirt
+Shopping,train,new sneakers
+Shopping,train,bought a charger
+Shopping,train,household item
+Shopping,train,new backpack
+Shopping,train,got a jacket
+Shopping,train,bought kitchen item
+Shopping,train,electrical purchase
+Shopping,train,shopping mall
+Shopping,train,gift purchase
+Shopping,train,bought some hardware
+Bills & Utilities,train,phone recharge
+Bills & Utilities,train,electricity bill
+Bills & Utilities,train,wifi payment
+Bills & Utilities,train,mobile plan
+Bills & Utilities,train,water bill
+Bills & Utilities,train,broadband recharge
+Bills & Utilities,train,power bill
+Bills & Utilities,train,recharged mom's phone
+Bills & Utilities,train,internet bill
+Bills & Utilities,train,utility payment
+Bills & Utilities,train,mobile recharge
+Bills & Utilities,train,paid the wifi
+Entertainment,train,movie tonite
+Entertainment,train,cinema ticket
+Entertainment,train,netflix renewal
+Entertainment,train,spotify sub
+Entertainment,train,concert ticket
+Entertainment,train,watched a film
+Entertainment,train,movie wit frnds
+Entertainment,train,streaming plan
+Entertainment,train,music subscription
+Entertainment,train,cinema outing
+Entertainment,train,paid for a show
+Entertainment,train,movie theatre
+Transfer / Personal,train,paid rahul back
+Transfer / Personal,train,sent money to mom
+Transfer / Personal,train,borrowed cash from friend
+Transfer / Personal,train,reimbursed my roommate
+Transfer / Personal,train,sent allowance home
+Transfer / Personal,train,returned the loan
+Transfer / Personal,train,money owed to brother
+Transfer / Personal,train,paid my cousin back
+Transfer / Personal,train,shared expense repayment
+Transfer / Personal,train,lent cash to friend
+Transfer / Personal,train,sent money for my sister
+Transfer / Personal,train,personal transfer
+Unknown,train,paid something
+Unknown,train,general payment
+Unknown,train,not sure what for
+Unknown,train,misc expense
+Unknown,train,just paid
+Unknown,train,something for home
+Unknown,train,cash payment
+Unknown,train,personal thing
+Unknown,train,done payment
+Unknown,train,random expense
+Unknown,train,for something
+Unknown,train,no idea

@@ -1,0 +1,101 @@
+case_id,scenario,merchant_name,amount_inr,payment_method,note,prior_context,expected_context,expected_category_v2,ambiguity_level,expected_action
+T001,obvious_known_merchant,ZOMATO,420,UPI,,,Food delivery,Food & Dining,low,categorize
+T002,obvious_known_merchant,SWIGGY,310,UPI,,,Food delivery,Food & Dining,low,categorize
+T003,obvious_known_merchant,STARBUCKS,380,UPI,,,Coffee/food,Food & Dining,low,categorize
+T004,obvious_known_merchant,UBER,260,UPI,,,Ride,Travel & Transport,low,categorize
+T005,obvious_known_merchant,OLA,190,UPI,,,Ride,Travel & Transport,low,categorize
+T006,obvious_known_merchant,AIRTEL,699,UPI,,,Mobile bill,Bills & Utilities,low,categorize
+T007,obvious_known_merchant,NETFLIX,649,UPI,,,Streaming subscription,Entertainment,low,categorize
+T008,obvious_known_merchant,BLINKIT,840,UPI,,,Quick-commerce groceries,Groceries,low,categorize
+T009,obvious_known_merchant,AMAZON,1299,UPI,,,Online purchase,Shopping,low,categorize
+T010,obvious_known_merchant,APOLLO HEALTH,760,UPI,,,Pharmacy/healthcare,Health & Fitness,low,categorize
+T011,personal_name_no_context,RAHUL KUMAR,350,UPI,,,unknown,Unknown,high,ask_user
+T012,personal_name_no_context,ANITA DEVI,850,UPI,,,unknown,Unknown,high,ask_user
+T013,personal_name_no_context,MOHAN,500,UPI,,,unknown,Unknown,high,ask_user
+T014,personal_name_no_context,SUNITA DEVI,1200,UPI,,,unknown,Unknown,high,ask_user
+T015,personal_name_no_context,RAJESH,2200,UPI,,,unknown,Unknown,high,ask_user
+T016,personal_name_no_context,PRIYA SHARMA,480,UPI,,,unknown,Unknown,high,ask_user
+T017,personal_name_no_context,AMIT VERMA,1500,UPI,,,unknown,Unknown,high,ask_user
+T018,personal_name_no_context,NEHA,275,UPI,,,unknown,Unknown,high,ask_user
+T019,personal_name_no_context,RAMESH,5000,UPI,,,unknown,Unknown,high,ask_user
+T020,personal_name_no_context,VIKAS,90,UPI,,,unknown,Unknown,high,ask_user
+T021,personal_name_with_context,RAHUL KUMAR,350,UPI,Tea from college shop,,Food purchase,Food & Dining,low,categorize
+T022,personal_name_with_context,ANITA DEVI,850,UPI,Medicines for fever,,Healthcare purchase,Health & Fitness,low,categorize
+T023,personal_name_with_context,MOHAN,500,UPI,Borrowed money,,Personal transfer / borrowing,Transfer / Personal,low,categorize
+T024,personal_name_with_context,SUNITA DEVI,1200,UPI,Monthly room rent,,Rent payment,Housing / Rent,low,categorize
+T025,personal_name_with_context,RAJESH,2200,UPI,College semester fee,,Education payment,Education,low,categorize
+T026,personal_name_with_context,PRIYA SHARMA,480,UPI,Auto ride home,,Local transport,Travel & Transport,low,categorize
+T027,personal_name_with_context,AMIT VERMA,1500,UPI,Dinner with friends,,Dining,Food & Dining,low,categorize
+T028,personal_name_with_context,NEHA,275,UPI,Groceries from local shop,,Groceries,Groceries,low,categorize
+T029,personal_name_with_context,RAMESH,5000,UPI,Paid back what I owed,,Debt repayment,Transfer / Personal,low,categorize
+T030,personal_name_with_context,VIKAS,90,UPI,Chai and snacks,,Food purchase,Food & Dining,low,categorize
+T031,local_business_name,SHARMA GENERAL STORE,640,UPI,Monthly groceries,,Groceries,Groceries,medium,categorize
+T032,local_business_name,NEW LUCKNOW MEDICOS,920,UPI,Tablets,,Pharmacy,Health & Fitness,low,categorize
+T033,local_business_name,ROYAL BAKERS,280,UPI,Birthday cake,,Bakery/food,Food & Dining,low,categorize
+T034,local_business_name,CITY MOBILE POINT,700,UPI,Phone recharge,,Mobile recharge,Bills & Utilities,medium,categorize
+T035,local_business_name,GANESH AUTO,180,UPI,Ride to college,,Auto-rickshaw,Travel & Transport,medium,categorize
+T036,local_business_name,Maa Durga Collection,1200,UPI,Kurti,,Clothing purchase,Shopping,medium,categorize
+T037,local_business_name,COLLEGE CANTEEN,95,UPI,Lunch,,College food,Food & Dining,low,categorize
+T038,local_business_name,OM ELECTRICALS,450,UPI,Extension board,,Household purchase,Shopping,medium,categorize
+T039,local_business_name,SRI BALAJI HARDWARE,780,UPI,Plumbing item,,Home repair purchase,Shopping,medium,categorize
+T040,local_business_name,JAI PRAKASH STATIONERS,260,UPI,Notebooks and pens,,Education supplies,Education,medium,categorize
+T041,repeated_merchant_history,RAHUL KUMAR,40,UPI,Tea,,Food purchase,Food & Dining,medium,categorize
+T042,repeated_merchant_history,RAHUL KUMAR,60,UPI,Breakfast,same merchant previously confirmed as Food & Dining,Food purchase,Food & Dining,low,categorize
+T043,repeated_merchant_history,RAHUL KUMAR,55,UPI,Tea,same merchant previously confirmed as Food & Dining,Food purchase,Food & Dining,low,categorize
+T044,repeated_merchant_history,RAHUL KUMAR,70,UPI,Snacks,same merchant previously confirmed as Food & Dining,Food purchase,Food & Dining,low,categorize
+T045,repeated_merchant_history,RAHUL KUMAR,45,UPI,Tea,same merchant previously confirmed as Food & Dining,Food purchase,Food & Dining,low,categorize
+T046,repeated_merchant_history,ANITA DEVI,600,UPI,Medicines,same merchant previously confirmed as Health & Fitness,Healthcare purchase,Health & Fitness,low,categorize
+T047,repeated_merchant_history,ANITA DEVI,450,UPI,Pharmacy,same merchant previously confirmed as Health & Fitness,Healthcare purchase,Health & Fitness,low,categorize
+T048,repeated_merchant_history,ANITA DEVI,720,UPI,Medicines,same merchant previously confirmed as Health & Fitness,Healthcare purchase,Health & Fitness,low,categorize
+T049,repeated_merchant_history,MOHAN,500,UPI,Borrowed,same merchant previously confirmed as Transfer / Personal,Personal transfer / borrowing,Transfer / Personal,low,categorize
+T050,repeated_merchant_history,MOHAN,500,UPI,Paid back borrowed amount,same merchant previously confirmed as Transfer / Personal,Debt repayment,Transfer / Personal,low,categorize
+T051,same_merchant_conflicting_context,RAHUL KUMAR,350,UPI,Tea from shop,same merchant has multiple historical meanings,Food purchase,Food & Dining,high,ask_user_if_conflict
+T052,same_merchant_conflicting_context,RAHUL KUMAR,5000,UPI,Monthly rent,same merchant has multiple historical meanings,Rent payment,Housing / Rent,high,ask_user_if_conflict
+T053,same_merchant_conflicting_context,RAHUL KUMAR,2000,UPI,Paid back loan,same merchant has multiple historical meanings,Debt repayment,Transfer / Personal,high,ask_user_if_conflict
+T054,same_merchant_conflicting_context,RAHUL KUMAR,420,UPI,Dinner,same merchant has multiple historical meanings,Dining,Food & Dining,high,ask_user_if_conflict
+T055,same_merchant_conflicting_context,RAHUL KUMAR,800,UPI,Medicine,same merchant has multiple historical meanings,Healthcare purchase,Health & Fitness,high,ask_user_if_conflict
+T056,same_merchant_conflicting_context,ANITA DEVI,250,UPI,Groceries,same merchant has multiple historical meanings,Groceries,Groceries,high,ask_user_if_conflict
+T057,same_merchant_conflicting_context,ANITA DEVI,1500,UPI,Clothes,same merchant has multiple historical meanings,Clothing purchase,Shopping,high,ask_user_if_conflict
+T058,same_merchant_conflicting_context,ANITA DEVI,5000,UPI,College fee,same merchant has multiple historical meanings,Education payment,Education,high,ask_user_if_conflict
+T059,same_merchant_conflicting_context,MOHAN,300,UPI,Lunch,same merchant has multiple historical meanings,Dining,Food & Dining,high,ask_user_if_conflict
+T060,same_merchant_conflicting_context,MOHAN,3000,UPI,Borrowed money,same merchant has multiple historical meanings,Personal transfer / borrowing,Transfer / Personal,high,ask_user_if_conflict
+T061,history_and_amount_clues,RAHUL KUMAR,5000,UPI,,Previous ₹40–₹70 payments were food; current amount is unusually high,uncertain; could be rent/transfer,Unknown,high,ask_user_if_low
+T062,history_and_amount_clues,ANITA DEVI,850,UPI,,Previous transactions were pharmacy purchases,likely healthcare,Health & Fitness,medium,ask_user_if_low
+T063,history_and_amount_clues,MOHAN,500,UPI,,Previous transaction note was 'borrowed',possibly transfer,Transfer / Personal,medium,ask_user_if_low
+T064,history_and_amount_clues,LOCAL MART,120,UPI,,Mostly small grocery purchases in history,likely groceries,Groceries,medium,ask_user_if_low
+T065,history_and_amount_clues,LOCAL MART,2400,UPI,,Usually ₹100–₹300 groceries; current amount is unusual,uncertain,Unknown,high,ask_user_if_low
+T066,history_and_amount_clues,RAMESH,80,UPI,,No history,unknown,Unknown,high,ask_user_if_low
+T067,history_and_amount_clues,RAMESH,600,UPI,,Previous note: 'auto ride',likely transport,Travel & Transport,medium,ask_user_if_low
+T068,history_and_amount_clues,PRIYA SHARMA,3000,UPI,,Previous ₹200–₹400 food payments; current amount is unusual,uncertain,Unknown,high,ask_user_if_low
+T069,history_and_amount_clues,COLLEGE CANTEEN,1200,UPI,,Frequent small food purchases,"likely food, but unusual amount",Food & Dining,medium,ask_user_if_low
+T070,history_and_amount_clues,AMIT VERMA,1500,UPI,,Previous notes were 'dinner' and 'lunch',likely dining,Food & Dining,medium,ask_user_if_low
+T071,non_expense_or_transfer,MOM,5000,UPI,Monthly allowance,,Family transfer,Transfer / Personal,low,categorize_semantics
+T072,non_expense_or_transfer,DAD,10000,UPI,Monthly allowance,,Family transfer,Transfer / Personal,low,categorize_semantics
+T073,non_expense_or_transfer,MOHAN,1500,UPI,Borrowed money,,Borrowing,Transfer / Personal,low,categorize_semantics
+T074,non_expense_or_transfer,RAMESH,1200,UPI,Returned borrowed money,,Debt repayment,Transfer / Personal,low,categorize_semantics
+T075,non_expense_or_transfer,LANDLORD,8000,UPI,Monthly room rent,,Rent payment,Housing / Rent,low,categorize_semantics
+T076,non_expense_or_transfer,COLLEGE OFFICE,25000,UPI,Semester fees,,Education payment,Education,low,categorize_semantics
+T077,non_expense_or_transfer,FRIEND,700,UPI,Split dinner repayment,,Expense reimbursement,Transfer / Personal,low,categorize_semantics
+T078,non_expense_or_transfer,SISTER,1000,UPI,Sent for travel,,Family transfer,Transfer / Personal,low,categorize_semantics
+T079,non_expense_or_transfer,RAHUL KUMAR,900,UPI,Refund for shared purchase,,Reimbursement,Transfer / Personal,low,categorize_semantics
+T080,non_expense_or_transfer,VIKAS,300,UPI,Paid back for lunch,,Reimbursement,Transfer / Personal,low,categorize_semantics
+T081,weak_or_partial_note,RAHUL KUMAR,350,UPI,,,unknown,Unknown,high,categorize_if_supported_else_ask
+T082,weak_or_partial_note,ANITA DEVI,850,UPI,ok,,insufficient context,Unknown,high,categorize_if_supported_else_ask
+T083,weak_or_partial_note,MOHAN,500,UPI,personal,,insufficient context,Unknown,high,categorize_if_supported_else_ask
+T084,weak_or_partial_note,SUNITA DEVI,1200,UPI,home,,insufficient context,Unknown,high,categorize_if_supported_else_ask
+T085,weak_or_partial_note,RAJESH,2200,UPI,fee,,education payment,Education,medium,categorize_if_supported_else_ask
+T086,weak_or_partial_note,PRIYA SHARMA,480,UPI,ride,,transport,Travel & Transport,medium,categorize_if_supported_else_ask
+T087,weak_or_partial_note,AMIT VERMA,1500,UPI,food,,dining,Food & Dining,medium,categorize_if_supported_else_ask
+T088,weak_or_partial_note,NEHA,275,UPI,stuff,,unclear purchase,Unknown,high,categorize_if_supported_else_ask
+T089,weak_or_partial_note,RAMESH,5000,UPI,payment,,insufficient context,Unknown,high,categorize_if_supported_else_ask
+T090,weak_or_partial_note,VIKAS,90,UPI,tea,,food purchase,Food & Dining,medium,categorize_if_supported_else_ask
+T091,genuinely_ambiguous,RAHUL KUMAR,4999,UPI,,,previously food payments only; amount unusually high,Unknown,high,ask_user
+T092,genuinely_ambiguous,ANITA DEVI,1999,UPI,gift,,could be shopping or transfer,Unknown,high,ask_user
+T093,genuinely_ambiguous,MOHAN,3000,UPI,,,"could be rent, loan, or purchase",Unknown,high,ask_user
+T094,genuinely_ambiguous,SUNITA DEVI,700,UPI,,,no history; common personal name,Unknown,high,ask_user
+T095,genuinely_ambiguous,RAJESH,1500,UPI,monthly,,"could be subscription, rent, or transfer",Unknown,high,ask_user
+T096,genuinely_ambiguous,PRIYA SHARMA,1000,UPI,,,no history,Unknown,high,ask_user
+T097,genuinely_ambiguous,AMIT VERMA,5000,UPI,,,previously food; amount unusually high,Unknown,high,ask_user
+T098,genuinely_ambiguous,RAMESH,100,UPI,,,no history,Unknown,high,ask_user
+T099,genuinely_ambiguous,VIKAS,2500,UPI,urgent,,insufficient context,Unknown,high,ask_user
+T100,genuinely_ambiguous,NEHA,1200,UPI,for home,,could be groceries or household shopping,Unknown,high,ask_user

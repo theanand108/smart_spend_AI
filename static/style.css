@@ -343,6 +343,66 @@
     filter: invert(1) grayscale(100%) brightness(180%);
 }
 
+/* Statement import page: Bootstrap's default text colors are too dark on
+   the SSAI dark surface, so this page explicitly follows the app tokens. */
+.statement-import-page {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: calc(100vh - 72px);
+}
+
+.statement-import-page h1 {
+    color: var(--text-hero);
+}
+
+.statement-import-page .text-muted {
+    color: var(--text-muted) !important;
+}
+
+.statement-import-page .form-label,
+.statement-import-page .fw-semibold {
+    color: var(--text-primary);
+}
+
+.statement-import-page .form-text {
+    color: var(--text-muted);
+}
+
+.statement-import-page .card {
+    background-color: var(--surface);
+    border-color: var(--border-soft) !important;
+    color: var(--text-primary);
+}
+
+.statement-import-page .form-control {
+    background-color: var(--surface-elevated);
+    border-color: var(--border-medium);
+    color: var(--text-primary);
+}
+
+.statement-import-page .form-control:focus {
+    background-color: var(--input-bg-focus);
+    border-color: var(--border-accent-strong);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.25rem var(--accent-soft-bg);
+}
+
+.statement-import-page .border {
+    border-color: var(--border-medium) !important;
+}
+
+.statement-import-page .btn-outline-secondary {
+    color: var(--text-secondary);
+    border-color: var(--border-medium);
+}
+
+.statement-import-page .btn-outline-secondary:hover,
+.statement-import-page .btn-outline-secondary:focus-visible {
+    color: var(--text-primary);
+    background-color: var(--surface-accent-tint);
+    border-color: var(--border-emphasis);
+}
+
 html {
     background-color: var(--bg-primary);
 }
@@ -1970,7 +2030,6 @@ body {
     color: var(--text-primary-alt);
     font-weight: 600;
     text-decoration: none;
-    transition: color 180ms ease;
 }
 .footer-links a:hover {
     color: var(--accent);

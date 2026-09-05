@@ -6,7 +6,10 @@ from flask import Flask, request, render_template, redirect, flash, get_flashed_
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_
 from datetime import datetime
+from src.analytics.financial_facts import build_financial_facts
 from src.analytics.financial_pulse import generate_financial_pulse
+from src.analytics.insight_engine import generate_financial_insights
+from src.statement_import_web import register_statement_import
 
 app = Flask(__name__)
 app.secret_key = "smart-spend-toast-secret"
@@ -34,6 +37,9 @@ class Transaction(db.Model):
     def __repr__(self):
 
         return f"<Transaction {self.merchant_name}>"
+
+
+register_statement_import(app, db, Transaction)
 
 
 def categorize(merchant):
@@ -132,9 +138,6 @@ def get_spending_analytics(transaction_query):
         top_merchant = "N/A"
         top_merchant_amount = 0
     
-    
-    
-    
     return {
         "top_merchant": top_merchant,
         "top_merchant_amount": top_merchant_amount,
@@ -169,6 +172,171 @@ def make_insight(title, value, supporting_text, priority_score, insight_type):
         "priority_score": priority_score,
         "type": insight_type,
     }
+
+
+def format_signed_currency(amount):
+    amount = float(amount or 0)
+    if amount > 0:
+        return f"+{format_currency(amount)}"
+    if amount < 0:
+        return f"-{format_currency(abs(amount))}"
+    return format_currency(0)
+
+
+def format_signed_percentage(percent):
+    if percent is None:
+        return ""
+
+    percent = float(percent)
+    sign = "+" if percent > 0 else ""
+    return f"{sign}{percent:.0f}%"
+
+
+def format_natural_change(amount, percent=None):
+    amount_text = format_currency(abs(float(amount or 0)))
+    percent_text = format_signed_percentage(percent).lstrip("+-")
+    return f"{amount_text} ({percent_text})" if percent_text else amount_text
+
+
+def format_financial_insight_supporting_text(insight):
+    insight_type = insight.get("insight_type")
+    driver = insight.get("driver")
+    category = insight.get("category")
+    merchant = insight.get("merchant")
+    amount = insight.get("change_amount")
+    percent = insight.get("change_percent")
+    amount_text = format_natural_change(amount, percent)
+
+    if insight_type == "spending_increase":
+        if driver == "category_and_merchant" and category and merchant:
+            return (
+                f"{merchant} contributed most of the increase in {category}, "
+                f"which rose by {amount_text}. Review whether the extra spend was planned."
+            )
+        if category:
+            return (
+                f"{category} spending rose by {amount_text}, making it the "
+                "biggest contributor to the increase."
+            )
+        if merchant:
+            return (
+                f"{merchant} spending rose by {amount_text}, making it the "
+                "biggest contributor to the increase."
+            )
+        return (
+            f"Total spending rose by {amount_text} from last month. Review "
+            "where the extra spend came from."
+        )
+
+    if insight_type == "spending_decrease":
+        if driver == "category_and_merchant" and category and merchant:
+            return (
+                f"{merchant} contributed most to the reduction in {category}, "
+                f"which fell by {amount_text}. Keep the lower-spend pattern going."
+            )
+        if category:
+            return (
+                f"{category} spending fell by {amount_text} from last month, "
+                "making it the biggest contributor to the overall reduction."
+            )
+        if merchant:
+            return (
+                f"{merchant} spending fell by {amount_text} from last month, "
+                "making it the biggest contributor to the overall reduction."
+            )
+        return (
+            f"Total spending fell by {amount_text} from last month. Keep the "
+            "lower-spend pattern going."
+        )
+
+    if insight_type == "new_spending_area" and category:
+        merchant_text = f" through {merchant}" if merchant else ""
+        return (
+            f"{category} is a new spending area this month{merchant_text}, adding "
+            f"{format_currency(amount)} to your spending. Check whether it was expected."
+        )
+
+    if insight_type == "frequency_increase":
+        focus = f" for {merchant}" if merchant else f" in {category}" if category else ""
+        return (
+            f"Transaction frequency increased{focus}, contributing "
+            f"{amount_text} to the monthly change."
+        )
+
+    if insight_type in {"basket_size_increase", "average_transaction_increase"}:
+        focus = f" in {category}" if category else f" at {merchant}" if merchant else ""
+        return (
+            f"Your typical transaction got larger{focus} by {amount_text}. Check "
+            "whether the bigger purchases were planned."
+        )
+
+    if insight_type == "distributed_increase":
+        return (
+            f"Spending increased by {amount_text} across several areas, with "
+            "no single category explaining most of the change."
+        )
+
+    return (
+        f"Spending changed by {amount_text}. Review the categories and merchants "
+        "behind the shift."
+    )
+
+
+def format_financial_insight_card(insight):
+    title = insight.get("title")
+    if not title:
+        return None
+
+    return {
+        "title": title,
+        "value": format_signed_currency(insight.get("change_amount")),
+        "supporting_text": format_financial_insight_supporting_text(insight),
+    }
+
+
+def append_distinct_insight(cards, insight, limit):
+    if not insight or len(cards) >= limit:
+        return
+
+    signature = (
+        insight.get("title"),
+        insight.get("value"),
+        insight.get("supporting_text"),
+    )
+    existing = {
+        (
+            card.get("title"),
+            card.get("value"),
+            card.get("supporting_text"),
+        )
+        for card in cards
+    }
+    if signature not in existing:
+        cards.append(insight)
+
+
+def build_structured_financial_insight_cards(
+    current_transactions,
+    previous_transactions,
+    fallback_insights=None,
+    limit=3,
+):
+    facts = build_financial_facts(current_transactions, previous_transactions)
+    structured_insights = generate_financial_insights(facts, limit=limit)
+    insight_cards = []
+    for insight in structured_insights:
+        append_distinct_insight(
+            insight_cards,
+            format_financial_insight_card(insight),
+            limit,
+        )
+
+    for insight in fallback_insights or []:
+        fallback_card = dict(insight)
+        fallback_card["title"] = f"{insight.get('title')} :: {insight.get('value')}"
+        append_distinct_insight(insight_cards, fallback_card, limit)
+
+    return insight_cards
 
 
 def biggest_money_destination_insight(context):
@@ -691,7 +859,6 @@ def submit():
         db.session.commit()
 
         flash("Transaction added successfully.", "success")
-        # redirect back to simulate page and indicate the newly created transaction id
         return redirect(f"/simulateATransaction?new_id={transaction.id}")
     except Exception:
         flash("Something went wrong.", "danger")
@@ -706,12 +873,10 @@ def home():
 
 @app.route("/simulateATransaction", methods=["POST", "GET"])
 def simulate_transaction():
-    # Show only the latest 10 transactions (newest first) on the simulate page
     allTransactions = (
         Transaction.query.order_by(Transaction.date.desc()).limit(10).all()
     )
     flash_messages = get_flashed_messages(with_categories=True)
-    # Pass through any new_id query param so the template can scroll/highlight
     new_id = request.args.get('new_id')
     return render_template(
         "index2.html",
@@ -732,8 +897,6 @@ def dashboard1(month=None):
             return redirect("/dashboard")
         curr_month = normalized_month
 
-    # Build months dropdown up to the latest month that has transaction data for the current year.
-    # If there are no transactions for the current year, fall back to current month.
     latest_tx_current_year = (
         Transaction.query.filter(db.extract('year', Transaction.date) == curr_year)
         .order_by(Transaction.date.desc())
@@ -778,8 +941,7 @@ def dashboard1(month=None):
     filtered_top_category, filtered_top_category_amount = get_top_category_for_query(
         transaction_query
     )
-    # print("Analytics = ", analytics)
-    
+
     prev_month, prev_year = get_previous_month(curr_month, curr_year)
     previous_month_transaction_query = build_transaction_query(prev_month, prev_year)
     previous_transaction_query = build_transaction_query(
@@ -793,9 +955,7 @@ def dashboard1(month=None):
         ).scalar()
         or 0
     )
-    prev_month_Transaction_amount = (
-        previous_month_total_expense
-    )
+    prev_month_Transaction_amount = previous_month_total_expense
     filtered_previous_total_expense = (
         previous_transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
         or 0
@@ -806,7 +966,6 @@ def dashboard1(month=None):
         previous_month_transaction_query
     )
 
-    # Compute lightweight signals from the already-loaded `transactions` list
     merchant_counts: dict[str, int] = {}
     merchant_amounts: dict[str, float] = {}
     weekend_spend = 0.0
@@ -825,6 +984,9 @@ def dashboard1(month=None):
     month_merchant_counts: dict[str, int] = {}
     month_weekend_spend = 0.0
     month_transactions = month_transaction_query.order_by(Transaction.date.desc()).all()
+    previous_month_transactions = (
+        previous_month_transaction_query.order_by(Transaction.date.desc()).all()
+    )
     for t in month_transactions:
         name = t.merchant_name or "N/A"
         amt = float(t.amount or 0)
@@ -857,7 +1019,6 @@ def dashboard1(month=None):
         default=None,
     )
 
-    # Weekly spending totals for the selected month
     days_in_month = monthrange(curr_year, curr_month)[1]
     previous_days_in_month = monthrange(prev_year, prev_month)[1]
     number_of_weeks = (days_in_month + 6) // 7
@@ -895,6 +1056,50 @@ def dashboard1(month=None):
         "calendar_avg_daily_spend": (float(filtered_total_expense or 0) / days_in_month),
     }
     key_insights = build_key_insights(insight_context)
+    month_largest_transaction = max(
+        month_transactions,
+        key=lambda transaction: float(transaction.amount or 0),
+        default=None,
+    )
+    month_merchant_amounts: dict[str, float] = {}
+    for t in month_transactions:
+        name = t.merchant_name or "N/A"
+        month_merchant_amounts[name] = month_merchant_amounts.get(name, 0.0) + float(
+            t.amount or 0
+        )
+    month_insight_context = {
+        "transactions": month_transactions,
+        "total_expense": float(total_expense or 0),
+        "total_transactions": total_transactions,
+        "top_category": top_category,
+        "top_category_amount": float(top_category_amount or 0),
+        "merchant_counts": month_merchant_counts,
+        "merchant_amounts": month_merchant_amounts,
+        "largest_transaction": month_largest_transaction,
+        "weekend_spending_ratio": month_weekend_spending_ratio,
+        "small_tx_count": sum(
+            1 for t in month_transactions if float(t.amount or 0) < 100
+        ),
+        "small_tx_ratio": (
+            sum(1 for t in month_transactions if float(t.amount or 0) < 100)
+            / total_transactions
+            if total_transactions
+            else 0
+        ),
+        "calendar_avg_daily_spend": (float(total_expense or 0) / days_in_month),
+    }
+    financial_insight_fallbacks = build_key_insights(month_insight_context)
+    try:
+        financial_insights = build_structured_financial_insight_cards(
+            month_transactions,
+            previous_month_transactions,
+            fallback_insights=financial_insight_fallbacks,
+        )
+    except Exception:
+        financial_insights = []
+    if not financial_insights:
+        financial_insights = financial_insight_fallbacks
+
     month_comparison_summary = build_month_comparison_summary(
         current_total_expense=float(filtered_total_expense or 0),
         current_total_transactions=filtered_total_transactions,
@@ -926,8 +1131,6 @@ def dashboard1(month=None):
         previous_category_totals=previous_month_category_totals,
     )
 
-
-    # Split the query tuple results into distinct arrays
     labels = [row[0] for row in category_data]
     values = [float(row[1]) for row in category_data]
 
@@ -941,10 +1144,8 @@ def dashboard1(month=None):
         .all()
     )
 
-
-    # 2. Split the results into parallel arrays for JavaScript
-    trend_labels = [row[0] for row in trend_data]  # e.g., ['2026-05', '2026-06']
-    trend_values = [float(row[1]) for row in trend_data]  # e.g., [1520.0, 4680.0]
+    trend_labels = [row[0] for row in trend_data]
+    trend_values = [float(row[1]) for row in trend_data]
 
     curr_month_name = datetime(curr_year, curr_month, 1).strftime("%B")
     flash_messages = get_flashed_messages(with_categories=True)
@@ -969,6 +1170,7 @@ def dashboard1(month=None):
         financial_pulse_summary=financial_pulse_summary,
         prev_month_Transaction_amount = prev_month_Transaction_amount,
         key_insights=key_insights,
+        financial_insights=financial_insights,
         month_comparison_summary=month_comparison_summary,
         weekly_labels=weekly_labels,
         weekly_values=weekly_values,
@@ -1062,7 +1264,6 @@ def exportCSV(month=None):
 
     export_date = datetime.now().strftime("%d-%b-%Y")
     month_name = datetime(curr_year, curr_month, 1).strftime("%B")
-    # Create CSV content
 
     csv_content = ""
 
@@ -1076,16 +1277,13 @@ def exportCSV(month=None):
     csv_content += f"Search: {search_query if search_query else 'None'}\n"
 
     csv_content += f"Total Transactions: {total_transactions}\n"
-
     csv_content += f"Total Amount: ₹{total_amount:.2f}\n"
-
     csv_content += "-" * 60 + "\n\n"
 
     csv_content += "S.No,Date,Merchant Name,Category,Amount,Payment Method,Notes\n"
     for index, transaction in enumerate(transactions, start=1):
         csv_content += f"{index},{transaction.date},{transaction.merchant_name},{transaction.amount},{transaction.category},{transaction.payment_method},{transaction.notes}\n"
 
-    # Create a response with the CSV content
     response = app.response_class(response=csv_content, status=200, mimetype="text/csv")
     response.headers["Content-Disposition"] = (
         f"attachment; filename=SmartSpend_{arrayMonths[curr_month - 1]}_{curr_year}_{search_query}.csv"

@@ -1,0 +1,128 @@
+{% if attention %}
+{% set dashboard_month = request.args.get('month')|int %}
+{% if dashboard_month >= 1 and dashboard_month <= 12 %}
+{% set dashboard_return_url = url_for('dashboard1', month=dashboard_month) %}
+{% else %}
+{% set dashboard_return_url = url_for('dashboard1') %}
+{% endif %}
+<section class="container dashboard-section-block" id="dashboard-needs-attention">
+  <div class="card dashboard-card">
+    <div class="card-body">
+      <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-4">
+        <div>
+          <h5 class="dashboard-section-title mb-1">Needs your attention</h5>
+          <p class="dashboard-section-copy mb-0">
+            {{ attention|length }} transaction{{ '' if attention|length == 1 else 's' }} need{{ 's' if attention|length == 1 else '' }} a decision.
+          </p>
+        </div>
+      </div>
+
+      {% for item in attention[:5] %}
+      {% if item.status != 'conflict' and (loop.first or attention[loop.index0 - 1].status == 'conflict') %}
+      <hr class="attention-group-divider" role="separator" style="border: 0; border-top: 1px solid var(--border-soft); opacity: 1; margin: 20px 0;">
+      {% endif %}
+      <div class="dashboard-transaction-item">
+        <div class="dashboard-transaction-main">
+          <div class="dashboard-transaction-title">{{ item.transaction.merchant_name }}</div>
+          <div class="dashboard-transaction-meta">
+            <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
+            <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
+            {% if item.category %}
+            <span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>
+            {% endif %}
+          </div>
+          <div class="dashboard-transaction-notes">{{ item.reason }}</div>
+        </div>
+        <div class="dashboard-transaction-actions">
+          <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            <input type="hidden" name="next" value="{{ dashboard_return_url }}">
+            <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
+              <option value="" {% if not item.category %}selected{% endif %}>Choose category</option>
+              {% if item.category and item.category not in review_categories %}
+              <option value="{{ item.category }}" selected>{{ item.category }}</option>
+              {% endif %}
+              {% for category in review_categories %}
+              <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% if attention|length > 5 %}
+      <input type="checkbox" id="attention-toggle" class="attention-toggle-input" aria-controls="attention-additional">
+      <div id="attention-additional" class="attention-additional">
+        {% for item in attention[5:] %}
+        {% if item.status != 'conflict' and attention[loop.index0 + 4].status == 'conflict' %}
+        <hr class="attention-group-divider" role="separator" style="border: 0; border-top: 1px solid var(--border-soft); opacity: 1; margin: 20px 0;">
+        {% endif %}
+        <div class="dashboard-transaction-item">
+          <div class="dashboard-transaction-main">
+            <div class="dashboard-transaction-title">{{ item.transaction.merchant_name }}</div>
+            <div class="dashboard-transaction-meta">
+              <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
+              <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
+              {% if item.category %}<span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>{% endif %}
+            </div>
+            <div class="dashboard-transaction-notes">{{ item.reason }}</div>
+          </div>
+          <div class="dashboard-transaction-actions">
+            <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+              <input type="hidden" name="next" value="{{ dashboard_return_url }}">
+              <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
+                <option value="" {% if not item.category %}selected{% endif %}>Choose category</option>
+                {% if item.category and item.category not in review_categories %}
+                <option value="{{ item.category }}" selected>{{ item.category }}</option>
+                {% endif %}
+                {% for category in review_categories %}
+                <option value="{{ category }}" {% if item.category == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <label for="attention-toggle" class="btn btn-outline-secondary btn-sm mt-3 attention-toggle-button">
+        <span class="attention-toggle-more">Show {{ attention|length - 5 }} more</span>
+        <span class="attention-toggle-less">Show less</span>
+      </label>
+
+      <style>
+        .attention-toggle-input {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .attention-additional {
+          display: none;
+        }
+
+        .attention-toggle-less {
+          display: none;
+        }
+
+        .attention-toggle-input:checked ~ .attention-additional {
+          display: block;
+        }
+
+        .attention-toggle-input:checked ~ .attention-toggle-button .attention-toggle-more {
+          display: none;
+        }
+
+        .attention-toggle-input:checked ~ .attention-toggle-button .attention-toggle-less {
+          display: inline;
+        }
+      </style>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}

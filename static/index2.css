@@ -173,9 +173,9 @@
   color: var(--input-placeholder);
 }
 
-/* This amount chip is an intentional fixed-dark surface (like the phone
-   mockup and positioning band) - it carries its own white text and doesn't
-   need to shift with the page theme. */
+/* The update page keeps its intentionally fixed-dark amount treatment for now.
+   The create/simulate page gets a theme-aware amount treatment below so its
+   light-mode surface stays consistent with the rest of the page. */
 .simulate-field-amount {
   background: #111827;
   border-radius: 15px;
@@ -213,6 +213,35 @@
   font-size: clamp(1.55rem, 3.2vw, 2.05rem);
   font-weight: 680;
   letter-spacing: 0;
+}
+
+/* Create/simulate page: keep the amount field aligned with the active theme.
+   This is deliberately scoped so the update page is not changed in this pass. */
+.simulate-create-page .simulate-field-amount {
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}
+
+.simulate-create-page .simulate-field-amount .form-label {
+  color: var(--text-secondary);
+}
+
+.simulate-create-page .simulate-amount-shell {
+  border-color: var(--border-subtle);
+}
+
+.simulate-create-page .simulate-amount-shell:focus-within {
+  background: var(--input-bg-focus);
+  border-color: var(--simulate-focus-border);
+  box-shadow: 0 0 0 3px var(--simulate-focus-ring);
+}
+
+.simulate-create-page .simulate-amount-shell span {
+  color: var(--text-muted);
+}
+
+.simulate-create-page .simulate-amount-shell .form-control {
+  color: var(--text-primary);
 }
 
 .simulate-amount-shell input[type="number"] {

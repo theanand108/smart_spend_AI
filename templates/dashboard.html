@@ -113,7 +113,7 @@ block body %}
             </a>
             {% endif %}
             <a href="{{ url_for('exportCSV', month=curr_month, q=search_query) }}" class="dashboard-export-btn">
-              <i class="bi bi-download" aria-hidden="true"></i> Export
+              <i class="bi bi-upload" aria-hidden="true"></i> Export
             </a>
           </div>
         </div>
@@ -153,32 +153,43 @@ block body %}
   </div>
 </section>
 
-<!-- Key Insights -->
-{% if key_insights %}
+<!-- Financial Insights -->
+{% if financial_insights %}
+{% set financial_insight_cards = financial_insights[:3] %}
 <div class="container dashboard-highlights-container dashboard-section-block">
   <div class="mb-3">
     <h5 class="dashboard-section-title">Financial Insights</h5>
   </div>
 
   <div class="insight-briefing">
-    {% for insight in key_insights %}
+    {% for insight in financial_insight_cards %}
       {% if loop.first %}
       <div class="insight-card insight-card-primary">
-        <p class="insight-eyebrow">{{ insight.title }}</p>
-        <p class="insight-value">{{ insight.value }}</p>
-        <p class="insight-context">{{ insight.supporting_text }}</p>
+        {% set insight_parts = insight.title.split(' :: ', 1) %}
+        <p class="insight-eyebrow">{{ insight_parts[0] }}</p>
+        <p class="insight-value">
+          {% if insight_parts|length > 1 %}{{ insight_parts[1] }}{% else %}{{ insight.title }}{% endif %}
+        </p>
+        <p class="insight-context">
+          {% if insight_parts|length > 1 %}{{ insight.value }} · {% endif %}{{ insight.supporting_text }}
+        </p>
       </div>
       {% endif %}
     {% endfor %}
 
-    {% if key_insights|length > 1 %}
+    {% if financial_insight_cards|length > 1 %}
     <div class="insight-secondary-row">
-      {% for insight in key_insights %}
+      {% for insight in financial_insight_cards %}
         {% if not loop.first %}
         <div class="insight-card insight-card-secondary">
-          <p class="insight-eyebrow">{{ insight.title }}</p>
-          <p class="insight-value">{{ insight.value }}</p>
-          <p class="insight-context">{{ insight.supporting_text }}</p>
+          {% set insight_parts = insight.title.split(' :: ', 1) %}
+          <p class="insight-eyebrow">{{ insight_parts[0] }}</p>
+          <p class="insight-value">
+            {% if insight_parts|length > 1 %}{{ insight_parts[1] }}{% else %}{{ insight.title }}{% endif %}
+          </p>
+          <p class="insight-context">
+            {% if insight_parts|length > 1 %}{{ insight.value }} · {% endif %}{{ insight.supporting_text }}
+          </p>
         </div>
         {% endif %}
       {% endfor %}
@@ -264,6 +275,8 @@ block body %}
   </div>
 </div>
 {% endif %}
+
+{% include '_attention.html' %}
 
 <!-- Transactions -->
 <div class="container dashboard-section-block">
