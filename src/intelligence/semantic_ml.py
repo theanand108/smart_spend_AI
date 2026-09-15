@@ -80,13 +80,32 @@ def _build_model() -> Any:
             (
                 "classifier",
                 LogisticRegression(
-                    max_iter=2000,
+                    max_iter=1000,
+                    solver="liblinear",
                     class_weight="balanced",
                     random_state=42,
                 ),
             ),
         ]
     ).fit(notes, labels)
+
+
+def warm_up_semantic_model() -> None:
+    """Build the cached semantic model before the first user transaction.
+
+    Transaction categorization can be invoked from SQLAlchemy's ``before_flush``
+    hook. Warming the cached model when this module is imported prevents model
+    training from happening inside a user-facing POST request on constrained
+    production workers such as Render's small instances.
+    """
+    try:
+        _build_model()
+    except ImportError:
+        # The prediction path already handles a missing scikit-learn install.
+        return
+    except Exception as exc:
+        # Keep startup non-fatal; prediction will retry lazily if needed.
+        print(f"Warning: semantic model warm-up failed: {exc}")
 
 
 def learned_semantic_evidence(
@@ -185,3 +204,8 @@ def learned_semantic_evidence(
         "candidates": candidates,
         "reason": f"Learned NLP model predicts {top_category} from transaction-note language.",
     }
+
+
+# Build the cached model during application import so the first transaction
+# request never pays the model-training cost.
+warm_up_semantic_model()
