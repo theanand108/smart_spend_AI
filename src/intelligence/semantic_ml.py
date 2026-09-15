@@ -80,8 +80,7 @@ def _build_model() -> Any:
             (
                 "classifier",
                 LogisticRegression(
-                    max_iter=1000,
-                    solver="liblinear",
+                    max_iter=2000,
                     class_weight="balanced",
                     random_state=42,
                 ),
@@ -91,20 +90,12 @@ def _build_model() -> Any:
 
 
 def warm_up_semantic_model() -> None:
-    """Build the cached semantic model before the first user transaction.
-
-    Transaction categorization can be invoked from SQLAlchemy's ``before_flush``
-    hook. Warming the cached model when this module is imported prevents model
-    training from happening inside a user-facing POST request on constrained
-    production workers such as Render's small instances.
-    """
+    """Build the cached semantic model before the first user transaction."""
     try:
         _build_model()
     except ImportError:
-        # The prediction path already handles a missing scikit-learn install.
         return
     except Exception as exc:
-        # Keep startup non-fatal; prediction will retry lazily if needed.
         print(f"Warning: semantic model warm-up failed: {exc}")
 
 
@@ -153,9 +144,6 @@ def learned_semantic_evidence(
         for category, probability in ranked[:3]
     ]
 
-    # "Unknown" is a training label for intentionally vague transactions,
-    # but it is not a concrete spending category. Preserve the public
-    # semantic-evidence contract by exposing that prediction as abstention.
     if str(top_category) == "Unknown":
         return {
             "category": None,
@@ -165,21 +153,12 @@ def learned_semantic_evidence(
             "reason": "Learned model identifies the note as unknown/vague; abstaining.",
         }
 
-    # A clear separation signal is useful because TF-IDF probabilities are
-    # naturally diluted across many classes. The calibrated default gate uses
-    # both probability and margin: enough evidence must exist, and the model
-    # must meaningfully prefer the winner over its runner-up.
     high_margin_confidence = 0.45
     high_margin_threshold = 0.35
     if (
         float(top_probability) >= high_margin_confidence
         and margin >= high_margin_threshold
     ):
-        # semantic.py treats confidence >= min_confidence as an accepted
-        # learned signal. A high-margin result has already passed the stricter
-        # separation gate above, so expose the gate level here rather than the
-        # diluted raw probability. The actual probability remains visible in
-        # candidates, while confidence means "accepted evidence strength".
         return {
             "category": str(top_category),
             "confidence": round(max(float(top_probability), min_confidence), 3),
@@ -206,6 +185,4 @@ def learned_semantic_evidence(
     }
 
 
-# Build the cached model during application import so the first transaction
-# request never pays the model-training cost.
 warm_up_semantic_model()
