@@ -187,7 +187,7 @@ def resolve_dashboard_attention(transaction_id: int):
     Transaction = current_app.extensions["statement_import_transaction_model"]
     category = request.form.get("category", "").strip()
     next_url = request.form.get("next") or "/dashboard"
-    if not next_url.startswith("/"):
+    if not next_url.startswith("/") or next_url.startswith("//"):
         next_url = "/dashboard"
     elif next_url.startswith("/dashboard/attention"):
         # The attention section is rendered as a dashboard partial. If its form
