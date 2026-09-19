@@ -66,7 +66,7 @@ def register_statement_import(app, db, Transaction) -> None:
                 text(
                     "SELECT COALESCE(SUM(amount), 0), COUNT(*) "
                     "FROM received_money "
-                    "WHERE user_id IS :user_id "
+                    "WHERE ((:user_id IS NULL AND user_id IS NULL) OR user_id = :user_id) "
                     "AND strftime('%Y', transaction_date) = :year "
                     "AND strftime('%m', transaction_date) = :month"
                 ),
