@@ -37,6 +37,7 @@
             <li class="nav-item">
               <a class="nav-link" href="/dashboard">Dashboard</a>
             </li>
+            {% if logged_in %}
             <li class="nav-item ms-2">
               <a class="nav-link d-flex align-items-center" href="/import">
                 <i class="bi bi-download me-1" aria-hidden="true"></i>
@@ -46,6 +47,20 @@
             <li class="nav-item ms-2">
               <a class="btn btn-outline-primary btn-sm rounded-pill" href="/simulateATransaction">+ Add Transaction</a>
             </li>
+            <li class="nav-item ms-2">
+              <form method="post" action="{{ url_for('logout') }}" class="d-inline">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-link nav-link">Sign out</button>
+              </form>
+            </li>
+            {% else %}
+            <li class="nav-item ms-2">
+              <a class="nav-link" href="/login">Sign in</a>
+            </li>
+            <li class="nav-item ms-2">
+              <a class="btn btn-primary btn-sm rounded-pill" href="/register">Start using SSAI</a>
+            </li>
+            {% endif %}
             {% if request.endpoint in ['dashboard1', 'home'] %}
             <li class="nav-item ms-2">
               <button type="button" id="theme-toggle-btn" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="Toggle dark mode" aria-pressed="false">
@@ -76,7 +91,11 @@
           </div>
           <div class="modal-footer border-0">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <a id="confirm-delete-link" href="#" class="btn btn-danger">Delete</a>
+            <form id="confirm-delete-form" method="post" action="#">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
           </div>
         </div>
       </div>
@@ -142,8 +161,8 @@
     <script>
       document.addEventListener('DOMContentLoaded', function () {
         var deleteModalEl = document.getElementById('deleteModal');
-        var confirmDeleteLink = document.getElementById('confirm-delete-link');
-        if (!deleteModalEl || !confirmDeleteLink) return;
+        var confirmDeleteForm = document.getElementById('confirm-delete-form');
+        if (!deleteModalEl || !confirmDeleteForm) return;
 
         var fallbackBackdrop = null;
 
@@ -170,7 +189,7 @@
           var deleteUrl = trigger.getAttribute('data-delete-url');
           if (!deleteUrl) return;
 
-          confirmDeleteLink.setAttribute('href', deleteUrl);
+          confirmDeleteForm.setAttribute('action', deleteUrl);
 
           if (window.bootstrap && bootstrap.Modal) {
             bootstrap.Modal.getOrCreateInstance(deleteModalEl).show();
