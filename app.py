@@ -1321,7 +1321,8 @@ def dashboard1(month=None):
     values = [float(row[1]) for row in category_data]
 
     trend_data = (
-        db.session.query(
+        scoped_transaction_query(Transaction.query)
+        .with_entities(
             db.func.strftime("%Y-%m", Transaction.date).label("month"),
             db.func.sum(Transaction.amount),
         )
