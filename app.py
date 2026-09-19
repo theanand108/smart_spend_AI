@@ -17,7 +17,7 @@ from src.analytics.insight_engine import generate_financial_insights
 from src.statement_import_web import register_statement_import
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or "local-development-secret-change-me"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or token_urlsafe(48)
 
 # Database configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///smart_spend.db")
