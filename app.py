@@ -1,4 +1,6 @@
 from calendar import monthrange, month_name
+import csv
+import io
 import os
 
 # pyright: reportMissingImports=false
@@ -1447,28 +1449,33 @@ def exportCSV(month=None):
     export_date = datetime.now().strftime("%d-%b-%Y")
     month_name = datetime(curr_year, curr_month, 1).strftime("%B")
 
-    csv_content = ""
-
-    csv_content += "Smart Spend AI - Expense Report\n\n"
-
-    csv_content += f"Export Date: {export_date}\n"
-    csv_content += f"Month: {month_name}\n"
-
-    csv_content += "Category: All Categories\n"
-
-    csv_content += f"Search: {search_query if search_query else 'None'}\n"
-
-    csv_content += f"Total Transactions: {total_transactions}\n"
-    csv_content += f"Total Amount: ₹{total_amount:.2f}\n"
-    csv_content += "-" * 60 + "\n\n"
-
-    csv_content += "S.No,Date,Merchant Name,Category,Amount,Payment Method,Notes\n"
+    output = io.StringIO(newline="")
+    csv_writer = csv.writer(output)
+    csv_writer.writerow(["Smart Spend AI - Expense Report"])
+    csv_writer.writerow([])
+    csv_writer.writerow(["Export Date", export_date])
+    csv_writer.writerow(["Month", month_name])
+    csv_writer.writerow(["Category", "All Categories"])
+    csv_writer.writerow(["Search", search_query if search_query else "None"])
+    csv_writer.writerow(["Total Transactions", total_transactions])
+    csv_writer.writerow(["Total Amount", f"₹{total_amount:.2f}"])
+    csv_writer.writerow([])
+    csv_writer.writerow(["S.No", "Date", "Merchant Name", "Category", "Amount", "Payment Method", "Notes"])
     for index, transaction in enumerate(transactions, start=1):
-        csv_content += f"{index},{transaction.date},{transaction.merchant_name},{transaction.amount},{transaction.category},{transaction.payment_method},{transaction.notes}\n"
+        csv_writer.writerow([
+            index,
+            transaction.date,
+            transaction.merchant_name,
+            transaction.category,
+            transaction.amount,
+            transaction.payment_method,
+            transaction.notes,
+        ])
 
-    response = app.response_class(response=csv_content, status=200, mimetype="text/csv")
+    response = app.response_class(response=output.getvalue(), status=200, mimetype="text/csv")
+    filename_suffix = "_filtered" if search_query else ""
     response.headers["Content-Disposition"] = (
-        f"attachment; filename=SmartSpend_{arrayMonths[curr_month - 1]}_{curr_year}_{search_query}.csv"
+        f"attachment; filename=SmartSpend_{arrayMonths[curr_month - 1]}_{curr_year}{filename_suffix}.csv"
     )
     return response
 
