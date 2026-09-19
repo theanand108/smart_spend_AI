@@ -1014,6 +1014,7 @@ def get_started():
 
 
 @app.route("/submit_expense", methods=["POST"])
+@login_required
 def submit():
     try:
         merchant_name = request.form.get("merchant_name")
