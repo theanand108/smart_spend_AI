@@ -50,7 +50,7 @@
             <button type="submit" class="btn btn-primary btn-sm">Save</button>
           </form>
           {% else %}
-          <a href="{{ url_for('register', next=url_for('get_started')) }}" class="btn btn-outline-primary btn-sm">Sign in to resolve</a>
+          <a href="{{ '/register?next=/get-started' }}" class="btn btn-outline-primary btn-sm">Sign in to resolve</a>
           {% endif %}
         </div>
       </div>
