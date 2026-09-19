@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from .statement_importer import ImportedTransaction, StatementImportResult
 
@@ -58,10 +58,7 @@ def ensure_import_tables(session: Any) -> None:
     session.execute(text(CREATE_IMPORT_RECORDS_SQL))
 
     for table in ("received_money", "statement_import_records"):
-        columns = {
-            row[1]
-            for row in session.execute(text(f"PRAGMA table_info({table})")).all()
-        }
+        columns = {column["name"] for column in inspect(session.bind).get_columns(table)}
         if "user_id" not in columns:
             session.execute(text(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER"))
 
