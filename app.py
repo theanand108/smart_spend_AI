@@ -2,24 +2,117 @@ from calendar import monthrange, month_name
 import os
 
 # pyright: reportMissingImports=false
-from flask import Flask, request, render_template, redirect, flash, get_flashed_messages
+from flask import Flask, request, render_template, redirect, flash, get_flashed_messages, session, url_for
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_
+from sqlalchemy import inspect, or_, text
 from datetime import datetime
+from functools import wraps
+from secrets import token_urlsafe
+from werkzeug.security import check_password_hash, generate_password_hash
 from src.analytics.financial_facts import build_financial_facts
 from src.analytics.financial_pulse import generate_financial_pulse
 from src.analytics.insight_engine import generate_financial_insights
 from src.statement_import_web import register_statement_import
 
 app = Flask(__name__)
-app.secret_key = "smart-spend-toast-secret"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or "local-development-secret-change-me"
 
 # Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///smart_spend.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///smart_spend.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "").lower() in {"1", "true", "yes"}
 
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
+
+
+def current_user_id():
+    return session.get("user_id")
+
+
+def current_user():
+    user_id = current_user_id()
+    return db.session.get(User, user_id) if user_id else None
+
+
+def scoped_transaction_query(query):
+    user_id = current_user_id()
+    if user_id is None:
+        return query.filter(Transaction.user_id.is_(None))
+    return query.filter(Transaction.user_id == user_id)
+
+
+def safe_next_url(value, fallback="/dashboard"):
+    value = (value or "").strip()
+    if value.startswith("/") and not value.startswith("//"):
+        return value
+    return fallback
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if current_user_id() is None:
+            flash("Please sign in to use your personal workspace.", "warning")
+            return redirect(url_for("login", next=safe_next_url(request.full_path)))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_auth_context():
+    return {
+        "current_user": current_user(),
+        "csrf_token": csrf_token,
+        "logged_in": current_user_id() is not None,
+    }
+
+
+@app.before_request
+def protect_state_changing_requests():
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+
+    expected = session.get("_csrf_token")
+    supplied = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token")
+    if not expected or not supplied or supplied != expected:
+        return ("Invalid or missing security token. Please refresh the page and try again.", 400)
+
+    return None
+
+
+def ensure_beta_schema():
+    with app.app_context():
+        db.create_all()
+        inspector = inspect(db.engine)
+
+        transaction_columns = {column["name"] for column in inspector.get_columns("transaction")}
+        if "user_id" not in transaction_columns:
+            with db.engine.begin() as connection:
+                connection.execute(text('ALTER TABLE "transaction" ADD COLUMN user_id INTEGER'))
+                connection.execute(text('CREATE INDEX IF NOT EXISTS ix_transaction_user_id ON "transaction" (user_id)'))
+
+        if "user" not in inspect(db.engine).get_table_names():
+            db.create_all()
+
+
+class User(db.Model):
+    __tablename__ = "user"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(320), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
 class Transaction(db.Model):
@@ -31,6 +124,7 @@ class Transaction(db.Model):
         category = db.Column(db.String(50), nullable=True)
         payment_method = db.Column(db.String(50))
         notes = db.Column(db.String(200))
+        user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     except Exception as e:
         print(f"Error defining Transaction model: {e}")
 
@@ -79,7 +173,7 @@ def build_transaction_query(month, year, search_query=""):
         db.extract("year", Transaction.date) == year,
     ]
     
-    query = Transaction.query.filter(*month_filters)
+    query = scoped_transaction_query(Transaction.query).filter(*month_filters)
 
     if search_query:
         pattern = f"%{search_query}%"
@@ -839,6 +933,84 @@ def build_month_comparison_summary(
     }
 
 
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if current_user_id() is not None:
+        return redirect(url_for("dashboard1"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        next_url = safe_next_url(request.form.get("next"), "/get-started")
+
+        if not email or "@" not in email or len(email) > 320:
+            flash("Enter a valid email address.", "warning")
+            return render_template("auth.html", mode="register", next=next_url)
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "warning")
+            return render_template("auth.html", mode="register", next=next_url)
+
+        if User.query.filter_by(email=email).first():
+            flash("An account with that email already exists. Sign in instead.", "warning")
+            return redirect(url_for("login", next=next_url))
+
+        user = User(email=email, password_hash=generate_password_hash(password))
+        db.session.add(user)
+        db.session.commit()
+
+        session.clear()
+        session["user_id"] = user.id
+        csrf_token()
+        flash("Your personal workspace is ready.", "success")
+        return redirect(next_url)
+
+    return render_template("auth.html", mode="register", next=safe_next_url(request.args.get("next"), "/get-started"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user_id() is not None:
+        return redirect(url_for("dashboard1"))
+
+    next_url = safe_next_url(request.args.get("next") or request.form.get("next"), "/dashboard")
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(email=email).first()
+
+        if not user or not check_password_hash(user.password_hash, password):
+            flash("Email or password is incorrect.", "danger")
+            return render_template("auth.html", mode="login", next=next_url)
+
+        session.clear()
+        session["user_id"] = user.id
+        csrf_token()
+        flash("Welcome back.", "success")
+        if not scoped_transaction_query(Transaction.query).first():
+            return redirect(url_for("get_started"))
+        return redirect(next_url)
+
+    return render_template("auth.html", mode="login", next=next_url)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    flash("You have been signed out.", "success")
+    return redirect(url_for("home"))
+
+
+@app.route("/get-started")
+@login_required
+def get_started():
+    has_transactions = scoped_transaction_query(Transaction.query).first() is not None
+    if has_transactions:
+        return redirect(url_for("dashboard1"))
+    return render_template("get_started.html")
+
+
 @app.route("/submit_expense", methods=["POST"])
 def submit():
     try:
@@ -847,12 +1019,20 @@ def submit():
         notes = request.form.get("notes")
         payment_method = request.form.get("payment_method")
 
+        if not merchant_name or not amount:
+            raise ValueError("Merchant and amount are required.")
+
+        parsed_amount = float(amount)
+        if parsed_amount <= 0:
+            raise ValueError("Amount must be greater than zero.")
+
         transaction = Transaction(
-            merchant_name=merchant_name,
-            amount=float(amount),
-            category=categorize(merchant_name),
+            merchant_name=merchant_name.strip(),
+            amount=parsed_amount,
+            category=None,
             notes=notes,
             payment_method=payment_method,
+            user_id=current_user_id(),
         )
 
         db.session.add(transaction)
@@ -868,13 +1048,16 @@ def submit():
 
 @app.route("/")
 def home():
-    allTransactions = Transaction.query.all()
+    allTransactions = scoped_transaction_query(Transaction.query).all()
     return render_template("index.html", allTransactions=allTransactions)
 
 @app.route("/simulateATransaction", methods=["POST", "GET"])
 def simulate_transaction():
     allTransactions = (
-        Transaction.query.order_by(Transaction.date.desc()).limit(10).all()
+        scoped_transaction_query(Transaction.query)
+        .order_by(Transaction.date.desc())
+        .limit(10)
+        .all()
     )
     flash_messages = get_flashed_messages(with_categories=True)
     new_id = request.args.get('new_id')
@@ -898,7 +1081,7 @@ def dashboard1(month=None):
         curr_month = normalized_month
 
     latest_tx_current_year = (
-        Transaction.query.filter(db.extract('year', Transaction.date) == curr_year)
+        scoped_transaction_query(Transaction.query).filter(db.extract('year', Transaction.date) == curr_year)
         .order_by(Transaction.date.desc())
         .first()
     )
@@ -1181,13 +1364,12 @@ def dashboard1(month=None):
     )
 
 
-@app.route("/delete/<int:id>", methods=["GET", "POST"])
+@app.route("/delete/<int:id>", methods=["POST"])
+@login_required
 def delete_transaction(id):
-    next_url = request.args.get("next") or request.form.get("next") or "/simulateATransaction"
-    if not next_url.startswith("/"):
-        next_url = f"/{next_url}"
+    next_url = safe_next_url(request.form.get("next") or request.args.get("next"), "/simulateATransaction")
 
-    transaction = Transaction.query.filter_by(id=id).first()
+    transaction = scoped_transaction_query(Transaction.query).filter_by(id=id).first()
     if not transaction:
         flash("Unable to delete transaction.", "danger")
         return redirect(next_url)
@@ -1203,12 +1385,11 @@ def delete_transaction(id):
 
 
 @app.route("/update/<int:id>", methods=["GET", "POST"])
+@login_required
 def update_transaction(id):
-    next_url = request.args.get("next") or request.form.get("next") or "/simulateATransaction"
-    if not next_url.startswith("/"):
-        next_url = f"/{next_url}"
+    next_url = safe_next_url(request.args.get("next") or request.form.get("next"), "/simulateATransaction")
 
-    transaction = Transaction.query.filter_by(id=id).first()
+    transaction = scoped_transaction_query(Transaction.query).filter_by(id=id).first()
     if not transaction:
         flash("Unable to update transaction.", "danger")
         return redirect(next_url)
@@ -1219,7 +1400,7 @@ def update_transaction(id):
             transaction.amount = float(request.form.get("amount"))
             transaction.notes = request.form.get("notes")
             transaction.payment_method = request.form.get("payment_method")
-            transaction.category = categorize(transaction.merchant_name)
+            transaction.category = None
 
             db.session.commit()
             flash("Transaction updated successfully.", "success")
@@ -1232,6 +1413,7 @@ def update_transaction(id):
 
 
 @app.route("/export/<int:month>")
+@login_required
 def exportCSV(month=None):
     normalized_month = normalize_month(month)
     if normalized_month is None:
@@ -1291,9 +1473,10 @@ def exportCSV(month=None):
     return response
 
 
+ensure_beta_schema()
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
+    ensure_beta_schema()
         
     port = int(os.environ.get("PORT", 5001))
     app.run(host="0.0.0.0", port=port, debug=False)
