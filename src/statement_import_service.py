@@ -156,15 +156,18 @@ def import_statement(
             session.flush()
             continue
 
-        transaction = Transaction(
-            date=item.date,
-            merchant_name=item.merchant_name,
-            amount=item.amount,
-            notes=item.note,
-            payment_method=item.payment_method,
-            category=None,
-            user_id=user_id,
-        )
+        transaction_kwargs = {
+            "date": item.date,
+            "merchant_name": item.merchant_name,
+            "amount": item.amount,
+            "notes": item.note,
+            "payment_method": item.payment_method,
+            "category": None,
+        }
+        if hasattr(Transaction, "user_id"):
+            transaction_kwargs["user_id"] = user_id
+
+        transaction = Transaction(**transaction_kwargs)
         session.add(transaction)
         # The existing persistence adapter runs before flush and resolves the
         # final V2 category. Each row is flushed before the next row so history
