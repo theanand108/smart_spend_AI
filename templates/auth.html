@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Create account' if mode == 'register' else 'Sign in' }}{% endblock title %}
+{% block body %}
+<section class="py-5">
+  <div class="container" style="max-width: 520px;">
+    <div class="text-center mb-4">
+      <p class="text-uppercase small fw-semibold text-primary mb-2">Smart Spend AI</p>
+      <h1 class="fw-bold">{{ 'Create your personal workspace' if mode == 'register' else 'Welcome back' }}</h1>
+      <p class="text-muted mb-0">
+        {{ 'Your transactions and intelligence stay separate from the demo workspace.' if mode == 'register' else 'Sign in to continue to your personal financial workspace.' }}
+      </p>
+    </div>
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4 p-md-5">
+        <form method="post">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ next or '' }}">
+          <div class="mb-3">
+            <label for="email" class="form-label fw-semibold">Email</label>
+            <input type="email" class="form-control form-control-lg" id="email" name="email" autocomplete="email" required>
+          </div>
+          <div class="mb-4">
+            <label for="password" class="form-label fw-semibold">Password</label>
+            <input type="password" class="form-control form-control-lg" id="password" name="password" minlength="8" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" required>
+            {% if mode == 'register' %}<div class="form-text">Use at least 8 characters.</div>{% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill">
+            {{ 'Create workspace' if mode == 'register' else 'Sign in' }}
+          </button>
+        </form>
+        <div class="text-center mt-4 small text-muted">
+          {% if mode == 'register' %}
+            Already have an account? <a href="{{ url_for('login', next=next) }}">Sign in</a>
+          {% else %}
+            New to SSAI? <a href="{{ url_for('register', next=next) }}">Create an account</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock body %}
