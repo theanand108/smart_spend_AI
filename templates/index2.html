@@ -10,7 +10,9 @@
         <div>
           <p class="simulate-kicker">UPI Payment Simulator</p>
           <h1 class="simulate-heading">Simulate a payment.</h1>
-          <p class="simulate-subtitle">Create a UPI-style transaction and see how it will enter your spend history.</p>
+          <p class="simulate-subtitle">
+            {% if logged_in %}Create a UPI-style transaction and see how SSAI interprets it in your personal history.{% else %}This is the read-only demo workspace. Sign in to add transactions to your own history.{% endif %}
+          </p>
         </div>
       </header>
 
@@ -21,7 +23,9 @@
             <h2 id="simulate-form-title">New UPI transaction</h2>
           </div>
 
+          {% if logged_in %}
           <form action="/submit_expense" method="POST" class="simulate-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="simulate-field">
               <label for="merchant_name" class="form-label">Merchant</label>
               <div class="simulate-input-shell">
@@ -73,6 +77,13 @@
               <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </button>
           </form>
+          {% else %}
+          <div class="alert alert-light border mt-3">
+            <div class="fw-semibold mb-1">Explore the demo first.</div>
+            <div class="text-muted small mb-3">When you're ready, create a free account to add and analyze your own transactions.</div>
+            <a href="{{ url_for('register', next=url_for('get_started')) }}" class="btn btn-primary">Create my workspace</a>
+          </div>
+          {% endif %}
         </section>
 
         <aside class="simulate-preview-panel" aria-label="Live payment preview">
@@ -138,12 +149,12 @@
             <div class="simulate-transaction-actions">
               <div class="simulate-transaction-amount">₹{{ transaction.amount }}</div>
               <div class="simulate-transaction-icons">
-                <a href="/update/{{ transaction.id }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit transaction">
+                {% if logged_in %}<a href="/update/{{ transaction.id }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit transaction">
                   <i class="bi bi-pencil"></i>
-                </a>
-                <a href="#" class="btn btn-outline-secondary btn-sm" aria-label="Delete transaction" data-delete-trigger data-delete-url="{{ url_for('delete_transaction', id=transaction.id, next=request.full_path) }}">
+                </a>{% endif %}
+                {% if logged_in %}<a href="#" class="btn btn-outline-secondary btn-sm" aria-label="Delete transaction" data-delete-trigger data-delete-url="{{ url_for('delete_transaction', id=transaction.id, next=request.full_path) }}">
                   <i class="bi bi-trash"></i>
-                </a>
+                </a>{% endif %}
               </div>
             </div>
           </article>
