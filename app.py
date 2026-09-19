@@ -126,7 +126,7 @@ class Transaction(db.Model):
         category = db.Column(db.String(50), nullable=True)
         payment_method = db.Column(db.String(50))
         notes = db.Column(db.String(200))
-        user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+        user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     except Exception as e:
         print(f"Error defining Transaction model: {e}")
 
