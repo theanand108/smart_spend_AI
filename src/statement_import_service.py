@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS received_money (
 
 CREATE_RECEIVED_MONEY_UNIQUE_INDEX_SQL = """
 CREATE UNIQUE INDEX IF NOT EXISTS ux_received_money_source_transaction
-ON received_money(source, source_transaction_id)
+ON received_money(source, source_transaction_id, user_id)
 WHERE source_transaction_id IS NOT NULL
 """
 
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS statement_import_records (
 
 CREATE_IMPORT_RECORDS_UNIQUE_INDEX_SQL = """
 CREATE UNIQUE INDEX IF NOT EXISTS ux_statement_import_source_transaction
-ON statement_import_records(source, source_transaction_id)
+ON statement_import_records(source, source_transaction_id, user_id)
 WHERE source_transaction_id IS NOT NULL
 """
 
@@ -65,13 +65,15 @@ def ensure_import_tables(session: Any) -> None:
         if "user_id" not in columns:
             session.execute(text(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER"))
 
-    # Existing demo/import data remains user_id=NULL; new imports are user-scoped.
+    # Rebuild import dedupe indexes so two users can import the same provider transaction.
+    session.execute(text("DROP INDEX IF EXISTS ux_received_money_source_transaction"))
+    session.execute(text("DROP INDEX IF EXISTS ux_statement_import_source_transaction"))
     session.execute(text(CREATE_RECEIVED_MONEY_UNIQUE_INDEX_SQL))
     session.execute(text(CREATE_IMPORT_RECORDS_UNIQUE_INDEX_SQL))
     session.flush()
 
 
-def _already_imported(session: Any, item: ImportedTransaction) -> bool:
+def _already_imported(session: Any, item: ImportedTransaction, user_id: int | None) -> bool:
     if not item.source_transaction_id:
         return False
     result = session.execute(
@@ -83,7 +85,7 @@ def _already_imported(session: Any, item: ImportedTransaction) -> bool:
         {
             "source": item.source,
             "source_transaction_id": item.source_transaction_id,
-            "user_id": item.user_id,
+            "user_id": user_id,
         },
     ).first()
     return result is not None
@@ -93,6 +95,7 @@ def _record_import(
     session: Any,
     item: ImportedTransaction,
     transaction_id: int | None,
+    user_id: int | None,
 ) -> None:
     session.execute(
         text(
@@ -105,12 +108,12 @@ def _record_import(
             "source_transaction_id": item.source_transaction_id,
             "direction": item.direction,
             "transaction_id": transaction_id,
-            "user_id": item.user_id,
+            "user_id": user_id,
         },
     )
 
 
-def _store_received_money(session: Any, item: ImportedTransaction) -> None:
+def _store_received_money(session: Any, item: ImportedTransaction, user_id: int | None) -> None:
     """Store credit data only; no categorization or spending analytics."""
     session.execute(
         text(
@@ -124,7 +127,7 @@ def _store_received_money(session: Any, item: ImportedTransaction) -> None:
             "amount": item.amount,
             "source": item.source,
             "source_transaction_id": item.source_transaction_id,
-            "user_id": item.user_id,
+            "user_id": user_id,
         },
     )
 
@@ -145,14 +148,13 @@ def import_statement(
     # Oldest first means later imported expenses can benefit from earlier rows
     # through the existing SQLAlchemy V2 history hook.
     for item in sorted(result.transactions, key=lambda transaction: transaction.date):
-        item.user_id = user_id
-        if _already_imported(session, item):
+        if _already_imported(session, item, user_id):
             skipped_duplicates += 1
             continue
 
         if item.direction == "credit":
-            _store_received_money(session, item)
-            _record_import(session, item, None)
+            _store_received_money(session, item, user_id)
+            _record_import(session, item, None, user_id)
             imported_received += 1
             session.flush()
             continue
@@ -171,7 +173,7 @@ def import_statement(
         # final V2 category. Each row is flushed before the next row so history
         # is available to subsequent imports.
         session.flush()
-        _record_import(session, item, transaction.id)
+        _record_import(session, item, transaction.id, user_id)
         imported_expenses += 1
 
     session.commit()
