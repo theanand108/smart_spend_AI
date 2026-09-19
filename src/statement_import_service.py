@@ -57,8 +57,12 @@ def ensure_import_tables(session: Any) -> None:
     session.execute(text(CREATE_RECEIVED_MONEY_SQL))
     session.execute(text(CREATE_IMPORT_RECORDS_SQL))
 
+    # Flask-SQLAlchemy uses a scoped session whose legacy `.bind` attribute can
+    # be unset even though the session is correctly connected to the app engine.
+    # Resolve the active bind through SQLAlchemy instead of reading `.bind`.
+    bind = session.get_bind()
     for table in ("received_money", "statement_import_records"):
-        columns = {column["name"] for column in inspect(session.bind).get_columns(table)}
+        columns = {column["name"] for column in inspect(bind).get_columns(table)}
         if "user_id" not in columns:
             session.execute(text(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER"))
 
