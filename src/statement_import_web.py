@@ -228,15 +228,16 @@ def resolve_dashboard_attention(transaction_id: int):
         # transactions for the same merchant so one correction teaches the
         # current statement instead of forcing the user to repeat themselves.
         merchant_name = transaction.merchant_name
+        propagation_update = update(Transaction).where(
+            Transaction.id != transaction_id,
+            Transaction.merchant_name == merchant_name,
+            Transaction.category == "Unknown",
+        )
+        if hasattr(Transaction, "user_id"):
+            propagation_update = propagation_update.where(Transaction.user_id == user_id)
+
         propagation = db.session.execute(
-            update(Transaction)
-            .where(
-                Transaction.id != transaction_id,
-                Transaction.user_id == user_id,
-                Transaction.merchant_name == merchant_name,
-                Transaction.category == "Unknown",
-            )
-            .values(category=category)
+            propagation_update.values(category=category)
         )
 
         db.session.commit()
