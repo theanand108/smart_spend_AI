@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS received_money (
     amount FLOAT NOT NULL,
     source VARCHAR(50) NOT NULL,
     source_transaction_id VARCHAR(255),
+    user_id INTEGER,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 """
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS statement_import_records (
     source_transaction_id VARCHAR(255),
     direction VARCHAR(10) NOT NULL,
     transaction_id INTEGER,
+    user_id INTEGER,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 """
@@ -53,8 +55,18 @@ WHERE source_transaction_id IS NOT NULL
 def ensure_import_tables(session: Any) -> None:
     """Create the small import-only tables without changing Transaction."""
     session.execute(text(CREATE_RECEIVED_MONEY_SQL))
-    session.execute(text(CREATE_RECEIVED_MONEY_UNIQUE_INDEX_SQL))
     session.execute(text(CREATE_IMPORT_RECORDS_SQL))
+
+    for table in ("received_money", "statement_import_records"):
+        columns = {
+            row[1]
+            for row in session.execute(text(f"PRAGMA table_info({table})")).all()
+        }
+        if "user_id" not in columns:
+            session.execute(text(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER"))
+
+    # Existing demo/import data remains user_id=NULL; new imports are user-scoped.
+    session.execute(text(CREATE_RECEIVED_MONEY_UNIQUE_INDEX_SQL))
     session.execute(text(CREATE_IMPORT_RECORDS_UNIQUE_INDEX_SQL))
     session.flush()
 
@@ -65,11 +77,13 @@ def _already_imported(session: Any, item: ImportedTransaction) -> bool:
     result = session.execute(
         text(
             "SELECT 1 FROM statement_import_records "
-            "WHERE source = :source AND source_transaction_id = :source_transaction_id LIMIT 1"
+            "WHERE source = :source AND source_transaction_id = :source_transaction_id "
+            "AND user_id IS :user_id LIMIT 1"
         ),
         {
             "source": item.source,
             "source_transaction_id": item.source_transaction_id,
+            "user_id": item.user_id,
         },
     ).first()
     return result is not None
@@ -83,14 +97,15 @@ def _record_import(
     session.execute(
         text(
             "INSERT INTO statement_import_records "
-            "(source, source_transaction_id, direction, transaction_id) "
-            "VALUES (:source, :source_transaction_id, :direction, :transaction_id)"
+            "(source, source_transaction_id, direction, transaction_id, user_id) "
+            "VALUES (:source, :source_transaction_id, :direction, :transaction_id, :user_id)"
         ),
         {
             "source": item.source,
             "source_transaction_id": item.source_transaction_id,
             "direction": item.direction,
             "transaction_id": transaction_id,
+            "user_id": item.user_id,
         },
     )
 
@@ -100,8 +115,8 @@ def _store_received_money(session: Any, item: ImportedTransaction) -> None:
     session.execute(
         text(
             "INSERT INTO received_money "
-            "(transaction_date, merchant_name, amount, source, source_transaction_id) "
-            "VALUES (:transaction_date, :merchant_name, :amount, :source, :source_transaction_id)"
+            "(transaction_date, merchant_name, amount, source, source_transaction_id, user_id) "
+            "VALUES (:transaction_date, :merchant_name, :amount, :source, :source_transaction_id, :user_id)"
         ),
         {
             "transaction_date": item.date,
@@ -109,6 +124,7 @@ def _store_received_money(session: Any, item: ImportedTransaction) -> None:
             "amount": item.amount,
             "source": item.source,
             "source_transaction_id": item.source_transaction_id,
+            "user_id": item.user_id,
         },
     )
 
@@ -117,6 +133,7 @@ def import_statement(
     session: Any,
     Transaction: Any,
     result: StatementImportResult,
+    user_id: int | None = None,
 ) -> dict[str, int]:
     """Persist a parsed statement using the existing V2 transaction path."""
     ensure_import_tables(session)
@@ -128,6 +145,7 @@ def import_statement(
     # Oldest first means later imported expenses can benefit from earlier rows
     # through the existing SQLAlchemy V2 history hook.
     for item in sorted(result.transactions, key=lambda transaction: transaction.date):
+        item.user_id = user_id
         if _already_imported(session, item):
             skipped_duplicates += 1
             continue
@@ -146,6 +164,7 @@ def import_statement(
             notes=item.note,
             payment_method=item.payment_method,
             category=None,
+            user_id=user_id,
         )
         session.add(transaction)
         # The existing persistence adapter runs before flush and resolves the
