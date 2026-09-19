@@ -160,12 +160,15 @@ def dashboard_attention():
 
     year = datetime.now().year
     user_id = session.get("user_id")
-    if user_id is None:
-        return ("Please sign in to view your personal attention queue.", 401)
+    user_scope = (
+        Transaction.user_id.is_(None)
+        if user_id is None
+        else Transaction.user_id == user_id
+    )
 
     transactions = (
         Transaction.query.filter(
-            Transaction.user_id == user_id,
+            user_scope,
             db.extract("month", Transaction.date) == month,
             db.extract("year", Transaction.date) == year,
         )
