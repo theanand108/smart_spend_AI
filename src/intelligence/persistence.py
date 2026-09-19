@@ -32,6 +32,13 @@ def _history_for_transaction(session: Session, transaction: Any) -> list[dict[st
     if transaction_id is not None:
         query = query.filter(model.id != transaction_id)
 
+    user_id = getattr(transaction, "user_id", None)
+    if hasattr(model, "user_id"):
+        if user_id is None:
+            query = query.filter(model.user_id.is_(None))
+        else:
+            query = query.filter(model.user_id == user_id)
+
     with session.no_autoflush:
         rows = query.all()
 
