@@ -22,6 +22,7 @@
           </div>
 
           <form action="{{ url_for('update_transaction', id=transaction.id, next=next) }}" method="POST" class="simulate-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ next or '' }}">
 
             <div class="simulate-field">
