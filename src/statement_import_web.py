@@ -199,13 +199,13 @@ def resolve_dashboard_attention(transaction_id: int):
         next_url = "/dashboard" + next_url[len("/dashboard/attention"):]
 
     user_id = session.get("user_id")
-    transaction = (
-        Transaction.query.filter(
-            Transaction.id == transaction_id,
-            Transaction.user_id == user_id,
-        ).first()
-    )
+    transaction = db.session.get(Transaction, transaction_id)
     if not transaction:
+        flash("That transaction could not be found.", "danger")
+        return redirect(next_url)
+
+    transaction_user_id = getattr(transaction, "user_id", None)
+    if transaction_user_id != user_id:
         flash("That transaction could not be found.", "danger")
         return redirect(next_url)
 
