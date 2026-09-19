@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from sqlalchemy import text, update
 from werkzeug.utils import secure_filename
 
@@ -66,10 +66,11 @@ def register_statement_import(app, db, Transaction) -> None:
                 text(
                     "SELECT COALESCE(SUM(amount), 0), COUNT(*) "
                     "FROM received_money "
-                    "WHERE strftime('%Y', transaction_date) = :year "
+                    "WHERE user_id IS :user_id "
+                    "AND strftime('%Y', transaction_date) = :year "
                     "AND strftime('%m', transaction_date) = :month"
                 ),
-                {"year": str(year), "month": f"{month:02d}"},
+                {"user_id": session.get("user_id"), "year": str(year), "month": f"{month:02d}"},
             ).first()
         except Exception:
             return {"received_money_total": 0.0, "received_money_count": 0}
@@ -85,6 +86,10 @@ def register_statement_import(app, db, Transaction) -> None:
 
 @statement_import_bp.route("/import", methods=["GET", "POST"])
 def import_statement_page():
+    if session.get("user_id") is None:
+        flash("Please sign in before importing your statement.", "warning")
+        return redirect(url_for("login", next=request.full_path))
+
     if request.method == "GET":
         return render_template("statement_import.html", flash_messages=[])
 
@@ -118,7 +123,7 @@ def import_statement_page():
     Transaction = current_app.extensions["statement_import_transaction_model"]
 
     try:
-        summary = import_statement(db.session, Transaction, result)
+        summary = import_statement(db.session, Transaction, result, user_id=session.get("user_id"))
     except Exception:
         db.session.rollback()
         flash("The statement could not be saved. No imported spending data was committed.", "danger")
@@ -154,8 +159,13 @@ def dashboard_attention():
         month = datetime.now().month
 
     year = datetime.now().year
+    user_id = session.get("user_id")
+    if user_id is None:
+        return ("Please sign in to view your personal attention queue.", 401)
+
     transactions = (
         Transaction.query.filter(
+            Transaction.user_id == user_id,
             db.extract("month", Transaction.date) == month,
             db.extract("year", Transaction.date) == year,
         )
@@ -185,7 +195,13 @@ def resolve_dashboard_attention(transaction_id: int):
         # dashboard while preserving query parameters such as the selected month.
         next_url = "/dashboard" + next_url[len("/dashboard/attention"):]
 
-    transaction = db.session.get(Transaction, transaction_id)
+    user_id = session.get("user_id")
+    transaction = (
+        Transaction.query.filter(
+            Transaction.id == transaction_id,
+            Transaction.user_id == user_id,
+        ).first()
+    )
     if not transaction:
         flash("That transaction could not be found.", "danger")
         return redirect(next_url)
@@ -214,6 +230,7 @@ def resolve_dashboard_attention(transaction_id: int):
             update(Transaction)
             .where(
                 Transaction.id != transaction_id,
+                Transaction.user_id == user_id,
                 Transaction.merchant_name == merchant_name,
                 Transaction.category == "Unknown",
             )
