@@ -102,12 +102,12 @@ def ensure_beta_schema():
                 connection.execute(text('ALTER TABLE "transaction" ADD COLUMN user_id INTEGER'))
                 connection.execute(text('CREATE INDEX IF NOT EXISTS ix_transaction_user_id ON "transaction" (user_id)'))
 
-        if "user" not in inspect(db.engine).get_table_names():
+        if "users" not in inspect(db.engine).get_table_names():
             db.create_all()
 
 
 class User(db.Model):
-    __tablename__ = "user"
+    __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(320), unique=True, nullable=False, index=True)
