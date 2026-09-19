@@ -204,8 +204,7 @@ def resolve_dashboard_attention(transaction_id: int):
         flash("That transaction could not be found.", "danger")
         return redirect(next_url)
 
-    transaction_user_id = getattr(transaction, "user_id", None)
-    if transaction_user_id != user_id:
+    if hasattr(transaction, "user_id") and transaction.user_id != user_id:
         flash("That transaction could not be found.", "danger")
         return redirect(next_url)
 
