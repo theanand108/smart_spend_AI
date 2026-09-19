@@ -26,7 +26,7 @@ def make_app():
 
     @app.context_processor
     def inject_test_auth():
-        return {"csrf_token": lambda: "test-token"}
+        return {"csrf_token": lambda: "test-token", "logged_in": True}
 
     @app.route("/dashboard")
     @app.route("/dashboard/<int:month>")
