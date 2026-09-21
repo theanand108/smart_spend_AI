@@ -128,6 +128,14 @@ def learned_semantic_evidence(
             "candidates": [],
             "reason": "scikit-learn is not installed; learned semantic evidence is unavailable.",
         }
+    except Exception as exc:
+        return {
+            "category": None,
+            "confidence": 0.0,
+            "margin": 0.0,
+            "candidates": [],
+            "reason": f"Learned semantic evidence is temporarily unavailable: {exc}",
+        }
 
     ranked = sorted(
         zip(classes, probabilities),
