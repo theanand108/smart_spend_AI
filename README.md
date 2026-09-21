@@ -480,7 +480,7 @@ The important design principle is that **uncertainty is a valid outcome**.
 - Smarter budgeting assistance
 - Personalized financial recommendations
 - Bank/UPI integrations
-- Multi-user accounts and cloud synchronization
+- Cloud synchronization and deeper payment-platform integration
 - Mobile application
 
 These are **future capabilities**, not claims about the current implementation.
