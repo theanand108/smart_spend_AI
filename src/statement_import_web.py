@@ -125,6 +125,7 @@ def import_statement_page():
     try:
         summary = import_statement(db.session, Transaction, result, user_id=session.get("user_id"))
     except Exception:
+        current_app.logger.exception("STATEMENT IMPORT FAILED")
         db.session.rollback()
         flash("The statement could not be saved. No imported spending data was committed.", "danger")
         return redirect(url_for("statement_import.import_statement_page"))
