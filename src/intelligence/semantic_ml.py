@@ -134,7 +134,7 @@ def learned_semantic_evidence(
             "confidence": 0.0,
             "margin": 0.0,
             "candidates": [],
-            "reason": f"Learned semantic evidence is temporarily unavailable: {exc}",
+            "reason": "Learned semantic evidence is temporarily unavailable; abstaining.",
         }
 
     ranked = sorted(
