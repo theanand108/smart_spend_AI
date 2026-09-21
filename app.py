@@ -244,6 +244,13 @@ def get_spending_analytics(transaction_query):
     }
 
 
+def safe_csv_cell(value):
+    """Neutralize spreadsheet formulas in user-controlled exported text."""
+    if isinstance(value, str) and value[:1] in {"=", "+", "-", "@"}:
+        return "'" + value
+    return value
+
+
 def format_currency(amount):
     amount = float(amount or 0)
     if amount.is_integer():
@@ -1458,7 +1465,7 @@ def exportCSV(month=None):
     csv_writer.writerow(["Export Date", export_date])
     csv_writer.writerow(["Month", month_name])
     csv_writer.writerow(["Category", "All Categories"])
-    csv_writer.writerow(["Search", search_query if search_query else "None"])
+    csv_writer.writerow(["Search", safe_csv_cell(search_query) if search_query else "None"])
     csv_writer.writerow(["Total Transactions", total_transactions])
     csv_writer.writerow(["Total Amount", f"₹{total_amount:.2f}"])
     csv_writer.writerow([])
@@ -1467,11 +1474,11 @@ def exportCSV(month=None):
         csv_writer.writerow([
             index,
             transaction.date,
-            transaction.merchant_name,
-            transaction.category,
+            safe_csv_cell(transaction.merchant_name),
+            safe_csv_cell(transaction.category),
             transaction.amount,
-            transaction.payment_method,
-            transaction.notes,
+            safe_csv_cell(transaction.payment_method),
+            safe_csv_cell(transaction.notes),
         ])
 
     response = app.response_class(response=output.getvalue(), status=200, mimetype="text/csv")
