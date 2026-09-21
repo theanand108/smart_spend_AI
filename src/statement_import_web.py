@@ -199,6 +199,10 @@ def resolve_dashboard_attention(transaction_id: int):
         next_url = "/dashboard" + next_url[len("/dashboard/attention"):]
 
     user_id = session.get("user_id")
+    if user_id is None:
+        flash("Please sign in to resolve transactions.", "warning")
+        return redirect(url_for("login", next=next_url))
+
     transaction = db.session.get(Transaction, transaction_id)
     if not transaction:
         flash("That transaction could not be found.", "danger")
