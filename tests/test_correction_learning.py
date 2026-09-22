@@ -1,3 +1,5 @@
+from flask import session
+
 from src.intelligence.categorizer import categorize_transaction
 
 
@@ -72,6 +74,8 @@ def test_user_correction_path_commits_and_propagates_to_matching_unknowns(monkey
     register_statement_import(app, db, FakeTransaction)
 
     with app.test_client() as client:
+        with client.session_transaction() as session:
+            session["user_id"] = 1
         response = client.post(
             "/dashboard/attention/7",
             data={"category": "Transfer / Personal", "next": "/dashboard"},
