@@ -11,7 +11,11 @@ from typing import Any
 
 from sqlalchemy import inspect, text
 
+from .intelligence.categorizer import categorize_transaction
 from .statement_importer import ImportedTransaction, StatementImportResult
+
+
+AUTO_RESOLVE_CONFIDENCE = 0.84
 
 
 CREATE_RECEIVED_MONEY_SQL = """
@@ -133,6 +137,68 @@ def _store_received_money(session: Any, item: ImportedTransaction, user_id: int 
     )
 
 
+def reconcile_unresolved_transactions(
+    session: Any,
+    Transaction: Any,
+    user_id: int | None = None,
+) -> int:
+    """Re-evaluate stored Unknown transactions against trusted user history.
+
+    Imported rows are initially categorized oldest-first, so an early row cannot
+    see later transactions from the same statement. This second pass fixes that
+    limitation without retraining the global model or lowering its confidence
+    gates: only a normal categorized decision at or above the existing
+    high-confidence boundary is persisted.
+
+    Unknown transactions are deliberately excluded from the history used for
+    this pass. A newly auto-resolved row therefore cannot teach another row in
+    the same pass, preventing uncertain data from cascading into false certainty.
+    """
+    query = session.query(Transaction)
+    if hasattr(Transaction, "user_id"):
+        if user_id is None:
+            query = query.filter(Transaction.user_id.is_(None))
+        else:
+            query = query.filter(Transaction.user_id == user_id)
+
+    rows = query.order_by(Transaction.date.asc(), Transaction.id.asc()).all()
+    history = [
+        {
+            "merchant_name": row.merchant_name,
+            "amount": row.amount,
+            "category": row.category,
+            "note": row.notes,
+            "payment_method": row.payment_method,
+        }
+        for row in rows
+        if row.category not in {None, "", "Unknown", "Others"}
+    ]
+
+    resolved = 0
+    for transaction in rows:
+        if transaction.category != "Unknown":
+            continue
+
+        result = categorize_transaction(
+            merchant_name=transaction.merchant_name,
+            amount=transaction.amount,
+            note=transaction.notes,
+            payment_method=transaction.payment_method,
+            history=history,
+        )
+        if (
+            result.get("status") == "categorized"
+            and result.get("category")
+            and float(result.get("confidence") or 0.0) >= AUTO_RESOLVE_CONFIDENCE
+        ):
+            transaction.category = str(result["category"])
+            resolved += 1
+
+    if resolved:
+        session.flush()
+
+    return resolved
+
 def import_statement(
     session: Any,
     Transaction: Any,
@@ -179,6 +245,11 @@ def import_statement(
         session.flush()
         _record_import(session, item, transaction.id, user_id)
         imported_expenses += 1
+
+    # A complete statement can contain repeated entities/amounts that were not
+    # visible when its earliest rows were categorized. Re-evaluate unresolved
+    # rows once the full imported history is available.
+    reconcile_unresolved_transactions(session, Transaction, user_id=user_id)
 
     session.commit()
     return {
