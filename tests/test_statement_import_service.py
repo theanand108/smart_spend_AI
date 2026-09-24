@@ -4,7 +4,7 @@ from sqlalchemy import Column, DateTime, Float, Integer, String, create_engine, 
 from sqlalchemy.orm import DeclarativeBase, Session
 
 from src.intelligence.persistence import install
-from src.statement_import_service import import_statement
+from src.statement_import_service import import_statement, reconcile_unresolved_transactions
 from src.statement_importer import ImportedTransaction, StatementImportResult
 
 
@@ -87,3 +87,53 @@ def test_import_skips_the_same_source_transaction_on_repeat_import():
     assert first["imported_expenses"] == 1
     assert second["skipped_duplicates"] == 1
     assert session.query(Transaction).count() == 1
+
+
+def test_reconcile_unresolved_uses_only_trusted_history():
+    session = make_session()
+
+    known = Transaction(
+        date=datetime(2026, 8, 1, 10, 0),
+        merchant_name="Campus Canteen",
+        amount=120,
+        category="Food & Dining",
+        payment_method="upi",
+        notes=None,
+    )
+    unknown = Transaction(
+        date=datetime(2026, 8, 2, 10, 0),
+        merchant_name="Campus Canteen",
+        amount=120,
+        category="Unknown",
+        payment_method="upi",
+        notes=None,
+    )
+    session.add_all([known, unknown])
+    session.commit()
+
+    resolved = reconcile_unresolved_transactions(session, Transaction)
+    session.commit()
+
+    assert resolved == 1
+    assert unknown.category == "Food & Dining"
+
+
+def test_reconcile_does_not_force_weak_unknown_transactions():
+    session = make_session()
+
+    unknown = Transaction(
+        date=datetime(2026, 8, 2, 10, 0),
+        merchant_name="Random Contact",
+        amount=120,
+        category="Unknown",
+        payment_method="upi",
+        notes="payment",
+    )
+    session.add(unknown)
+    session.commit()
+
+    resolved = reconcile_unresolved_transactions(session, Transaction)
+    session.commit()
+
+    assert resolved == 0
+    assert unknown.category == "Unknown"
