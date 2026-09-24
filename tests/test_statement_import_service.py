@@ -94,7 +94,7 @@ def test_reconcile_unresolved_uses_only_trusted_history():
 
     known = Transaction(
         date=datetime(2026, 8, 1, 10, 0),
-        merchant_name="Campus Canteen",
+        merchant_name="Campus Services",
         amount=120,
         category="Food & Dining",
         payment_method="upi",
@@ -102,7 +102,7 @@ def test_reconcile_unresolved_uses_only_trusted_history():
     )
     unknown = Transaction(
         date=datetime(2026, 8, 2, 10, 0),
-        merchant_name="Campus Canteen",
+        merchant_name="Campus Services",
         amount=137,
         category="Unknown",
         payment_method="upi",
