@@ -176,7 +176,15 @@ def dashboard_attention():
         .order_by(Transaction.date.desc())
         .all()
     )
-    attention = build_attention_queue(transactions)
+    history_transactions = (
+        Transaction.query.filter(user_scope)
+        .order_by(Transaction.date.desc())
+        .all()
+    )
+    attention = build_attention_queue(
+        transactions,
+        history_transactions=history_transactions,
+    )
     return render_template(
         "_attention.html",
         attention=attention,
