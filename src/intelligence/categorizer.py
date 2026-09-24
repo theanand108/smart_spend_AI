@@ -96,7 +96,7 @@ def _specific_merchant_override(merchant_name: str) -> tuple[str, str] | None:
     if re.search(r"\b(?:filling\s+station|petrol\s+pump)\b", text):
         return "Travel & Transport", "The merchant descriptor explicitly identifies a fuel station."
 
-    if re.search(r"\b(?:mobile\s+(?:shop|wholesale|wholesaler))\b", text):
+    if re.search(r"\b(?:mobile\s+(?:shop|wholesale|wholesaler|hol[e]?sale))\b", text):
         return "Shopping", "The merchant descriptor explicitly identifies a mobile retail business."
 
     if re.search(r"\b(?:adda247)\b", text):
@@ -209,6 +209,20 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     if note_category:
         return _result(category=str(note_category), confidence=min(0.89, max(0.35, note_confidence)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
+    if allow_personal_memory and len(historical_counts) == 1 and entity_profile.get("transaction_count", 0) >= 1:
+        # Trusted user history is allowed to become personal memory during
+        # post-import reconciliation. Normal categorization stays conservative.
+        personal_category = str(next(iter(historical_counts)))
+        return _result(
+            category=personal_category,
+            confidence=0.90,
+            status="categorized",
+            reason="The user's trusted history consistently associates this entity with this category.",
+            needs_user_confirmation=False,
+            entity_memory=entity_profile,
+            personal_category_candidate=personal_category,
+        )
+
     if len(historical_counts) == 1 and int(amount_matches.get(str(top_category), 0)) >= 1:
         close_matches = int(amount_matches[str(top_category)])
         confidence = min(0.84, 0.68 + 0.04 * close_matches)
@@ -225,19 +239,6 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
         if ranked_history[0] == ranked_history[1] and margin < 0.12:
             return _result(category=None, confidence=0.20, status="conflict", reason="Entity has equally represented historical categories and the current amount does not provide enough separation.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
-    if allow_personal_memory and len(historical_counts) == 1 and entity_profile.get("transaction_count", 0) >= 1:
-        # Trusted user history is allowed to become personal memory during
-        # post-import reconciliation. Normal categorization stays conservative.
-        personal_category = str(next(iter(historical_counts)))
-        return _result(
-            category=personal_category,
-            confidence=0.90,
-            status="categorized",
-            reason="The user's trusted history consistently associates this entity with this category.",
-            needs_user_confirmation=False,
-            entity_memory=entity_profile,
-            personal_category_candidate=personal_category,
-        )
     if historical_counts and not profile["varies"] and profile["dominance"] >= 0.80:
         if entity_profile.get("transaction_count", 0) >= 4 and margin >= 0.20:
             confidence = min(0.90, 0.65 + top_score * 0.30 + margin * 0.10)
