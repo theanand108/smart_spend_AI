@@ -196,19 +196,6 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     if profile["varies"] and not note_category:
         return _result(category=None, confidence=0.25, status="varies", reason="Entity history spans multiple categories, so this entity is remembered as VARIES.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
-    if not ranked:
-        return _result(category=None, confidence=0.05, status="unknown", reason="Available evidence does not provide enough context to categorize safely.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
-
-    top_category, top_score = ranked[0]
-    second_score = ranked[1][1] if len(ranked) > 1 else 0.0
-    margin = top_score - second_score
-
-    if merchant_category and top_category == merchant_category and merchant_confidence >= 0.90:
-        return _result(category=str(merchant_category), confidence=min(0.90, max(0.50, merchant_confidence)), status="categorized", reason="Merchant language provides strong, unambiguous semantic evidence for this transaction.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
-
-    if note_category:
-        return _result(category=str(note_category), confidence=min(0.89, max(0.35, note_confidence)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
-
     if allow_personal_memory and len(historical_counts) == 1 and entity_profile.get("transaction_count", 0) >= 1:
         # Trusted user history is allowed to become personal memory during
         # post-import reconciliation. Normal categorization stays conservative.
@@ -222,6 +209,19 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
             entity_memory=entity_profile,
             personal_category_candidate=personal_category,
         )
+
+    if not ranked:
+        return _result(category=None, confidence=0.05, status="unknown", reason="Available evidence does not provide enough context to categorize safely.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+
+    top_category, top_score = ranked[0]
+    second_score = ranked[1][1] if len(ranked) > 1 else 0.0
+    margin = top_score - second_score
+
+    if merchant_category and top_category == merchant_category and merchant_confidence >= 0.90:
+        return _result(category=str(merchant_category), confidence=min(0.90, max(0.50, merchant_confidence)), status="categorized", reason="Merchant language provides strong, unambiguous semantic evidence for this transaction.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+
+    if note_category:
+        return _result(category=str(note_category), confidence=min(0.89, max(0.35, note_confidence)), status="needs_confirmation", reason="The note provides useful but insufficiently strong evidence for silent categorization.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
     if len(historical_counts) == 1 and int(amount_matches.get(str(top_category), 0)) >= 1:
         close_matches = int(amount_matches[str(top_category)])
