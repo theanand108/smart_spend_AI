@@ -136,3 +136,48 @@ def test_personal_care_descriptor_in_note_is_authoritative():
     assert result["category"] == "Personal Care"
     assert result["status"] == "categorized"
     assert result["needs_user_confirmation"] is False
+
+
+def test_trusted_single_entity_history_can_be_reused_during_reconciliation():
+    """Reconciliation may reuse one trusted category for a recurring entity."""
+    history = [
+        {"merchant_name": "ROCKY KIRAN STORE", "category": "Groceries", "amount": 11, "note": "payment"},
+    ]
+
+    result = categorize_transaction(
+        "ROCKY KIRAN STORE", 45, "payment", "UPI", history, allow_personal_memory=True
+    )
+
+    assert result["category"] == "Groceries"
+    assert result["status"] == "categorized"
+    assert result["confidence"] == 0.90
+
+
+def test_single_entity_history_remains_conservative_without_personal_memory():
+    """Normal categorization must not silently learn from one historical row."""
+    history = [
+        {"merchant_name": "ROCKY KIRAN STORE", "category": "Groceries", "amount": 11, "note": "payment"},
+    ]
+
+    result = categorize_transaction("ROCKY KIRAN STORE", 45, "payment", "UPI", history)
+
+    assert result["status"] != "categorized"
+
+
+def test_high_confidence_merchant_descriptors():
+    cases = {
+        "University": "Education",
+        "Sawariya Medicals - 2": "Health & Fitness",
+        "Siddhi Vinayak Bakers": "Food & Dining",
+        "Sudha Filling Station": "Travel & Transport",
+        "Manoj Mobile Holesale": "Shopping",
+        "Matrix saloon": "Personal Care",
+        "ADDA247": "Education",
+        "ekart": "Shopping",
+        "Royal Chasma Ghar": "Health & Fitness",
+    }
+
+    for merchant, category in cases.items():
+        result = categorize_transaction(merchant, 100, None, "UPI", [])
+        assert result["category"] == category
+        assert result["status"] == "categorized"
