@@ -68,6 +68,9 @@ def _before_flush(
     candidates = list(session.new) + [obj for obj in session.dirty if obj not in session.new]
 
     for transaction in candidates:
+        if getattr(transaction, "_preserve_category_during_flush", False):
+            transaction._preserve_category_during_flush = False
+            continue
         if transaction.__class__.__name__ != "Transaction":
             continue
         if not all(
