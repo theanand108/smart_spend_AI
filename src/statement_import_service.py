@@ -185,6 +185,7 @@ def reconcile_unresolved_transactions(
             note=transaction.notes,
             payment_method=transaction.payment_method,
             history=history,
+            allow_personal_memory=True,
         )
         if (
             result.get("status") == "categorized"
