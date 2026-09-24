@@ -71,6 +71,15 @@ def test_attention_queue_excludes_explicit_transfer_personal_correction():
     assert build_attention_queue(transactions) == []
 
 
+def test_attention_queue_excludes_explicit_education_and_housing_categories():
+    transactions = [
+        FakeTransaction("college", 1000, "Education"),
+        FakeTransaction("room rent", 10000, "Housing / Rent"),
+    ]
+
+    assert build_attention_queue(transactions) == []
+
+
 def test_attention_queue_excludes_explicit_personal_care_category():
     transactions = [
         FakeTransaction("sajir", 350, "Personal Care", "paid to sajir barber"),
