@@ -54,6 +54,14 @@ def make_app():
                     payment_method="UPI",
                     user_id=1,
                 ),
+                Transaction(
+                    date=datetime(2026, 8, 30),
+                    merchant_name="UNKNOWN CONTACT",
+                    amount=250,
+                    category="Unknown",
+                    payment_method="UPI",
+                    user_id=1,
+                ),
             ]
         )
         db.session.commit()
@@ -71,8 +79,9 @@ def test_dashboard_attention_partial_contains_only_unresolved_transactions():
 
     assert response.status_code == 200
     assert b"Needs your attention" in response.data
-    assert b"EKART" in response.data
+    assert b"UNKNOWN CONTACT" in response.data
     assert b"DEEPAK FRUIT CENTRE" not in response.data
+    assert b"EKART" not in response.data
     assert b'value="/dashboard/8"' in response.data
 
 
