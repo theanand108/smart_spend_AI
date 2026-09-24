@@ -85,6 +85,28 @@ def test_dashboard_attention_partial_contains_only_unresolved_transactions():
     assert b'value="/dashboard/8#dashboard-needs-attention"' in response.data
 
 
+def test_dashboard_attention_accepts_education_and_housing_categories():
+    app, db, Transaction = make_app()
+
+    with app.app_context():
+        transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
+
+    with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
+
+        for category in ("Education", "Housing / Rent"):
+            response = client.post(
+                f"/dashboard/attention/{transaction_id}",
+                data={"category": category, "next": "/dashboard", "_csrf_token": "test-token"},
+            )
+            assert response.status_code == 302
+
+            with app.app_context():
+                transaction = db.session.get(Transaction, transaction_id)
+                assert transaction.category == category
+
+
 def test_dashboard_attention_correction_persists_category():
     app, db, Transaction = make_app()
 
