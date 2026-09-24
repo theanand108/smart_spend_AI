@@ -98,7 +98,7 @@ def test_reconcile_unresolved_uses_only_trusted_history():
         amount=120,
         category="Food & Dining",
         payment_method="upi",
-        notes=None,
+        notes="dinner at the college canteen",
     )
     unknown = Transaction(
         date=datetime(2026, 8, 2, 10, 0),
