@@ -81,8 +81,32 @@ def _specific_merchant_override(merchant_name: str) -> tuple[str, str] | None:
     if re.search(r"\b(?:book\s+shop|bookstore|book\s+store)\b", text):
         return "Education", "The merchant descriptor explicitly identifies a book-selling business."
 
-    if re.search(r"\b(?:barber|barbershop|haircut|salon)\b", text):
+    if re.search(r"\b(?:barber|barbershop|haircut|salon|saloon)\b", text):
         return "Personal Care", "The merchant descriptor explicitly identifies a personal-care service."
+
+    if re.search(r"\b(?:medical|medicals|pharmacy|chemist)\b", text):
+        return "Health & Fitness", "The merchant descriptor explicitly identifies a medical or pharmacy business."
+
+    if re.search(r"\b(?:university|college)\b", text):
+        return "Education", "The merchant descriptor explicitly identifies an educational institution."
+
+    if re.search(r"\b(?:bakery|bakers)\b", text):
+        return "Food & Dining", "The merchant descriptor explicitly identifies a bakery or food business."
+
+    if re.search(r"\b(?:filling\s+station|petrol\s+pump)\b", text):
+        return "Travel & Transport", "The merchant descriptor explicitly identifies a fuel station."
+
+    if re.search(r"\b(?:mobile\s+(?:shop|wholesale|wholesaler))\b", text):
+        return "Shopping", "The merchant descriptor explicitly identifies a mobile retail business."
+
+    if re.search(r"\b(?:adda247)\b", text):
+        return "Education", "The merchant is a known education platform."
+
+    if re.search(r"\b(?:ekart)\b", text):
+        return "Shopping", "The merchant is a known e-commerce logistics provider associated with shopping transactions."
+
+    if re.search(r"\b(?:chasma|optical|optician)\b", text):
+        return "Health & Fitness", "The merchant descriptor explicitly identifies an optical/vision business."
 
     return None
 
