@@ -192,6 +192,7 @@ def reconcile_unresolved_transactions(
             and result.get("category")
             and float(result.get("confidence") or 0.0) >= AUTO_RESOLVE_CONFIDENCE
         ):
+            transaction._preserve_category_during_flush = True
             transaction.category = str(result["category"])
             resolved += 1
 
