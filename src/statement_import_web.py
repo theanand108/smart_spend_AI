@@ -32,6 +32,8 @@ REVIEW_CATEGORIES = (
     "Shopping",
     "Health & Fitness",
     "Personal Care",
+    "Housing / Rent",
+    "Education",
     "Transfer / Personal",
     "Others",
 )
