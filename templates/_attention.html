@@ -1,9 +1,9 @@
 {% if attention %}
 {% set dashboard_month = request.args.get('month')|int %}
 {% if dashboard_month >= 1 and dashboard_month <= 12 %}
-{% set dashboard_return_url = url_for('dashboard1', month=dashboard_month) %}
+{% set dashboard_return_url = url_for('dashboard1', month=dashboard_month) + '#dashboard-needs-attention' %}
 {% else %}
-{% set dashboard_return_url = url_for('dashboard1') %}
+{% set dashboard_return_url = url_for('dashboard1') + '#dashboard-needs-attention' %}
 {% endif %}
 <section class="container dashboard-section-block" id="dashboard-needs-attention">
   <div class="card dashboard-card">
