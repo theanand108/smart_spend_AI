@@ -87,7 +87,7 @@ def _specific_merchant_override(merchant_name: str) -> tuple[str, str] | None:
     return None
 
 
-def categorize_transaction(merchant_name: str, amount: float | int | None = None, note: str | None = None, payment_method: str | None = None, history: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def categorize_transaction(merchant_name: str, amount: float | int | None = None, note: str | None = None, payment_method: str | None = None, history: list[dict[str, Any]] | None = None, allow_personal_memory: bool = False) -> dict[str, Any]:
     """Categorize a transaction using independent evidence sources."""
     merchant = normalize_text(merchant_name)
     if not merchant:
@@ -201,6 +201,19 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
         if ranked_history[0] == ranked_history[1] and margin < 0.12:
             return _result(category=None, confidence=0.20, status="conflict", reason="Entity has equally represented historical categories and the current amount does not provide enough separation.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
+    if allow_personal_memory and len(historical_counts) == 1 and entity_profile.get("transaction_count", 0) >= 1:
+        # Trusted user history is allowed to become personal memory during
+        # post-import reconciliation. Normal categorization stays conservative.
+        personal_category = str(next(iter(historical_counts)))
+        return _result(
+            category=personal_category,
+            confidence=0.90,
+            status="categorized",
+            reason="The user's trusted history consistently associates this entity with this category.",
+            needs_user_confirmation=False,
+            entity_memory=entity_profile,
+            personal_category_candidate=personal_category,
+        )
     if historical_counts and not profile["varies"] and profile["dominance"] >= 0.80:
         if entity_profile.get("transaction_count", 0) >= 4 and margin >= 0.20:
             confidence = min(0.90, 0.65 + top_score * 0.30 + margin * 0.10)
