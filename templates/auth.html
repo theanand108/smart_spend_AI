@@ -1,7 +1,46 @@
 {% extends 'base.html' %}
 {% block title %}{{ 'Create account' if mode == 'register' else 'Sign in' }}{% endblock title %}
 {% block body %}
-<section class="py-5">
+<style>
+  .auth-page {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  .auth-page .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+  .auth-page .form-control {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--text-primary);
+  }
+  .auth-page .form-control:focus {
+    background-color: var(--input-bg-focus);
+    color: var(--text-primary);
+    border-color: var(--input-border-focus);
+  }
+  .auth-page .form-control::placeholder {
+    color: var(--input-placeholder);
+  }
+  .auth-page .form-label,
+  .auth-page h1 {
+    color: var(--text-primary);
+  }
+  .auth-page .text-muted,
+  .auth-page .form-text {
+    color: var(--text-muted) !important;
+  }
+  .auth-page .form-control:-webkit-autofill,
+  .auth-page .form-control:-webkit-autofill:hover,
+  .auth-page .form-control:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-primary);
+    -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+</style>
+<section class="py-5 auth-page">
   <div class="container" style="max-width: 520px;">
     <div class="text-center mb-4">
       <p class="text-uppercase small fw-semibold text-primary mb-2">Smart Spend AI</p>
@@ -10,7 +49,7 @@
         {{ 'Your transactions and intelligence stay separate from the demo workspace.' if mode == 'register' else 'Sign in to continue to your personal financial workspace.' }}
       </p>
     </div>
-    <div class="card shadow-sm border-0">
+    <div class="card shadow-sm border-0 auth-card">
       <div class="card-body p-4 p-md-5">
         <form method="post">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
