@@ -82,7 +82,7 @@ def test_dashboard_attention_partial_contains_only_unresolved_transactions():
     assert b"UNKNOWN CONTACT" in response.data
     assert b"DEEPAK FRUIT CENTRE" not in response.data
     assert b"EKART" not in response.data
-    assert b'value="/dashboard/8"' in response.data
+    assert b'value="/dashboard/8#dashboard-needs-attention"' in response.data
 
 
 def test_dashboard_attention_correction_persists_category():
