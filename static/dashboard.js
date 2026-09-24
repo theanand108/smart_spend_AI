@@ -488,10 +488,22 @@ document.addEventListener("DOMContentLoaded", () => {
     exploreSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  function restoreDashboardAnchor() {
+    if (window.location.hash !== '#dashboard-needs-attention') return;
+
+    const target = document.getElementById('dashboard-needs-attention');
+    if (!target) return;
+
+    // The dashboard contains charts that finish laying out after DOMContentLoaded.
+    // Restore the anchor after the page has settled so the browser does not
+    // immediately shift back toward the top when those sections resize.
+    target.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' });
+  }
+
   if (attentionSection && window.location.hash === '#dashboard-needs-attention') {
-    window.setTimeout(function () {
-      attentionSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+    window.addEventListener('load', restoreDashboardAnchor, { once: true });
+    window.setTimeout(restoreDashboardAnchor, 100);
+    window.setTimeout(restoreDashboardAnchor, 600);
   }
 
 });
