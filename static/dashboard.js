@@ -438,6 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const exploreSection = document.getElementById('explore-your-spending');
+  const attentionSection = document.getElementById('dashboard-needs-attention');
   const searchForm = document.getElementById('spend-search-form');
   const searchInput = document.getElementById('spend-search-input');
 
@@ -485,6 +486,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (exploreSection && window.location.hash === '#explore-your-spending') {
     exploreSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  if (attentionSection && window.location.hash === '#dashboard-needs-attention') {
+    window.setTimeout(function () {
+      attentionSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 
 });
