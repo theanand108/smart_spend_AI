@@ -308,7 +308,7 @@ block body %}
               <a href="{{ url_for('update_transaction', id=transaction.id, next=request.full_path) }}" class="btn btn-outline-secondary btn-sm" aria-label="Edit transaction">
                 <i class="bi bi-pencil"></i>
               </a>
-              <a href="#" class="btn btn-outline-secondary btn-sm dashboard-transaction-delete-btn" aria-label="Delete transaction" data-delete-trigger data-delete-url="{{ url_for('delete_transaction', id=transaction.id, next=request.full_path) }}">
+              <a href="#" class="btn btn-outline-secondary btn-sm dashboard-transaction-delete-btn" aria-label="Delete transaction" data-delete-trigger data-delete-url="{{ url_for('delete_transaction', id=transaction.id, next=(request.full_path + '#explore-your-spending')) }}">
                 <i class="bi bi-trash"></i>
               </a>
             </div>
