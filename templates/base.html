@@ -159,6 +159,56 @@
       });
     </script>
     <script>
+      // Preserve the exact browser scroll position across destructive POST -> redirect -> GET
+      // navigations. This uses sessionStorage rather than a page-specific anchor, so it
+      // works for any transaction list or section without hardcoding a destination.
+      (function () {
+        var scrollStorageKey = 'ssai.pending-scroll:' + window.location.pathname + window.location.search;
+
+        function saveScrollPosition() {
+          try {
+            sessionStorage.setItem(scrollStorageKey, String(window.scrollY));
+          } catch (e) {}
+        }
+
+        function restoreScrollPosition() {
+          try {
+            var stored = sessionStorage.getItem(scrollStorageKey);
+            if (stored === null) return;
+
+            var scrollY = Number(stored);
+            if (!Number.isFinite(scrollY) || scrollY < 0) {
+              sessionStorage.removeItem(scrollStorageKey);
+              return;
+            }
+
+            var restore = function () {
+              window.scrollTo(0, scrollY);
+            };
+
+            requestAnimationFrame(function () {
+              requestAnimationFrame(restore);
+            });
+            window.setTimeout(restore, 250);
+            window.setTimeout(function () {
+              restore();
+              sessionStorage.removeItem(scrollStorageKey);
+            }, 1000);
+          } catch (e) {}
+        }
+
+        window.addEventListener('load', restoreScrollPosition);
+        window.addEventListener('pageshow', restoreScrollPosition);
+
+        document.addEventListener('DOMContentLoaded', function () {
+          var deleteForm = document.getElementById('confirm-delete-form');
+          if (!deleteForm) return;
+
+          deleteForm.addEventListener('submit', saveScrollPosition);
+        });
+      })();
+    </script>
+    <script>
       document.addEventListener('DOMContentLoaded', function () {
         var deleteModalEl = document.getElementById('deleteModal');
         var confirmDeleteForm = document.getElementById('confirm-delete-form');
