@@ -27,6 +27,7 @@
           <div class="dashboard-transaction-meta">
             <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
             <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
+            <span class="dashboard-transaction-date">{{ item.transaction.date.strftime('%A, %d %b %Y · %I:%M %p') }}</span>
             {% if item.category %}
             <span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>
             {% endif %}
@@ -69,6 +70,7 @@
             <div class="dashboard-transaction-meta">
               <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
               <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
+            <span class="dashboard-transaction-date">{{ item.transaction.date.strftime('%A, %d %b %Y · %I:%M %p') }}</span>
               {% if item.category %}<span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>{% endif %}
             </div>
             <div class="dashboard-transaction-notes">{{ item.reason }}</div>
