@@ -67,6 +67,23 @@
             {{ 'Create workspace' if mode == 'register' else 'Sign in' }}
           </button>
         </form>
+        {% if clerk_publishable_key %}
+        <div class="d-flex align-items-center gap-3 my-4 text-muted small">
+          <span class="flex-grow-1 border-top"></span>
+          <span>or</span>
+          <span class="flex-grow-1 border-top"></span>
+        </div>
+        <button
+          type="button"
+          id="clerk-google-button"
+          class="btn btn-outline-secondary btn-lg w-100 rounded-pill d-flex align-items-center justify-content-center gap-2"
+          data-next="{{ next or ('/get-started' if mode == 'register' else '/dashboard') }}"
+        >
+          <span aria-hidden="true" style="font-weight:700;">G</span>
+          Continue with Google
+        </button>
+        <p class="text-center text-muted small mt-2 mb-0">Use your Google account without remembering another SSAI password.</p>
+        {% endif %}
         <div class="text-center mt-4 small text-muted">
           {% if mode == 'register' %}
             Already have an account? <a href="{{ url_for('login', next=next) }}">Sign in</a>
@@ -78,4 +95,7 @@
     </div>
   </div>
 </section>
+  {% if clerk_publishable_key %}
+  <script src="{{ url_for('static', filename='clerk_auth.js') }}"></script>
+  {% endif %}
 {% endblock body %}
