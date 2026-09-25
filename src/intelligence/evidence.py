@@ -18,6 +18,7 @@ from .semantic import semantic_note_evidence
 # transaction to justify a much larger new one.
 AMOUNT_RELATIVE_TOLERANCE = 0.25
 AMOUNT_ABSOLUTE_TOLERANCE = 100.0
+AMOUNT_MIN_REFERENCE_FOR_UPWARD_TOLERANCE = 15.0
 
 
 def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], category: str) -> tuple[float, int]:
@@ -50,8 +51,16 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
         # close when it is within 25% of the larger value OR within an absolute
         # ₹100 band. The absolute floor matters most for small UPI purchases;
         # the percentage guard prevents that tolerance from growing without
-        # bound for large values.
-        if ratio <= AMOUNT_RELATIVE_TOLERANCE or abs(current - value) <= AMOUNT_ABSOLUTE_TOLERANCE:
+        # bound for large values. A very small historical reference does not
+        # establish a larger upward spending range by itself.
+        difference = abs(current - value)
+        upward_drift_from_small_reference = (
+            current > value and value < AMOUNT_MIN_REFERENCE_FOR_UPWARD_TOLERANCE
+        )
+        if ratio <= AMOUNT_RELATIVE_TOLERANCE or (
+            difference <= AMOUNT_ABSOLUTE_TOLERANCE
+            and not upward_drift_from_small_reference
+        ):
             healthy_matches += 1
 
     if healthy_matches:
