@@ -26,39 +26,30 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
     if current <= 0:
         return 0.0, 0
 
-    ratios: list[float] = []
+    healthy_matches = 0
     for item in history:
         if item.get("category") != category or item.get("amount") is None:
             continue
+
         value = float(item["amount"])
         if value <= 0:
             continue
-        ratios.append(abs(current - value) / max(current, value, 1.0))
 
-    if not ratios:
-        return 0.0, 0
-
-    # For recurring personal/merchant entities, small amount changes are
-    # normal. A strict percentage-only match makes low-value purchases such as
-    # ₹15 → ₹50 or ₹30 → ₹35 look unrelated even though they are clearly within
-    # the same everyday spending range. Treat an amount as reasonably close when
-    # it is within 25% of the larger value OR within an absolute ₹100 band.
-    # The absolute floor matters most for small UPI purchases; the percentage
-    # guard prevents that tolerance from growing without bound for large values.
-    healthy_matches = sum(
-        ratio <= 0.25 or abs(current - float(item_amount)) <= 100.0
-        for ratio, item_amount in (
-            (abs(current - float(item.get("amount"))) / max(current, float(item.get("amount")), 1.0), item.get("amount"))
-            for item in history
-            if item.get("category") == category and item.get("amount") is not None and float(item.get("amount")) > 0
-        )
-    )
+        ratio = abs(current - value) / max(current, value, 1.0)
+        # For recurring personal/merchant entities, small amount changes are
+        # normal. A strict percentage-only match makes low-value purchases such
+        # as ₹15 → ₹50 or ₹30 → ₹35 look unrelated even though they are clearly
+        # within the same everyday spending range. Treat an amount as reasonably
+        # close when it is within 25% of the larger value OR within an absolute
+        # ₹100 band. The absolute floor matters most for small UPI purchases;
+        # the percentage guard prevents that tolerance from growing without
+        # bound for large values.
+        if ratio <= 0.25 or abs(current - value) <= 100.0:
+            healthy_matches += 1
 
     if healthy_matches:
         return min(0.25, 0.10 + 0.05 * healthy_matches), healthy_matches
     return 0.0, 0
-    return 0.0, 0
-
 
 def collect_evidence(*, amount: float | int | None, note: str | None, merchant_name: str | None = None, payment_method: str | None, history: list[dict[str, Any]]) -> dict[str, Any]:
     """Collect independent evidence without making the final decision.
