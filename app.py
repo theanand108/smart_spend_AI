@@ -297,6 +297,17 @@ def format_signed_percentage(percent):
 
 def format_natural_change(amount, percent=None):
     amount_text = format_currency(abs(float(amount or 0)))
+    if percent is None:
+        return amount_text
+
+    percent_value = abs(float(percent))
+    # Very large percentage changes are mathematically valid but can be
+    # misleading when a small prior-period baseline makes the ratio explode.
+    # Keep the underlying fact intact, but omit the unstable percentage from
+    # user-facing copy rather than presenting a noisy number as insight.
+    if percent_value >= 300:
+        return amount_text
+
     percent_text = format_signed_percentage(percent).lstrip("+-")
     return f"{amount_text} ({percent_text})" if percent_text else amount_text
 
