@@ -38,13 +38,25 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
     if not ratios:
         return 0.0, 0
 
-    exact_or_close = sum(ratio <= 0.10 for ratio in ratios)
-    moderate_matches = sum(ratio <= 0.25 for ratio in ratios)
+    # For recurring personal/merchant entities, small amount changes are
+    # normal. A strict percentage-only match makes low-value purchases such as
+    # ₹15 → ₹50 or ₹30 → ₹35 look unrelated even though they are clearly within
+    # the same everyday spending range. Treat an amount as reasonably close when
+    # it is within 25% of the larger value OR within an absolute ₹100 band.
+    # The absolute floor matters most for small UPI purchases; the percentage
+    # guard prevents that tolerance from growing without bound for large values.
+    healthy_matches = sum(
+        ratio <= 0.25 or abs(current - float(item_amount)) <= 100.0
+        for ratio, item_amount in (
+            (abs(current - float(item.get("amount"))) / max(current, float(item.get("amount")), 1.0), item.get("amount"))
+            for item in history
+            if item.get("category") == category and item.get("amount") is not None and float(item.get("amount")) > 0
+        )
+    )
 
-    if exact_or_close:
-        return min(0.25, 0.10 + 0.05 * exact_or_close), exact_or_close
-    if moderate_matches:
-        return 0.05, 0
+    if healthy_matches:
+        return min(0.25, 0.10 + 0.05 * healthy_matches), healthy_matches
+    return 0.0, 0
     return 0.0, 0
 
 
