@@ -13,6 +13,13 @@ from .context import history_categories
 from .semantic import semantic_note_evidence
 
 
+# Amounts for recurring entities naturally vary. Keep the tolerance bounded so
+# a small everyday purchase can drift meaningfully without allowing a tiny old
+# transaction to justify a much larger new one.
+AMOUNT_RELATIVE_TOLERANCE = 0.25
+AMOUNT_ABSOLUTE_TOLERANCE = 100.0
+
+
 def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], category: str) -> tuple[float, int]:
     """Return an explainable amount signal and close-match count.
 
@@ -44,7 +51,7 @@ def _amount_signal(amount: float | int | None, history: list[dict[str, Any]], ca
         # ₹100 band. The absolute floor matters most for small UPI purchases;
         # the percentage guard prevents that tolerance from growing without
         # bound for large values.
-        if ratio <= 0.25 or abs(current - value) <= 100.0:
+        if ratio <= AMOUNT_RELATIVE_TOLERANCE or abs(current - value) <= AMOUNT_ABSOLUTE_TOLERANCE:
             healthy_matches += 1
 
     if healthy_matches:
