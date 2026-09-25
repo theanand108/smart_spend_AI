@@ -136,6 +136,10 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     merchant_category = evidence.get("merchant_category")
     merchant_confidence = float(evidence.get("merchant_confidence") or 0.0)
 
+    personal_category_candidate = None
+    if should_create_personal_category(entity_profile):
+        personal_category_candidate = entity_profile["dominant_category"]
+
     specific_note = _specific_note_override(note)
     specific_merchant = _specific_merchant_override(merchant)
 
@@ -178,11 +182,25 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
         return _result(category=str(merchant_category), confidence=min(0.96, merchant_confidence), status="categorized", reason="Qualified merchant wording provides stronger transaction-purpose evidence than the generic known merchant mapping.", needs_user_confirmation=False, entity_memory=entity_profile)
 
     if known_category:
-        return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile)
+        if (
+            not allow_personal_memory
+            and amount is not None
+            and merchant_history
+            and len(historical_counts) == 1
+            and historical_counts.get(known_category) == 1
+            and not (evidence.get("amount_matches") or {}).get(known_category)
+        ):
+            return _result(
+                category=None,
+                confidence=0.25,
+                status="unknown",
+                reason="The merchant is known, but this amount is outside the user's remembered spending range for the entity.",
+                needs_user_confirmation=True,
+                entity_memory=entity_profile,
+                personal_category_candidate=personal_category_candidate,
+            )
 
-    personal_category_candidate = None
-    if should_create_personal_category(entity_profile):
-        personal_category_candidate = entity_profile["dominant_category"]
+        return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
     ranked = evidence.get("ranked") or []
     amount_matches = evidence.get("amount_matches") or {}
