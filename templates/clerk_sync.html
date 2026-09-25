@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Signing you in{% endblock title %}
+{% block body %}
+<section class="py-5">
+  <div
+    id="clerk-sync-page"
+    class="container text-center"
+    style="max-width: 520px;"
+    data-next="{{ next }}"
+    data-csrf-token="{{ csrf_token() }}"
+  >
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-5">
+        <p class="text-uppercase small fw-semibold text-primary mb-2">Smart Spend AI</p>
+        <h1 class="h3 fw-bold mb-3">Signing you in</h1>
+        <p id="clerk-sync-status" class="text-muted mb-3">Connecting your Google account to your personal workspace…</p>
+        <a id="clerk-sync-retry" href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill" hidden>
+          Return to sign in
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+<script src="{{ url_for('static', filename='clerk_auth.js') }}"></script>
+{% endblock body %}
