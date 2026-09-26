@@ -58,8 +58,8 @@
     if (!window.Clerk.loaded) {
       await window.Clerk.load({
         ui: { ClerkUI: window.__internal_ClerkUICtor },
-        signInUrl: "/login",
-        signUpUrl: "/register",
+        signInUrl: window.location.origin + "/login",
+        signUpUrl: window.location.origin + "/register",
         appearance: {
           options: {
             socialButtonsPlacement: "top",
@@ -85,8 +85,11 @@
 
         clerk.openSignIn({
           withSignUp: true,
+          transferable: true,
           oauthFlow: "redirect",
           forceRedirectUrl: callbackUrl,
+          signInForceRedirectUrl: callbackUrl,
+          signUpForceRedirectUrl: callbackUrl,
         });
       } catch (error) {
         console.error("Clerk sign-in failed:", error);
