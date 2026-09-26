@@ -91,7 +91,7 @@
             method: "POST",
             headers: {
               "Authorization": "Bearer " + existingToken,
-              "X-CSRF-Token": (document.querySelector('input[name="csrf_token"]') || {}).value || "",
+              "X-CSRF-Token": (document.querySelector('input[name="_csrf_token"]') || {}).value || "",
               "Accept": "application/json",
             },
           });
