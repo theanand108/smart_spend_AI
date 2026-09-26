@@ -60,7 +60,6 @@
         ui: { ClerkUI: window.__internal_ClerkUICtor },
         signInUrl: window.location.origin + "/login",
         signUpUrl: window.location.origin + "/register",
-        allowedRedirectOrigins: [window.location.origin],
         appearance: {
           options: {
             socialButtonsPlacement: "top",
