@@ -3,6 +3,10 @@ import csv
 import io
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # pyright: reportMissingImports=false
 from flask import Flask, request, render_template, redirect, flash, get_flashed_messages, session, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -29,7 +33,10 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "").lower() in {"1", "true", "yes"}
 app.config["CLERK_SECRET_KEY"] = os.environ.get("CLERK_SECRET_KEY")
 app.config["CLERK_JWT_KEY"] = os.environ.get("CLERK_JWT_KEY")
-app.config["CLERK_PUBLISHABLE_KEY"] = os.environ.get("CLERK_PUBLISHABLE_KEY")
+app.config["CLERK_PUBLISHABLE_KEY"] = (
+    os.environ.get("CLERK_PUBLISHABLE_KEY")
+    or os.environ.get("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")
+)
 app.config["CLERK_AUTHORIZED_PARTIES"] = [
     part.strip()
     for part in os.environ.get("CLERK_AUTHORIZED_PARTIES", "").split(",")
