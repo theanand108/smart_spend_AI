@@ -995,6 +995,7 @@ def sync_clerk_session():
             request,
             AuthenticateRequestOptions(
                 secret_key=secret_key,
+                publishable_key=app.config.get("CLERK_PUBLISHABLE_KEY"),
                 jwt_key=app.config.get("CLERK_JWT_KEY"),
                 authorized_parties=_clerk_authorized_parties(),
                 accepts_token=["session_token"],
@@ -1003,7 +1004,7 @@ def sync_clerk_session():
     except Exception:
         return jsonify({"ok": False, "error": "Unable to verify the Clerk session."}), 401
 
-    if not state.is_signed_in:
+    if not state.is_authenticated:
         return jsonify({"ok": False, "error": "Clerk session is not signed in."}), 401
 
     clerk_user_id = state.payload.get("sub")
