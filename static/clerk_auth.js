@@ -4,12 +4,19 @@
   var publishableKey = document.body.getAttribute("data-clerk-publishable-key");
   if (!publishableKey) return;
 
-  function loadScript(src) {
+  function loadScript(src, attributes) {
     return new Promise(function (resolve, reject) {
       var script = document.createElement("script");
       script.src = src;
       script.async = true;
       script.crossOrigin = "anonymous";
+      if (attributes) {
+        Object.keys(attributes).forEach(function (name) {
+          script.setAttribute("data-clerk-" + name.replace(/[A-Z]/g, function (letter) {
+            return "-" + letter.toLowerCase();
+          }), attributes[name]);
+        });
+      }
       script.onload = resolve;
       script.onerror = function () {
         reject(new Error("Unable to load Clerk."));
@@ -38,10 +45,15 @@
 
     if (!window.__ssaiClerkJsLoading) {
       window.__ssaiClerkJsLoading = loadScript(
-        "https://" + domain + "/npm/@clerk/clerk-js@6/dist/clerk.browser.js"
+        "https://" + domain + "/npm/@clerk/clerk-js@6/dist/clerk.browser.js",
+        { publishableKey: publishableKey }
       );
     }
     await window.__ssaiClerkJsLoading;
+
+    if (!window.Clerk || typeof window.Clerk.load !== "function") {
+      throw new Error("ClerkJS failed to initialize.");
+    }
 
     if (!window.Clerk.loaded) {
       await window.Clerk.load({
