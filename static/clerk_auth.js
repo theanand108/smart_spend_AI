@@ -60,6 +60,7 @@
         ui: { ClerkUI: window.__internal_ClerkUICtor },
         signInUrl: window.location.origin + "/login",
         signUpUrl: window.location.origin + "/register",
+        allowedRedirectOrigins: [window.location.origin],
         appearance: {
           options: {
             socialButtonsPlacement: "top",
@@ -81,7 +82,27 @@
       try {
         var clerk = await loadClerk();
         var next = googleButton.getAttribute("data-next") || "/dashboard";
-        var callbackUrl = "/clerk-sync?next=" + encodeURIComponent(next);
+        var callbackUrl = window.location.origin + "/clerk-sync?next=" + encodeURIComponent(next);
+
+        if (clerk.isSignedIn && clerk.session) {
+          var existingToken = await clerk.session.getToken();
+          if (!existingToken) throw new Error("Unable to obtain the existing Clerk session token.");
+
+          var existingResponse = await fetch("/auth/clerk/sync", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + existingToken,
+              "X-CSRF-Token": document.body.getAttribute("data-csrf-token") || "",
+              "Accept": "application/json",
+            },
+          });
+          var existingData = await existingResponse.json().catch(function () { return {}; });
+          if (!existingResponse.ok || !existingData.ok) {
+            throw new Error(existingData.error || "Unable to create the SSAI session.");
+          }
+          window.location.replace(next);
+          return;
+        }
 
         clerk.openSignIn({
           withSignUp: true,
