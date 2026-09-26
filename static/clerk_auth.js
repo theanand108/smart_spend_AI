@@ -92,7 +92,7 @@
             method: "POST",
             headers: {
               "Authorization": "Bearer " + existingToken,
-              "X-CSRF-Token": document.body.getAttribute("data-csrf-token") || "",
+              "X-CSRF-Token": (document.querySelector('input[name="csrf_token"]') || {}).value || "",
               "Accept": "application/json",
             },
           });
