@@ -1039,7 +1039,12 @@ def sync_clerk_session():
     session.clear()
     session["user_id"] = user.id
     csrf_token()
-    return jsonify({"ok": True, "user_id": user.id})
+    has_transactions = scoped_transaction_query(Transaction.query).first() is not None
+    return jsonify({
+        "ok": True,
+        "user_id": user.id,
+        "has_transactions": has_transactions,
+    })
 
 
 @app.route("/clerk-sync")
