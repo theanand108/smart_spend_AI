@@ -103,14 +103,25 @@
           return;
         }
 
-        clerk.openSignIn({
-          withSignUp: true,
-          transferable: false,
-          oauthFlow: "redirect",
-          forceRedirectUrl: callbackUrl,
-          signInForceRedirectUrl: callbackUrl,
-          signUpForceRedirectUrl: callbackUrl,
-        });
+        var authMode = googleButton.getAttribute("data-auth-mode") || "login";
+
+        if (authMode === "register") {
+          clerk.openSignUp({
+            oauthFlow: "redirect",
+            forceRedirectUrl: callbackUrl,
+            signInForceRedirectUrl: callbackUrl,
+            signUpForceRedirectUrl: callbackUrl,
+          });
+        } else {
+          clerk.openSignIn({
+            withSignUp: true,
+            transferable: false,
+            oauthFlow: "redirect",
+            forceRedirectUrl: callbackUrl,
+            signInForceRedirectUrl: callbackUrl,
+            signUpForceRedirectUrl: callbackUrl,
+          });
+        }
       } catch (error) {
         console.error("Clerk sign-in failed:", error);
         googleButton.disabled = false;
