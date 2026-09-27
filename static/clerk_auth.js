@@ -105,7 +105,7 @@
 
         clerk.openSignIn({
           withSignUp: true,
-          transferable: true,
+          transferable: false,
           oauthFlow: "redirect",
           forceRedirectUrl: callbackUrl,
           signInForceRedirectUrl: callbackUrl,
