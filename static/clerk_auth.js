@@ -99,7 +99,8 @@
           if (!existingResponse.ok || !existingData.ok) {
             throw new Error(existingData.error || "Unable to create the SSAI session.");
           }
-          window.location.replace(next);
+          var existingDestination = existingData.has_transactions ? next : "/get-started";
+          window.location.replace(existingDestination);
           return;
         }
 
@@ -167,7 +168,8 @@
           throw new Error(data.error || "Unable to create the SSAI session.");
         }
 
-        window.location.replace(next);
+        var destination = data.has_transactions ? next : "/get-started";
+        window.location.replace(destination);
       } catch (error) {
         console.error("Clerk session sync failed:", error);
         status.textContent = "We couldn't finish Google sign-in.";
