@@ -1001,10 +1001,14 @@ def sync_clerk_session():
                 accepts_token=["session_token"],
             ),
         )
-    except Exception:
+    except Exception as exc:
+        print(f"Clerk authentication exception: {type(exc).__name__}: {exc}")
         return jsonify({"ok": False, "error": "Unable to verify the Clerk session."}), 401
 
-    if not state.is_authenticated:
+    if not state.is_signed_in:
+        reason = getattr(state, "reason", None)
+        reason_name = getattr(reason, "name", None) or str(reason or "unknown")
+        print(f"Clerk authentication rejected the session: {reason_name}")
         return jsonify({"ok": False, "error": "Clerk session is not signed in."}), 401
 
     clerk_user_id = state.payload.get("sub")
