@@ -995,7 +995,6 @@ def sync_clerk_session():
             request,
             AuthenticateRequestOptions(
                 secret_key=secret_key,
-                publishable_key=app.config.get("CLERK_PUBLISHABLE_KEY"),
                 jwt_key=app.config.get("CLERK_JWT_KEY"),
                 authorized_parties=_clerk_authorized_parties(),
                 accepts_token=["session_token"],
