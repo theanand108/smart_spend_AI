@@ -78,6 +78,7 @@
           id="clerk-google-button"
           class="btn btn-outline-secondary btn-lg w-100 rounded-pill d-flex align-items-center justify-content-center gap-2"
           data-next="{{ next or ('/get-started' if mode == 'register' else '/dashboard') }}"
+          data-auth-mode="{{ mode }}"
         >
           <span aria-hidden="true" style="font-weight:700;">G</span>
           Continue with Google
