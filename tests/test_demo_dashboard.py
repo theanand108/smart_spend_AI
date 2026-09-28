@@ -1,12 +1,28 @@
 from flask import Flask
 
-from src.demo_dashboard import register_demo_dashboard
+from src.statement_import_web import register_statement_import
+
+
+class FakeDB:
+    class Session:
+        pass
+
+    session = Session()
+
+
+class FakeTransaction:
+    pass
+
+
+def make_demo_app():
+    app = Flask(__name__, template_folder="../templates")
+    app.secret_key = "test"
+    register_statement_import(app, FakeDB(), FakeTransaction)
+    return app
 
 
 def test_demo_dashboard_is_public_and_read_only():
-    app = Flask(__name__, template_folder="../templates")
-    app.secret_key = "test"
-    register_demo_dashboard(app)
+    app = make_demo_app()
 
     with app.test_client() as client:
         response = client.get("/demo")
@@ -17,9 +33,7 @@ def test_demo_dashboard_is_public_and_read_only():
 
 
 def test_demo_dashboard_does_not_require_authentication():
-    app = Flask(__name__, template_folder="../templates")
-    app.secret_key = "test"
-    register_demo_dashboard(app)
+    app = make_demo_app()
 
     with app.test_client() as client:
         response = client.get("/demo")
