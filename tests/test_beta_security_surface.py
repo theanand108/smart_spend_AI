@@ -14,7 +14,7 @@ class FakeTransaction:
 
 
 def make_security_surface_app():
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder="../templates")
     app.secret_key = "test"
 
     @app.route("/login")
@@ -25,10 +25,6 @@ def make_security_surface_app():
     @app.route("/dashboard/<int:month>")
     def dashboard1(month=None):
         return "private dashboard"
-
-    @app.route("/demo")
-    def demo_dashboard():
-        return "public demo dashboard"
 
     @app.route("/simulateATransaction")
     def simulate_transaction():
