@@ -19,6 +19,10 @@ def make_security_app():
     def login():
         return "login"
 
+    @app.route("/demo")
+    def demo():
+        return "demo dashboard"
+
     @app.route("/dashboard")
     def dashboard1():
         return "private dashboard"
@@ -31,14 +35,14 @@ def make_security_app():
     return app
 
 
-def test_dashboard_redirects_when_not_authenticated():
+def test_dashboard_redirects_to_demo_when_not_authenticated():
     app = make_security_app()
 
     with app.test_client() as client:
         response = client.get("/dashboard")
 
     assert response.status_code == 302
-    assert response.headers["Location"].startswith("/login?next=/dashboard")
+    assert response.headers["Location"] == "/demo"
 
 
 def test_simulator_redirects_when_not_authenticated():
