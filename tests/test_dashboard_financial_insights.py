@@ -45,17 +45,18 @@ def authenticate(client, user_id=1):
         flask_session["_csrf_token"] = "test-csrf-token"
 
 
-def add_transaction(month, amount, merchant, category, day=1, user_id=1):
-    db.session.add(
-        Transaction(
-            date=datetime(datetime.now().year, month, day),
-            merchant_name=merchant,
-            amount=amount,
-            category=category,
-            payment_method="UPI",
-            user_id=user_id,
-        )
+def add_transaction(month, amount, merchant, category, day=1, user_id=1, preserve_category=False):
+    transaction = Transaction(
+        date=datetime(datetime.now().year, month, day),
+        merchant_name=merchant,
+        amount=amount,
+        category=category,
+        payment_method="UPI",
+        user_id=user_id,
     )
+    if preserve_category:
+        transaction._preserve_category_during_flush = True
+    db.session.add(transaction)
 
 
 def seed_structured_insight_transactions():
@@ -179,7 +180,14 @@ def test_user_cannot_update_another_users_transaction(dashboard_app):
     with dashboard_app.app_context():
         db.session.add(User(email="other-user@example.com", password_hash="test"))
         db.session.flush()
-        add_transaction(8, 9999, "USER TWO SECRET MERCHANT", "Shopping", user_id=2)
+        add_transaction(
+            8,
+            9999,
+            "USER TWO SECRET MERCHANT",
+            "Shopping",
+            user_id=2,
+            preserve_category=True,
+        )
         db.session.commit()
         transaction_id = Transaction.query.filter_by(user_id=2).first().id
 
