@@ -38,6 +38,18 @@ REVIEW_CATEGORIES = (
     "Others",
 )
 
+# These endpoints expose or mutate a user's financial workspace. The main app
+# already protects several of them with @login_required; this app-level guard
+# closes the remaining gap for dashboard/import pages without duplicating route
+# logic in app.py.
+PROTECTED_FINANCIAL_ENDPOINTS = {
+    "dashboard1",
+    "simulate_transaction",
+    "statement_import.import_statement_page",
+    "statement_import.dashboard_attention",
+    "statement_import.resolve_dashboard_attention",
+}
+
 
 def _allowed_filename(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -48,6 +60,31 @@ def register_statement_import(app, db, Transaction) -> None:
     app.config.setdefault("MAX_CONTENT_LENGTH", MAX_UPLOAD_BYTES)
     app.extensions["statement_import_db"] = db
     app.extensions["statement_import_transaction_model"] = Transaction
+
+    @app.before_request
+    def protect_financial_pages():
+        if request.endpoint not in PROTECTED_FINANCIAL_ENDPOINTS:
+            return None
+        if session.get("user_id") is not None:
+            return None
+
+        flash("Please sign in to use your personal workspace.", "warning")
+        return redirect(url_for("login", next=request.full_path))
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        )
+
+        if request.endpoint in PROTECTED_FINANCIAL_ENDPOINTS or session.get("user_id") is not None:
+            response.headers["Cache-Control"] = "private, no-store"
+
+        return response
 
     @app.context_processor
     def inject_received_money_summary():
