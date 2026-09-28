@@ -38,7 +38,7 @@ def test_dashboard_redirects_when_not_authenticated():
         response = client.get("/dashboard")
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/login?next=/dashboard")
+    assert response.headers["Location"].startswith("/login?next=/dashboard")
 
 
 def test_simulator_redirects_when_not_authenticated():
@@ -48,7 +48,7 @@ def test_simulator_redirects_when_not_authenticated():
         response = client.get("/simulateATransaction")
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/login?next=/simulateATransaction")
+    assert response.headers["Location"].startswith("/login?next=/simulateATransaction")
 
 
 def test_authenticated_financial_page_gets_security_headers_and_no_store():
