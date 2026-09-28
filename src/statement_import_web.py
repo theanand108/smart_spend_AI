@@ -119,6 +119,28 @@ def register_statement_import(app, db, Transaction) -> None:
             "received_money_count": int(row[1] or 0) if row else 0,
         }
 
+    @app.route("/demo")
+    def demo_dashboard():
+        """Render a public, read-only product demo using only fictional data."""
+        return render_template(
+            "demo_dashboard.html",
+            demo_data={
+                "month": "September 2026",
+                "health": "Good",
+                "summary": "Spending is under control this month, with most activity concentrated in everyday essentials.",
+                "change": "+8%",
+                "change_label": "Monthly spending increased",
+                "current_total": "₹18,420",
+                "previous_total": "₹17,060",
+                "driver": "Food & Dining",
+                "driver_change": "₹1,120 more",
+                "driver_share": "82% of the monthly increase",
+                "transactions": "42",
+                "top_category": "Food & Dining",
+                "average_day": "₹614",
+            },
+        )
+
     if statement_import_bp.name not in app.blueprints:
         app.register_blueprint(statement_import_bp)
 
