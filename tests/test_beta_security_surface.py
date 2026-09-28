@@ -34,18 +34,18 @@ def make_security_surface_app():
 
 def test_all_financial_workspace_pages_redirect_when_not_authenticated():
     app = make_security_surface_app()
-    protected_paths = (
-        "/dashboard",
-        "/dashboard/9",
-        "/simulateATransaction",
-        "/import",
-        "/dashboard/attention",
-        "/dashboard/attention/123",
+    protected_requests = (
+        ("get", "/dashboard"),
+        ("get", "/dashboard/9"),
+        ("get", "/simulateATransaction"),
+        ("get", "/import"),
+        ("get", "/dashboard/attention"),
+        ("post", "/dashboard/attention/123"),
     )
 
     with app.test_client() as client:
-        for path in protected_paths:
-            response = client.get(path)
+        for method, path in protected_requests:
+            response = getattr(client, method)(path)
             assert response.status_code == 302
             assert response.headers["Location"].startswith("/login?next=")
 
@@ -54,7 +54,7 @@ def test_financial_workspace_redirect_preserves_internal_path_only():
     app = make_security_surface_app()
 
     with app.test_client() as client:
-        response = client.get("/dashboard/attention/123?month=9")
+        response = client.post("/dashboard/attention/123?month=9")
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/login?next=/dashboard/attention/123?month=9"
