@@ -17,6 +17,16 @@ class FakeTransaction:
 def make_demo_app():
     app = Flask(__name__, template_folder="../templates")
     app.secret_key = "test"
+
+    @app.context_processor
+    def auth_context():
+        return {
+            "logged_in": False,
+            "current_user": None,
+            "clerk_publishable_key": "",
+            "csrf_token": lambda: "test-token",
+        }
+
     register_statement_import(app, FakeDB(), FakeTransaction)
     return app
 
