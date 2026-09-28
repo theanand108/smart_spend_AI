@@ -59,7 +59,6 @@ def test_financial_workspace_redirect_preserves_internal_path_only():
         response = client.post("/dashboard/attention/123?month=9")
 
     assert response.status_code == 302
-    assert response.status_code == 302
     location = urlparse(response.headers["Location"])
     assert location.path == "/login"
     assert parse_qs(location.query)["next"] == ["/dashboard/attention/123?month=9"]
