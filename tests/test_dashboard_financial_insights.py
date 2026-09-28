@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine
 
-from app import Transaction, app, db
+from app import Transaction, User, app, db
 
 
 @pytest.fixture
@@ -27,6 +27,8 @@ def dashboard_app(tmp_path):
             assert Path(engines[None].url.database).resolve() != real_db_path.resolve()
             db.drop_all()
             db.create_all()
+            db.session.add(User(email="dashboard-test@example.com", password_hash="test"))
+            db.session.commit()
             yield app
         finally:
             db.session.remove()
@@ -37,6 +39,11 @@ def dashboard_app(tmp_path):
             app.config["SQLALCHEMY_DATABASE_URI"] = original_uri
 
 
+def authenticate(client):
+    with client.session_transaction() as flask_session:
+        flask_session["user_id"] = 1
+
+
 def add_transaction(month, amount, merchant, category, day=1):
     db.session.add(
         Transaction(
@@ -45,6 +52,7 @@ def add_transaction(month, amount, merchant, category, day=1):
             amount=amount,
             category=category,
             payment_method="UPI",
+            user_id=1,
         )
     )
 
@@ -63,6 +71,7 @@ def test_dashboard_renders_structured_financial_insights(dashboard_app):
         seed_structured_insight_transactions()
 
     with dashboard_app.test_client() as client:
+        authenticate(client)
         response = client.get("/dashboard/8")
 
     html = response.data.decode("utf-8")
@@ -80,6 +89,7 @@ def test_dashboard_preserves_v1_three_card_composition(dashboard_app):
         seed_structured_insight_transactions()
 
     with dashboard_app.test_client() as client:
+        authenticate(client)
         response = client.get("/dashboard/8")
 
     html = response.data.decode("utf-8")
@@ -92,6 +102,7 @@ def test_search_filter_does_not_change_financial_insights(dashboard_app):
         seed_structured_insight_transactions()
 
     with dashboard_app.test_client() as client:
+        authenticate(client)
         response = client.get("/dashboard/8?q=Bookstore")
 
     html = response.data.decode("utf-8")
@@ -113,6 +124,7 @@ def test_dashboard_falls_back_to_key_insights_when_structured_empty(
         db.session.commit()
 
     with dashboard_app.test_client() as client:
+        authenticate(client)
         response = client.get("/dashboard/8")
 
     assert response.status_code == 200
