@@ -68,6 +68,9 @@ def register_statement_import(app, db, Transaction) -> None:
         if session.get("user_id") is not None:
             return None
 
+        if request.endpoint == "dashboard1":
+            return redirect(url_for("demo_dashboard"))
+
         flash("Please sign in to use your personal workspace.", "warning")
         return redirect(url_for("login", next=request.full_path))
 
