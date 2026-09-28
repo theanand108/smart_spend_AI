@@ -26,6 +26,10 @@ def make_security_surface_app():
     def dashboard1(month=None):
         return "private dashboard"
 
+    @app.route("/demo")
+    def demo_dashboard():
+        return "public demo dashboard"
+
     @app.route("/simulateATransaction")
     def simulate_transaction():
         return "private transactions"
@@ -34,11 +38,19 @@ def make_security_surface_app():
     return app
 
 
-def test_all_financial_workspace_pages_redirect_when_not_authenticated():
+def test_anonymous_dashboard_visitors_are_sent_to_public_demo():
+    app = make_security_surface_app()
+
+    with app.test_client() as client:
+        for path in ("/dashboard", "/dashboard/9"):
+            response = client.get(path)
+            assert response.status_code == 302
+            assert response.headers["Location"] == "/demo"
+
+
+def test_other_financial_workspace_pages_redirect_when_not_authenticated():
     app = make_security_surface_app()
     protected_requests = (
-        ("get", "/dashboard"),
-        ("get", "/dashboard/9"),
         ("get", "/simulateATransaction"),
         ("get", "/import"),
         ("get", "/dashboard/attention"),
