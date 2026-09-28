@@ -5,10 +5,13 @@
     <script>
       (function () {
         try {
-          if (localStorage.getItem('theme') === 'dark') {
+          // Dark mode is the SSAI default. Respect an explicit light-mode choice.
+          if (localStorage.getItem('theme') !== 'light') {
             document.documentElement.setAttribute('data-theme', 'dark');
           }
-        } catch (e) {}
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -25,7 +28,7 @@
      {% endblock head %}
 
   </head>
-  <body>
+  <body data-clerk-publishable-key="{{ clerk_publishable_key or '' }}">
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
       <div class="container">
         <a class="navbar-brand fw-bold fs-4" href="/">Smart Spend AI</a>
