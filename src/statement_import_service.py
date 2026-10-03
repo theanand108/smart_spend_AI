@@ -2,14 +2,14 @@
 
 Debit rows become normal SSAI Transaction records and therefore flow through
 the existing V2 SQLAlchemy categorization hook. Credit rows deliberately bypass
-that pipeline and are stored as received money only.
+the pipeline and are stored as received money only.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import inspect, text
+from sqlalchemy import Column, DateTime, Float, Index, Integer, MetaData, String, Table, inspect, text
 
 from .intelligence.categorizer import categorize_transaction
 from .statement_importer import ImportedTransaction, StatementImportResult
@@ -18,63 +18,82 @@ from .statement_importer import ImportedTransaction, StatementImportResult
 AUTO_RESOLVE_CONFIDENCE = 0.84
 
 
-CREATE_RECEIVED_MONEY_SQL = """
-CREATE TABLE IF NOT EXISTS received_money (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    transaction_date DATETIME NOT NULL,
-    merchant_name VARCHAR(255) NOT NULL,
-    amount FLOAT NOT NULL,
-    source VARCHAR(50) NOT NULL,
-    source_transaction_id VARCHAR(255),
-    user_id INTEGER,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-)
-"""
+def _import_tables() -> tuple[Table, Table]:
+    """Build portable SQLAlchemy definitions for the import-only tables."""
+    metadata = MetaData()
+    received_money = Table(
+        "received_money",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("transaction_date", DateTime, nullable=False),
+        Column("merchant_name", String(255), nullable=False),
+        Column("amount", Float, nullable=False),
+        Column("source", String(50), nullable=False),
+        Column("source_transaction_id", String(255)),
+        Column("user_id", Integer),
+        Column("created_at", DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")),
+    )
+    statement_import_records = Table(
+        "statement_import_records",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("source", String(50), nullable=False),
+        Column("source_transaction_id", String(255)),
+        Column("direction", String(10), nullable=False),
+        Column("transaction_id", Integer),
+        Column("user_id", Integer),
+        Column("created_at", DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")),
+    )
+    return received_money, statement_import_records
 
-CREATE_RECEIVED_MONEY_UNIQUE_INDEX_SQL = """
-CREATE UNIQUE INDEX IF NOT EXISTS ux_received_money_source_transaction
-ON received_money(source, source_transaction_id, user_id)
-WHERE source_transaction_id IS NOT NULL
-"""
 
-CREATE_IMPORT_RECORDS_SQL = """
-CREATE TABLE IF NOT EXISTS statement_import_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source VARCHAR(50) NOT NULL,
-    source_transaction_id VARCHAR(255),
-    direction VARCHAR(10) NOT NULL,
-    transaction_id INTEGER,
-    user_id INTEGER,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-)
-"""
+def _recreate_import_indexes(bind: Any) -> None:
+    """Create user-scoped dedupe indexes using the active database dialect."""
+    received_money, statement_import_records = _import_tables()
 
-CREATE_IMPORT_RECORDS_UNIQUE_INDEX_SQL = """
-CREATE UNIQUE INDEX IF NOT EXISTS ux_statement_import_source_transaction
-ON statement_import_records(source, source_transaction_id, user_id)
-WHERE source_transaction_id IS NOT NULL
-"""
+    for index_name in (
+        "ux_received_money_source_transaction",
+        "ux_statement_import_source_transaction",
+    ):
+        bind.exec_driver_sql(f"DROP INDEX IF EXISTS {index_name}")
+
+    Index(
+        "ux_received_money_source_transaction",
+        received_money.c.source,
+        received_money.c.source_transaction_id,
+        received_money.c.user_id,
+        unique=True,
+        sqlite_where=received_money.c.source_transaction_id.is_not(None),
+        postgresql_where=received_money.c.source_transaction_id.is_not(None),
+    ).create(bind=bind)
+    Index(
+        "ux_statement_import_source_transaction",
+        statement_import_records.c.source,
+        statement_import_records.c.source_transaction_id,
+        statement_import_records.c.user_id,
+        unique=True,
+        sqlite_where=statement_import_records.c.source_transaction_id.is_not(None),
+        postgresql_where=statement_import_records.c.source_transaction_id.is_not(None),
+    ).create(bind=bind)
 
 
 def ensure_import_tables(session: Any) -> None:
-    """Create the small import-only tables without changing Transaction."""
-    session.execute(text(CREATE_RECEIVED_MONEY_SQL))
-    session.execute(text(CREATE_IMPORT_RECORDS_SQL))
-
-    # Flask-SQLAlchemy uses a scoped session whose legacy `.bind` attribute can
-    # be unset even though the session is correctly connected to the app engine.
-    # Resolve the active bind through SQLAlchemy instead of reading `.bind`.
+    """Create or migrate the small import-only tables for SQLite/PostgreSQL."""
     bind = session.get_bind()
+    received_money, statement_import_records = _import_tables()
+    metadata = received_money.metadata
+    metadata.create_all(bind=bind, tables=[received_money, statement_import_records], checkfirst=True)
+
+    # Older beta databases may already have these tables without user_id.
     for table in ("received_money", "statement_import_records"):
         columns = {column["name"] for column in inspect(bind).get_columns(table)}
         if "user_id" not in columns:
             session.execute(text(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER"))
 
-    # Rebuild import dedupe indexes so two users can import the same provider transaction.
-    session.execute(text("DROP INDEX IF EXISTS ux_received_money_source_transaction"))
-    session.execute(text("DROP INDEX IF EXISTS ux_statement_import_source_transaction"))
-    session.execute(text(CREATE_RECEIVED_MONEY_UNIQUE_INDEX_SQL))
-    session.execute(text(CREATE_IMPORT_RECORDS_UNIQUE_INDEX_SQL))
+    # Rebuild the dedupe indexes so the same provider transaction is scoped to
+    # the current user. The previous SQLite-only partial-index SQL is replaced
+    # by SQLAlchemy-generated SQL for both supported database dialects.
+    _recreate_import_indexes(bind)
     session.flush()
 
 
@@ -85,7 +104,8 @@ def _already_imported(session: Any, item: ImportedTransaction, user_id: int | No
         text(
             "SELECT 1 FROM statement_import_records "
             "WHERE source = :source AND source_transaction_id = :source_transaction_id "
-            "AND user_id IS :user_id LIMIT 1"
+            "AND ((:user_id IS NULL AND user_id IS NULL) OR user_id = :user_id) "
+            "LIMIT 1"
         ),
         {
             "source": item.source,
@@ -200,6 +220,7 @@ def reconcile_unresolved_transactions(
         session.flush()
 
     return resolved
+
 
 def import_statement(
     session: Any,
