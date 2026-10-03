@@ -51,6 +51,16 @@
               <a class="btn btn-outline-primary btn-sm rounded-pill" href="/simulateATransaction">+ Add Transaction</a>
             </li>
             <li class="nav-item ms-2">
+              <button type="button"
+                      id="feedback-btn"
+                      class="btn btn-outline-secondary btn-sm rounded-pill"
+                      data-bs-toggle="modal"
+                      data-bs-target="#feedbackModal">
+                <i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>
+                Feedback
+              </button>
+            </li>
+            <li class="nav-item ms-2">
               <form method="post" action="/logout" class="d-inline">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-link nav-link">Sign out</button>
@@ -276,5 +286,61 @@
         });
       });
     </script>
+  <!-- Feedback Modal -->
+  <div class="modal fade" id="feedbackModal" tabindex="-1"
+       aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="feedbackModalLabel">Share your feedback</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+
+        <form method="post" action="/feedback">
+          <div class="modal-body">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="page" value="{{ request.path }}">
+
+            <div class="mb-3">
+              <label class="form-label">How was your experience?</label>
+              <select name="rating" class="form-select">
+                <option value="">Rating (optional)</option>
+                <option value="5">5 — Excellent</option>
+                <option value="4">4 — Good</option>
+                <option value="3">3 — Okay</option>
+                <option value="2">2 — Needs improvement</option>
+                <option value="1">1 — Poor</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="feedback-message" class="form-label">
+                What can we improve?
+              </label>
+              <textarea
+                id="feedback-message"
+                name="message"
+                class="form-control"
+                rows="4"
+                maxlength="2000"
+                placeholder="Tell us what worked, what didn't, or what you'd like to see..."
+                required></textarea>
+              <div class="form-text">Maximum 2000 characters.</div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              Send Feedback
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   </body>
 </html>

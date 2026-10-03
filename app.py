@@ -65,8 +65,17 @@ def scoped_transaction_query(query):
 
 def safe_next_url(value, fallback="/dashboard"):
     value = (value or "").strip()
-    if value.startswith("/") and not value.startswith("//"):
+
+    # Only allow internal application paths. Reject URL-like values,
+    # including scheme-relative and backslash-normalized external URLs.
+    if (
+        value.startswith("/")
+        and not value.startswith("//")
+        and "\\" not in value
+        and ":" not in value.split("?", 1)[0]
+    ):
         return value
+
     return fallback
 
 
@@ -134,6 +143,15 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+class Feedback(db.Model):
+    __tablename__ = "feedback"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    rating = db.Column(db.Integer, nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    page = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 class Transaction(db.Model):
     try:
@@ -1165,6 +1183,35 @@ def submit():
         flash("Something went wrong.", "danger")
 
     return redirect("/simulateATransaction")
+
+
+@app.post("/feedback")
+@login_required
+def submit_feedback():
+    rating = request.form.get("rating", type=int)
+    message = (request.form.get("message") or "").strip()
+    page = (request.form.get("page") or "").strip()[:255]
+
+    if rating is not None and not 1 <= rating <= 5:
+        flash("Please choose a valid rating.", "warning")
+        return redirect(url_for("dashboard1"))
+
+    if not message or len(message) > 2000:
+        flash("Please enter feedback between 1 and 2000 characters.", "warning")
+        return redirect(url_for("dashboard1"))
+
+    feedback = Feedback(
+        user_id=current_user_id(),
+        rating=rating,
+        message=message,
+        page=page or None,
+    )
+
+    db.session.add(feedback)
+    db.session.commit()
+
+    flash("Thanks for your feedback!", "success")
+    return redirect(url_for("dashboard1"))
 
 
 @app.route("/")

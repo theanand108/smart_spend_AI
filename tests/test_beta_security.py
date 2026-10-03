@@ -1,0 +1,97 @@
+from flask import Flask
+from app import safe_next_url
+
+from src.statement_import_web import register_statement_import
+
+
+class FakeDB:
+    session = object()
+
+
+class FakeTransaction:
+    pass
+
+
+def make_security_app():
+    app = Flask(__name__)
+    app.secret_key = "test"
+
+    @app.route("/login")
+    def login():
+        return "login"
+
+    @app.route("/demo")
+    def demo():
+        return "demo dashboard"
+
+    @app.route("/dashboard")
+    def dashboard1():
+        return "private dashboard"
+
+    @app.route("/simulateATransaction")
+    def simulate_transaction():
+        return "private transactions"
+
+    register_statement_import(app, FakeDB(), FakeTransaction)
+    return app
+
+
+def test_dashboard_redirects_to_demo_when_not_authenticated():
+    app = make_security_app()
+
+    with app.test_client() as client:
+        response = client.get("/dashboard")
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/demo"
+
+
+def test_simulator_redirects_when_not_authenticated():
+    app = make_security_app()
+
+    with app.test_client() as client:
+        response = client.get("/simulateATransaction")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].startswith("/login?next=/simulateATransaction")
+
+
+def test_authenticated_financial_page_gets_security_headers_and_no_store():
+    app = make_security_app()
+
+    with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
+
+        response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert response.headers["Permissions-Policy"] == "camera=(), microphone=(), geolocation=()"
+    assert response.headers["Cache-Control"] == "private, no-store"
+
+
+def test_safe_next_url_allows_internal_path():
+    assert safe_next_url("/dashboard") == "/dashboard"
+
+
+def test_safe_next_url_allows_internal_path_with_query():
+    assert safe_next_url("/dashboard/attention/123?month=9") == "/dashboard/attention/123?month=9"
+
+
+def test_safe_next_url_rejects_scheme_relative_external_url():
+    assert safe_next_url("//evil.example") == "/dashboard"
+
+
+def test_safe_next_url_rejects_backslash_external_url():
+    assert safe_next_url("/\\evil.example") == "/dashboard"
+
+
+def test_safe_next_url_rejects_absolute_url():
+    assert safe_next_url("https://evil.example") == "/dashboard"
+
+
+def test_safe_next_url_rejects_javascript_like_value():
+    assert safe_next_url("javascript:alert(1)") == "/dashboard"

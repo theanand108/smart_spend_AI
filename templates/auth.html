@@ -51,6 +51,17 @@
     </div>
     <div class="card shadow-sm border-0 auth-card">
       <div class="card-body p-4 p-md-5">
+        {% with flash_messages = get_flashed_messages(with_categories=True) %}
+          {% if flash_messages %}
+            <div class="mb-4" aria-live="polite">
+              {% for category, message in flash_messages %}
+                <div class="alert alert-{{ 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }} mb-2" role="alert">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
         <form method="post">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="next" value="{{ next or '' }}">

@@ -181,3 +181,43 @@ def test_dashboard_attention_correction_becomes_future_history_evidence():
     assert future["category"] == "Shopping"
     assert future["status"] == "categorized"
     assert future["needs_user_confirmation"] is False
+
+
+def test_dashboard_attention_does_not_expose_or_modify_another_users_transaction():
+    app, db, Transaction = make_app()
+
+    with app.app_context():
+        other_user_transaction = Transaction(
+            date=datetime(2026, 8, 30),
+            merchant_name="USER TWO SECRET MERCHANT",
+            amount=9999,
+            category="Unknown",
+            payment_method="UPI",
+            user_id=2,
+        )
+        db.session.add(other_user_transaction)
+        db.session.commit()
+        transaction_id = other_user_transaction.id
+
+    with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
+
+        response = client.get("/dashboard/attention?month=8")
+        assert response.status_code == 200
+        assert b"USER TWO SECRET MERCHANT" not in response.data
+
+        response = client.post(
+            f"/dashboard/attention/{transaction_id}",
+            data={
+                "category": "Shopping",
+                "next": "/dashboard",
+                "_csrf_token": "test-token",
+            },
+        )
+        assert response.status_code == 302
+
+    with app.app_context():
+        transaction = db.session.get(Transaction, transaction_id)
+        assert transaction.category == "Unknown"
+        assert transaction.user_id == 2
