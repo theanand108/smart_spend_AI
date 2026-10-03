@@ -26,7 +26,19 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or token_urlsafe(48)
 
 # Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///smart_spend.db")
+database_url = os.environ.get("DATABASE_URL", "sqlite:///smart_spend.db")
+
+# Render/PostgreSQL may provide the generic `postgresql://` URL.
+# Explicitly use psycopg 3, which is the PostgreSQL driver installed by
+# `psycopg[binary]`.
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace(
+        "postgresql://",
+        "postgresql+psycopg://",
+        1,
+    )
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
