@@ -65,8 +65,17 @@ def scoped_transaction_query(query):
 
 def safe_next_url(value, fallback="/dashboard"):
     value = (value or "").strip()
-    if value.startswith("/") and not value.startswith("//"):
+
+    # Only allow internal application paths. Reject URL-like values,
+    # including scheme-relative and backslash-normalized external URLs.
+    if (
+        value.startswith("/")
+        and not value.startswith("//")
+        and "\\" not in value
+        and ":" not in value.split("?", 1)[0]
+    ):
         return value
+
     return fallback
 
 

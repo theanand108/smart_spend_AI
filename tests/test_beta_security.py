@@ -1,4 +1,5 @@
 from flask import Flask
+from app import safe_next_url
 
 from src.statement_import_web import register_statement_import
 
@@ -70,3 +71,27 @@ def test_authenticated_financial_page_gets_security_headers_and_no_store():
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert response.headers["Permissions-Policy"] == "camera=(), microphone=(), geolocation=()"
     assert response.headers["Cache-Control"] == "private, no-store"
+
+
+def test_safe_next_url_allows_internal_path():
+    assert safe_next_url("/dashboard") == "/dashboard"
+
+
+def test_safe_next_url_allows_internal_path_with_query():
+    assert safe_next_url("/dashboard/attention/123?month=9") == "/dashboard/attention/123?month=9"
+
+
+def test_safe_next_url_rejects_scheme_relative_external_url():
+    assert safe_next_url("//evil.example") == "/dashboard"
+
+
+def test_safe_next_url_rejects_backslash_external_url():
+    assert safe_next_url("/\\evil.example") == "/dashboard"
+
+
+def test_safe_next_url_rejects_absolute_url():
+    assert safe_next_url("https://evil.example") == "/dashboard"
+
+
+def test_safe_next_url_rejects_javascript_like_value():
+    assert safe_next_url("javascript:alert(1)") == "/dashboard"
