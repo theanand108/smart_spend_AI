@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
-from sqlalchemy import text, update
+from sqlalchemy import column, func, select, table, update
 from werkzeug.utils import secure_filename
 
 from .intelligence.attention import build_attention_queue
@@ -104,16 +104,25 @@ def register_statement_import(app, db, Transaction) -> None:
 
         year = datetime.now().year
         try:
-            row = db.session.execute(
-                text(
-                    "SELECT COALESCE(SUM(amount), 0), COUNT(*) "
-                    "FROM received_money "
-                    "WHERE ((:user_id IS NULL AND user_id IS NULL) OR user_id = :user_id) "
-                    "AND strftime('%Y', transaction_date) = :year "
-                    "AND strftime('%m', transaction_date) = :month"
-                ),
-                {"user_id": session.get("user_id"), "year": str(year), "month": f"{month:02d}"},
-            ).first()
+            received_money = table(
+                "received_money",
+                column("amount"),
+                column("transaction_date"),
+                column("user_id"),
+            )
+            stmt = (
+                select(
+                    func.coalesce(func.sum(received_money.c.amount), 0),
+                    func.count(),
+                )
+                .select_from(received_money)
+                .where(
+                    ((received_money.c.user_id.is_(None)) if session.get("user_id") is None else (received_money.c.user_id == session.get("user_id"))),
+                    func.extract("year", received_money.c.transaction_date) == year,
+                    func.extract("month", received_money.c.transaction_date) == month,
+                )
+            )
+            row = db.session.execute(stmt).first()
         except Exception:
             return {"received_money_total": 0.0, "received_money_count": 0}
 
