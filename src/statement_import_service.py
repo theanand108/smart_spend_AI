@@ -140,6 +140,7 @@ def _record_import(
 
 
 def _store_received_money(session: Any, item: ImportedTransaction, user_id: int | None) -> None:
+    """Store credit data only; no categorization or spending analytics."""
     session.execute(
         text(
             "INSERT INTO received_money "
@@ -148,7 +149,7 @@ def _store_received_money(session: Any, item: ImportedTransaction, user_id: int 
         ),
         {
             "transaction_date": item.date,
-            "merchant_name": item.merchant,
+            "merchant_name": item.merchant_name,
             "amount": item.amount,
             "source": item.source,
             "source_transaction_id": item.source_transaction_id,
@@ -157,40 +158,127 @@ def _store_received_money(session: Any, item: ImportedTransaction, user_id: int 
     )
 
 
-def import_statement(session: Any, Transaction: Any, result: StatementImportResult, user_id: int | None = None) -> dict[str, int]:
-    """Persist an imported statement and return a summary of what was stored."""
+def reconcile_unresolved_transactions(
+    session: Any,
+    Transaction: Any,
+    user_id: int | None = None,
+) -> int:
+    """Re-evaluate stored Unknown transactions against trusted user history.
+
+    Imported rows are initially categorized oldest-first, so an early row cannot
+    see later transactions from the same statement. This second pass fixes that
+    limitation without retraining the global model or lowering its confidence
+    gates: only a normal categorized decision at or above the existing
+    high-confidence boundary is persisted.
+
+    Unknown transactions are deliberately excluded from the history used for
+    this pass. A newly auto-resolved row therefore cannot teach another row in
+    the same pass, preventing uncertain data from cascading into false certainty.
+    """
+    query = session.query(Transaction)
+    if hasattr(Transaction, "user_id"):
+        if user_id is None:
+            query = query.filter(Transaction.user_id.is_(None))
+        else:
+            query = query.filter(Transaction.user_id == user_id)
+
+    rows = query.order_by(Transaction.date.asc(), Transaction.id.asc()).all()
+    history = [
+        {
+            "merchant_name": row.merchant_name,
+            "amount": row.amount,
+            "category": row.category,
+            "note": row.notes,
+            "payment_method": row.payment_method,
+        }
+        for row in rows
+        if row.category not in {None, "", "Unknown", "Others"}
+    ]
+
+    resolved = 0
+    for transaction in rows:
+        if transaction.category != "Unknown":
+            continue
+
+        result = categorize_transaction(
+            merchant_name=transaction.merchant_name,
+            amount=transaction.amount,
+            note=transaction.notes,
+            payment_method=transaction.payment_method,
+            history=history,
+            allow_personal_memory=True,
+        )
+        if (
+            result.get("status") == "categorized"
+            and result.get("category")
+            and float(result.get("confidence") or 0.0) >= AUTO_RESOLVE_CONFIDENCE
+        ):
+            transaction._preserve_category_during_flush = True
+            transaction.category = str(result["category"])
+            resolved += 1
+
+    if resolved:
+        session.flush()
+
+    return resolved
+
+
+def import_statement(
+    session: Any,
+    Transaction: Any,
+    result: StatementImportResult,
+    user_id: int | None = None,
+) -> dict[str, int]:
+    """Persist a parsed statement using the existing V2 transaction path."""
     ensure_import_tables(session)
 
-    imported_debits = 0
-    imported_credits = 0
-    skipped = 0
+    imported_expenses = 0
+    imported_received = 0
+    skipped_duplicates = 0
 
-    for item in result.transactions:
+    # Oldest first means later imported expenses can benefit from earlier rows
+    # through the existing SQLAlchemy V2 history hook.
+    for item in sorted(result.transactions, key=lambda transaction: transaction.date):
         if _already_imported(session, item, user_id):
-            skipped += 1
+            skipped_duplicates += 1
             continue
 
         if item.direction == "credit":
             _store_received_money(session, item, user_id)
             _record_import(session, item, None, user_id)
-            imported_credits += 1
+            imported_received += 1
+            session.flush()
             continue
 
-        transaction = Transaction(
-            date=item.date,
-            merchant=item.merchant,
-            amount=item.amount,
-            category=categorize_transaction(item.merchant),
-            user_id=user_id,
-        )
+        transaction_kwargs = {
+            "date": item.date,
+            "merchant_name": item.merchant_name,
+            "amount": item.amount,
+            "notes": item.note,
+            "payment_method": item.payment_method,
+            "category": None,
+        }
+        if hasattr(Transaction, "user_id"):
+            transaction_kwargs["user_id"] = user_id
+
+        transaction = Transaction(**transaction_kwargs)
         session.add(transaction)
+        # The existing persistence adapter runs before flush and resolves the
+        # final V2 category. Each row is flushed before the next row so history
+        # is available to subsequent imports.
         session.flush()
         _record_import(session, item, transaction.id, user_id)
-        imported_debits += 1
+        imported_expenses += 1
+
+    # A complete statement can contain repeated entities/amounts that were not
+    # visible when its earliest rows were categorized. Re-evaluate unresolved
+    # rows once the full imported history is available.
+    reconcile_unresolved_transactions(session, Transaction, user_id=user_id)
 
     session.commit()
     return {
-        "imported": imported_debits,
-        "received": imported_credits,
-        "skipped": skipped,
+        "imported_expenses": imported_expenses,
+        "imported_received": imported_received,
+        "skipped_duplicates": skipped_duplicates,
+        "skipped_rows": len(result.skipped_rows),
     }
