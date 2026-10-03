@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Create account' if mode == 'register' else 'Sign in' }}{% endblock title %}
+{% block body %}
+<style>
+  .auth-page {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  .auth-page .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+  .auth-page .form-control {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--text-primary);
+  }
+  .auth-page .form-control:focus {
+    background-color: var(--input-bg-focus);
+    color: var(--text-primary);
+    border-color: var(--input-border-focus);
+  }
+  .auth-page .form-control::placeholder {
+    color: var(--input-placeholder);
+  }
+  .auth-page .form-label,
+  .auth-page h1 {
+    color: var(--text-primary);
+  }
+  .auth-page .text-muted,
+  .auth-page .form-text {
+    color: var(--text-muted) !important;
+  }
+  .auth-page .form-control:-webkit-autofill,
+  .auth-page .form-control:-webkit-autofill:hover,
+  .auth-page .form-control:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-primary);
+    -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+</style>
+<section class="py-5 auth-page">
+  <div class="container" style="max-width: 520px;">
+    <div class="text-center mb-4">
+      <p class="text-uppercase small fw-semibold text-primary mb-2">Smart Spend AI</p>
+      <h1 class="fw-bold">{{ 'Create your personal workspace' if mode == 'register' else 'Welcome back' }}</h1>
+      <p class="text-muted mb-0">
+        {{ 'Your transactions and intelligence stay separate from the demo workspace.' if mode == 'register' else 'Sign in to continue to your personal financial workspace.' }}
+      </p>
+    </div>
+    <div class="card shadow-sm border-0 auth-card">
+      <div class="card-body p-4 p-md-5">
+        {% with flash_messages = get_flashed_messages(with_categories=True) %}
+          {% if flash_messages %}
+            <div class="mb-4" aria-live="polite">
+              {% for category, message in flash_messages %}
+                <div class="alert alert-{{ 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }} mb-2" role="alert">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        <form method="post">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ next or '' }}">
+          <div class="mb-3">
+            <label for="email" class="form-label fw-semibold">Email</label>
+            <input type="email" class="form-control form-control-lg" id="email" name="email" autocomplete="email" required>
+          </div>
+          <div class="mb-4">
+            <label for="password" class="form-label fw-semibold">Password</label>
+            <input type="password" class="form-control form-control-lg" id="password" name="password" minlength="8" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" required>
+            {% if mode == 'register' %}<div class="form-text">Use at least 8 characters.</div>{% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill">
+            {{ 'Create workspace' if mode == 'register' else 'Sign in' }}
+          </button>
+        </form>
+        {% if clerk_publishable_key %}
+        <div class="d-flex align-items-center gap-3 my-4 text-muted small">
+          <span class="flex-grow-1 border-top"></span>
+          <span>or</span>
+          <span class="flex-grow-1 border-top"></span>
+        </div>
+        <button
+          type="button"
+          id="clerk-google-button"
+          class="btn btn-outline-secondary btn-lg w-100 rounded-pill d-flex align-items-center justify-content-center gap-2"
+          data-next="{{ next or ('/get-started' if mode == 'register' else '/dashboard') }}"
+          data-auth-mode="{{ mode }}"
+        >
+          <span aria-hidden="true" style="font-weight:700;">G</span>
+          Continue with Google
+        </button>
+        <p class="text-center text-muted small mt-2 mb-0">Use your Google account without remembering another SSAI password.</p>
+        {% endif %}
+        <div class="text-center mt-4 small text-muted">
+          {% if mode == 'register' %}
+            Already have an account? <a href="{{ url_for('login', next=next) }}">Sign in</a>
+          {% else %}
+            New to SSAI? <a href="{{ url_for('register', next=next) }}">Create an account</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+  {% if clerk_publishable_key %}
+  <script src="{{ url_for('static', filename='clerk_auth.js') }}"></script>
+  {% endif %}
+{% endblock body %}

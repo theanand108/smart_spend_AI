@@ -22,6 +22,10 @@ def make_test_app():
     app = Flask(__name__, template_folder="../templates")
     app.secret_key = "test"
 
+    @app.context_processor
+    def inject_test_auth():
+        return {"csrf_token": lambda: "test-token", "logged_in": True}
+
     # The import template links back to the application's dashboard endpoint.
     # Provide a minimal stand-in so the blueprint can be tested independently
     # from the full Flask application.
@@ -37,6 +41,8 @@ def test_statement_import_route_is_registered():
     app = make_test_app()
 
     with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
         response = client.get("/import")
 
     assert response.status_code == 200
@@ -47,9 +53,12 @@ def test_statement_import_rejects_unsupported_extension():
     app = make_test_app()
 
     with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
+            flask_session["_csrf_token"] = "test-token"
         response = client.post(
             "/import",
-            data={"statement": (BytesIO(b"hello"), "statement.txt")},
+            data={"statement": (BytesIO(b"hello"), "statement.txt"), "_csrf_token": "test-token"},
             content_type="multipart/form-data",
         )
 

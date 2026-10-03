@@ -9,7 +9,7 @@ from .categorizer import categorize_transaction
 
 ATTENTION_STATUSES = {"conflict", "unknown", "varies"}
 STATUS_PRIORITY = {"conflict": 0, "varies": 1, "unknown": 2}
-RESOLVED_CATEGORIES = {"Food & Dining", "Travel & Transport", "Entertainment", "Groceries", "Bills & Utilities", "Shopping", "Health & Fitness", "Personal Care", "Transfer / Personal", "Others"}
+RESOLVED_CATEGORIES = {"Food & Dining", "Travel & Transport", "Entertainment", "Groceries", "Bills & Utilities", "Shopping", "Health & Fitness", "Personal Care", "Housing / Rent", "Education", "Transfer / Personal", "Others"}
 
 
 def _history_rows(transactions: Iterable[Any]) -> list[dict[str, Any]]:
@@ -27,7 +27,11 @@ def _history_rows(transactions: Iterable[Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def build_attention_queue(transactions: Iterable[Any]) -> list[dict[str, Any]]:
+def build_attention_queue(
+    transactions: Iterable[Any],
+    *,
+    history_transactions: Iterable[Any] | None = None,
+) -> list[dict[str, Any]]:
     """Evaluate transactions and return only unresolved intelligence states.
 
     Explicitly categorized transactions have already been resolved by the user
@@ -41,7 +45,8 @@ def build_attention_queue(transactions: Iterable[Any]) -> list[dict[str, Any]]:
     remains in the queue until the user explicitly resolves it.
     """
     transaction_list = list(transactions)
-    history = _history_rows(transaction_list)
+    history_source = history_transactions if history_transactions is not None else transaction_list
+    history = _history_rows(history_source)
     attention: list[dict[str, Any]] = []
 
     for transaction in transaction_list:

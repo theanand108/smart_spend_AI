@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Flask
+from flask import Flask, session
 from flask_sqlalchemy import SQLAlchemy
 
 from src.intelligence.categorizer import categorize_transaction
@@ -22,6 +22,11 @@ def make_app():
         category = db.Column(db.String(50))
         payment_method = db.Column(db.String(50))
         notes = db.Column(db.String(200))
+        user_id = db.Column(db.Integer)
+
+    @app.context_processor
+    def inject_test_auth():
+        return {"csrf_token": lambda: "test-token", "logged_in": True}
 
     @app.route("/dashboard")
     @app.route("/dashboard/<int:month>")
@@ -39,6 +44,7 @@ def make_app():
                     amount=673,
                     category="Unknown",
                     payment_method="UPI",
+                    user_id=1,
                 ),
                 Transaction(
                     date=datetime(2026, 8, 30),
@@ -46,6 +52,15 @@ def make_app():
                     amount=200,
                     category="Groceries",
                     payment_method="UPI",
+                    user_id=1,
+                ),
+                Transaction(
+                    date=datetime(2026, 8, 30),
+                    merchant_name="UNKNOWN CONTACT",
+                    amount=250,
+                    category="Unknown",
+                    payment_method="UPI",
+                    user_id=1,
                 ),
             ]
         )
@@ -58,13 +73,38 @@ def test_dashboard_attention_partial_contains_only_unresolved_transactions():
     app, _db, _transaction = make_app()
 
     with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
         response = client.get("/dashboard/attention?month=8")
 
     assert response.status_code == 200
     assert b"Needs your attention" in response.data
-    assert b"EKART" in response.data
+    assert b"UNKNOWN CONTACT" in response.data
     assert b"DEEPAK FRUIT CENTRE" not in response.data
-    assert b'value="/dashboard/8"' in response.data
+    assert b"EKART" not in response.data
+    assert b'value="/dashboard/8#dashboard-needs-attention"' in response.data
+
+
+def test_dashboard_attention_accepts_education_and_housing_categories():
+    app, db, Transaction = make_app()
+
+    with app.app_context():
+        transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
+
+    with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
+
+        for category in ("Education", "Housing / Rent"):
+            response = client.post(
+                f"/dashboard/attention/{transaction_id}",
+                data={"category": category, "next": "/dashboard", "_csrf_token": "test-token"},
+            )
+            assert response.status_code == 302
+
+            with app.app_context():
+                transaction = db.session.get(Transaction, transaction_id)
+                assert transaction.category == category
 
 
 def test_dashboard_attention_correction_persists_category():
@@ -74,9 +114,11 @@ def test_dashboard_attention_correction_persists_category():
         transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
 
     with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
         response = client.post(
             f"/dashboard/attention/{transaction_id}",
-            data={"category": "Shopping", "next": "/dashboard"},
+            data={"category": "Shopping", "next": "/dashboard", "_csrf_token": "test-token"},
         )
 
     assert response.status_code == 302
@@ -93,9 +135,11 @@ def test_dashboard_attention_correction_from_partial_returns_to_canonical_dashbo
         transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
 
     with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
         response = client.post(
             f"/dashboard/attention/{transaction_id}",
-            data={"category": "Shopping", "next": "/dashboard/8"},
+            data={"category": "Shopping", "next": "/dashboard/8", "_csrf_token": "test-token"},
         )
 
     assert response.status_code == 302
@@ -112,9 +156,11 @@ def test_dashboard_attention_correction_becomes_future_history_evidence():
         transaction_id = Transaction.query.filter_by(merchant_name="EKART").first().id
 
     with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
         response = client.post(
             f"/dashboard/attention/{transaction_id}",
-            data={"category": "Shopping", "next": "/dashboard"},
+            data={"category": "Shopping", "next": "/dashboard", "_csrf_token": "test-token"},
         )
 
     assert response.status_code == 302
@@ -135,3 +181,43 @@ def test_dashboard_attention_correction_becomes_future_history_evidence():
     assert future["category"] == "Shopping"
     assert future["status"] == "categorized"
     assert future["needs_user_confirmation"] is False
+
+
+def test_dashboard_attention_does_not_expose_or_modify_another_users_transaction():
+    app, db, Transaction = make_app()
+
+    with app.app_context():
+        other_user_transaction = Transaction(
+            date=datetime(2026, 8, 30),
+            merchant_name="USER TWO SECRET MERCHANT",
+            amount=9999,
+            category="Unknown",
+            payment_method="UPI",
+            user_id=2,
+        )
+        db.session.add(other_user_transaction)
+        db.session.commit()
+        transaction_id = other_user_transaction.id
+
+    with app.test_client() as client:
+        with client.session_transaction() as flask_session:
+            flask_session["user_id"] = 1
+
+        response = client.get("/dashboard/attention?month=8")
+        assert response.status_code == 200
+        assert b"USER TWO SECRET MERCHANT" not in response.data
+
+        response = client.post(
+            f"/dashboard/attention/{transaction_id}",
+            data={
+                "category": "Shopping",
+                "next": "/dashboard",
+                "_csrf_token": "test-token",
+            },
+        )
+        assert response.status_code == 302
+
+    with app.app_context():
+        transaction = db.session.get(Transaction, transaction_id)
+        assert transaction.category == "Unknown"
+        assert transaction.user_id == 2

@@ -17,6 +17,7 @@ class Transaction(Base):
     category: Mapped[str | None] = mapped_column(String, nullable=True)
     payment_method: Mapped[str | None] = mapped_column(String, nullable=True)
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 def make_session() -> Session:
@@ -76,3 +77,30 @@ def test_edit_recalculates_and_replaces_stale_category():
     # note re-runs V2 against the new purpose rather than reusing the stale
     # category from before the edit.
     assert transaction.category == "Travel & Transport"
+
+
+def test_history_is_isolated_between_users():
+    session = make_session()
+
+    known_for_user_one = Transaction(
+        merchant_name="Campus Services",
+        amount=600,
+        category="Education",
+        payment_method="upi",
+        notes="engineering books",
+        user_id=1,
+    )
+    session.add(known_for_user_one)
+    session.commit()
+
+    user_two_transaction = Transaction(
+        merchant_name="Campus Services",
+        amount=600,
+        payment_method="upi",
+        notes="payment",
+        user_id=2,
+    )
+    session.add(user_two_transaction)
+    session.commit()
+
+    assert user_two_transaction.category != "Education"

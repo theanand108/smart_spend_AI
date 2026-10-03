@@ -81,13 +81,37 @@ def _specific_merchant_override(merchant_name: str) -> tuple[str, str] | None:
     if re.search(r"\b(?:book\s+shop|bookstore|book\s+store)\b", text):
         return "Education", "The merchant descriptor explicitly identifies a book-selling business."
 
-    if re.search(r"\b(?:barber|barbershop|haircut|salon)\b", text):
+    if re.search(r"\b(?:barber|barbershop|haircut|salon|saloon)\b", text):
         return "Personal Care", "The merchant descriptor explicitly identifies a personal-care service."
+
+    if re.search(r"\b(?:medical|medicals|pharmacy|chemist)\b", text):
+        return "Health & Fitness", "The merchant descriptor explicitly identifies a medical or pharmacy business."
+
+    if re.search(r"\b(?:university|college)\b", text):
+        return "Education", "The merchant descriptor explicitly identifies an educational institution."
+
+    if re.search(r"\b(?:bakery|bakers)\b", text):
+        return "Food & Dining", "The merchant descriptor explicitly identifies a bakery or food business."
+
+    if re.search(r"\b(?:filling\s+station|petrol\s+pump)\b", text):
+        return "Travel & Transport", "The merchant descriptor explicitly identifies a fuel station."
+
+    if re.search(r"\b(?:mobile\s+(?:shop|wholesale|wholesaler|hol[e]?sale))\b", text):
+        return "Shopping", "The merchant descriptor explicitly identifies a mobile retail business."
+
+    if re.search(r"\b(?:adda247)\b", text):
+        return "Education", "The merchant is a known education platform."
+
+    if re.search(r"\b(?:ekart)\b", text):
+        return "Shopping", "The merchant is a known e-commerce logistics provider associated with shopping transactions."
+
+    if re.search(r"\b(?:chasma|optical|optician)\b", text):
+        return "Health & Fitness", "The merchant descriptor explicitly identifies an optical/vision business."
 
     return None
 
 
-def categorize_transaction(merchant_name: str, amount: float | int | None = None, note: str | None = None, payment_method: str | None = None, history: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def categorize_transaction(merchant_name: str, amount: float | int | None = None, note: str | None = None, payment_method: str | None = None, history: list[dict[str, Any]] | None = None, allow_personal_memory: bool = False) -> dict[str, Any]:
     """Categorize a transaction using independent evidence sources."""
     merchant = normalize_text(merchant_name)
     if not merchant:
@@ -111,6 +135,10 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
     note_confidence = float(evidence.get("note_confidence") or 0.0)
     merchant_category = evidence.get("merchant_category")
     merchant_confidence = float(evidence.get("merchant_confidence") or 0.0)
+
+    personal_category_candidate = None
+    if should_create_personal_category(entity_profile):
+        personal_category_candidate = entity_profile["dominant_category"]
 
     specific_note = _specific_note_override(note)
     specific_merchant = _specific_merchant_override(merchant)
@@ -154,11 +182,25 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
         return _result(category=str(merchant_category), confidence=min(0.96, merchant_confidence), status="categorized", reason="Qualified merchant wording provides stronger transaction-purpose evidence than the generic known merchant mapping.", needs_user_confirmation=False, entity_memory=entity_profile)
 
     if known_category:
-        return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile)
+        if (
+            not allow_personal_memory
+            and amount is not None
+            and merchant_history
+            and len(historical_counts) == 1
+            and historical_counts.get(known_category) == 1
+            and not (evidence.get("amount_matches") or {}).get(known_category)
+        ):
+            return _result(
+                category=None,
+                confidence=0.25,
+                status="unknown",
+                reason="The merchant is known, but this amount is outside the user's remembered spending range for the entity.",
+                needs_user_confirmation=True,
+                entity_memory=entity_profile,
+                personal_category_candidate=personal_category_candidate,
+            )
 
-    personal_category_candidate = None
-    if should_create_personal_category(entity_profile):
-        personal_category_candidate = entity_profile["dominant_category"]
+        return _result(category=known_category, confidence=0.99, status="categorized", reason="Merchant matches a known high-confidence transaction category.", needs_user_confirmation=False, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
 
     ranked = evidence.get("ranked") or []
     amount_matches = evidence.get("amount_matches") or {}
@@ -171,6 +213,20 @@ def categorize_transaction(merchant_name: str, amount: float | int | None = None
 
     if profile["varies"] and not note_category:
         return _result(category=None, confidence=0.25, status="varies", reason="Entity history spans multiple categories, so this entity is remembered as VARIES.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)
+
+    if allow_personal_memory and len(historical_counts) == 1 and entity_profile.get("transaction_count", 0) >= 1:
+        # Trusted user history is allowed to become personal memory during
+        # post-import reconciliation. Normal categorization stays conservative.
+        personal_category = str(next(iter(historical_counts)))
+        return _result(
+            category=personal_category,
+            confidence=0.90,
+            status="categorized",
+            reason="The user's trusted history consistently associates this entity with this category.",
+            needs_user_confirmation=False,
+            entity_memory=entity_profile,
+            personal_category_candidate=personal_category,
+        )
 
     if not ranked:
         return _result(category=None, confidence=0.05, status="unknown", reason="Available evidence does not provide enough context to categorize safely.", needs_user_confirmation=True, entity_memory=entity_profile, personal_category_candidate=personal_category_candidate)

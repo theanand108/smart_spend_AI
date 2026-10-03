@@ -82,6 +82,9 @@ def _parse_amount(value: object) -> float:
 def _parse_date(date_value: str, time_value: str | None = None) -> datetime:
     date_value = _clean(date_value)
     time_value = _clean(time_value)
+    # PhonePe exports September as "Sept", while Python's %b parser expects
+    # the standard three-letter abbreviation "Sep".
+    date_value = re.sub(r"^Sept(?=\s)", "Sep", date_value, flags=re.I)
     combined = f"{date_value} {time_value}".strip()
 
     formats = (

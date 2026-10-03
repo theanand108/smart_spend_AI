@@ -87,7 +87,27 @@ document.addEventListener('DOMContentLoaded', function () {
       const wrapper = document.createElement('div');
       wrapper.innerHTML = markup;
       const section = wrapper.firstElementChild;
-      if (section) transactionsCard.closest('.dashboard-section-block').before(section);
+      if (section) {
+        transactionsCard.closest('.dashboard-section-block').before(section);
+
+        // The attention section is loaded asynchronously after DOMContentLoaded,
+        // so the browser cannot restore #dashboard-needs-attention by itself.
+        // Restore the user's position only after the section actually exists.
+        if (window.location.hash === '#dashboard-needs-attention') {
+          const restoreAttentionPosition = function () {
+            const target = document.getElementById('dashboard-needs-attention');
+            if (!target) return;
+
+            const top = target.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({ top: Math.max(0, top - 16), behavior: 'auto' });
+          };
+
+          requestAnimationFrame(function () {
+            requestAnimationFrame(restoreAttentionPosition);
+          });
+          window.setTimeout(restoreAttentionPosition, 100);
+        }
+      }
     })
     .catch(function () {
       // The dashboard remains fully usable if the intelligence review request fails.

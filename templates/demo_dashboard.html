@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Demo Dashboard{% endblock title %}
+{% block body %}
+<section class="dashboard-top-section">
+  <div class="container dashboard-top-container">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+      <div>
+        <p class="dashboard-eyebrow mb-2">Smart Spend AI · Demo</p>
+        <h1 class="dashboard-page-title mb-2">See how your finances could look.</h1>
+        <p class="dashboard-section-copy mb-0">This is a sample dashboard using fictional data. Your personal dashboard becomes available after you sign in and import your transactions.</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="/register" class="btn btn-primary rounded-pill px-4">Create account</a>
+        <a href="/login" class="btn btn-outline-secondary rounded-pill px-4">Sign in</a>
+      </div>
+    </div>
+
+    <div class="dashboard-card dashboard-pulse-card mb-4">
+      <div class="row g-4 g-xl-0 align-items-stretch">
+        <div class="col-12 col-xl-4 dashboard-pulse-col">
+          <p class="dashboard-health-eyebrow mb-3">Overall Assessment</p>
+          <span class="dashboard-health-pill dashboard-health-pill-good">{{ demo_data.health }}</span>
+          <p class="dashboard-pulse-text mt-4 mb-0">{{ demo_data.summary }}</p>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4 dashboard-pulse-col">
+          <p class="dashboard-eyebrow mb-2">Main Change</p>
+          <p class="dashboard-figure-value dashboard-tone-negative mb-1">{{ demo_data.change }}</p>
+          <p class="dashboard-figure-label mb-3">{{ demo_data.change_label }}</p>
+          <p class="dashboard-section-copy mb-1">{{ demo_data.current_total }} this month</p>
+          <p class="dashboard-section-copy mb-0">vs {{ demo_data.previous_total }} last month</p>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4 dashboard-pulse-col">
+          <p class="dashboard-eyebrow mb-2">Biggest Driver</p>
+          <h3 class="dashboard-figure-value mb-2">{{ demo_data.driver }}</h3>
+          <p class="dashboard-figure-label dashboard-tone-negative mb-1">{{ demo_data.driver_change }}</p>
+          <p class="dashboard-section-copy mb-0">{{ demo_data.driver_share }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-sm-6 col-xl-3"><div class="dashboard-kpi-card h-100"><p class="dashboard-kpi-label mb-2">Spent This Month</p><h3 class="dashboard-kpi-value mb-0">{{ demo_data.current_total }}</h3></div></div>
+      <div class="col-sm-6 col-xl-3"><div class="dashboard-kpi-card h-100"><p class="dashboard-kpi-label mb-2">Transactions</p><h3 class="dashboard-kpi-value mb-0">{{ demo_data.transactions }}</h3></div></div>
+      <div class="col-sm-6 col-xl-3"><div class="dashboard-kpi-card h-100"><p class="dashboard-kpi-label mb-2">Top Category</p><h3 class="dashboard-kpi-value mb-0">{{ demo_data.top_category }}</h3></div></div>
+      <div class="col-sm-6 col-xl-3"><div class="dashboard-kpi-card h-100"><p class="dashboard-kpi-label mb-2">Average / Day</p><h3 class="dashboard-kpi-value mb-0">{{ demo_data.average_day }}</h3></div></div>
+    </div>
+
+    <div class="card dashboard-card mt-4">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+          <div>
+            <p class="dashboard-eyebrow mb-2">Financial Intelligence</p>
+            <h2 class="dashboard-section-title mb-1">What Smart Spend AI can tell you</h2>
+            <p class="dashboard-section-copy mb-0">Your real dashboard will calculate these insights from your own transaction history.</p>
+          </div>
+          <span class="dashboard-filter-pill badge rounded-pill">Sample data</span>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4"><div class="dashboard-kpi-card h-100"><p class="dashboard-kpi-label mb-2">Spending trend</p><h3 class="dashboard-kpi-value mb-2">Food &amp; Dining</h3><p class="dashboard-section-copy mb-0">This category contributed most to the monthly increase.</p></div></div>
+          <div class="col-md-4"><div class="dashboard-kpi-card h-100"><p class="dashboard-kpi-label mb-2">Pattern</p><h3 class="dashboard-kpi-value mb-2">42 transactions</h3><p class="dashboard-section-copy mb-0">Activity is concentrated across a small number of recurring spending areas.</p></div></div>
+          <div class="col-md-4"><div class="dashboard-kpi-card h-100"><p class="dashboard-kpi-label mb-2">Next step</p><h3 class="dashboard-kpi-value mb-2">Bring your data</h3><p class="dashboard-section-copy mb-0">Import your UPI statement to unlock personalized analysis and insights.</p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center py-5">
+      <p class="dashboard-section-copy mb-3">Ready to see this with your own transactions?</p>
+      <a href="/register" class="btn btn-primary btn-lg rounded-pill px-5">Start with your data</a>
+    </div>
+  </div>
+</section>
+{% endblock body %}

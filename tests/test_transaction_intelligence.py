@@ -36,6 +36,35 @@ def test_history_can_resolve_repeated_personal_merchant():
     assert result["status"] == "categorized"
 
 
+def test_single_personal_history_uses_a_healthy_amount_range():
+    history = [
+        {"merchant_name": "KIRANA SHOP", "category": "Groceries", "amount": 15},
+    ]
+
+    for amount in (5, 35, 50, 100):
+        result = categorize_transaction("KIRANA SHOP", amount, None, "UPI", history)
+        assert result["category"] == "Groceries", amount
+        assert result["status"] == "categorized", amount
+        assert result["needs_user_confirmation"] is False, amount
+
+    # A large jump should still require a decision rather than being treated as
+    # the same recurring spending pattern.
+    result = categorize_transaction("KIRANA SHOP", 1000, None, "UPI", history)
+    assert result["category"] is None
+    assert result["status"] == "unknown"
+    assert result["needs_user_confirmation"] is True
+
+
+def test_small_amount_change_is_not_blocked_by_strict_percentage_match():
+    history = [
+        {"merchant_name": "HABIBUL", "category": "Personal Care", "amount": 30},
+    ]
+    result = categorize_transaction("HABIBUL", 35, None, "UPI", history)
+    assert result["category"] == "Personal Care"
+    assert result["status"] == "categorized"
+    assert result["needs_user_confirmation"] is False
+
+
 def test_stable_personal_history_can_categorize_without_note():
     history = [
         {"merchant_name": "RAHUL KUMAR", "category": "Transfer / Personal", "amount": 500},

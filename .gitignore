@@ -22,5 +22,10 @@ node_modules/
 # Logs
 *.log
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
 # Internal project docs
 docs/

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from sqlalchemy import text, update
 from werkzeug.utils import secure_filename
 
@@ -32,9 +32,23 @@ REVIEW_CATEGORIES = (
     "Shopping",
     "Health & Fitness",
     "Personal Care",
+    "Housing / Rent",
+    "Education",
     "Transfer / Personal",
     "Others",
 )
+
+# These endpoints expose or mutate a user's financial workspace. The main app
+# already protects several of them with @login_required; this app-level guard
+# closes the remaining gap for dashboard/import pages without duplicating route
+# logic in app.py.
+PROTECTED_FINANCIAL_ENDPOINTS = {
+    "dashboard1",
+    "simulate_transaction",
+    "statement_import.import_statement_page",
+    "statement_import.dashboard_attention",
+    "statement_import.resolve_dashboard_attention",
+}
 
 
 def _allowed_filename(filename: str) -> bool:
@@ -46,6 +60,34 @@ def register_statement_import(app, db, Transaction) -> None:
     app.config.setdefault("MAX_CONTENT_LENGTH", MAX_UPLOAD_BYTES)
     app.extensions["statement_import_db"] = db
     app.extensions["statement_import_transaction_model"] = Transaction
+
+    @app.before_request
+    def protect_financial_pages():
+        if request.endpoint not in PROTECTED_FINANCIAL_ENDPOINTS:
+            return None
+        if session.get("user_id") is not None:
+            return None
+
+        if request.endpoint == "dashboard1":
+            return redirect(url_for("demo_dashboard"))
+
+        flash("Please sign in to use your personal workspace.", "warning")
+        return redirect(url_for("login", next=request.full_path))
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        )
+
+        if request.endpoint in PROTECTED_FINANCIAL_ENDPOINTS or session.get("user_id") is not None:
+            response.headers["Cache-Control"] = "private, no-store"
+
+        return response
 
     @app.context_processor
     def inject_received_money_summary():
@@ -66,10 +108,11 @@ def register_statement_import(app, db, Transaction) -> None:
                 text(
                     "SELECT COALESCE(SUM(amount), 0), COUNT(*) "
                     "FROM received_money "
-                    "WHERE strftime('%Y', transaction_date) = :year "
+                    "WHERE ((:user_id IS NULL AND user_id IS NULL) OR user_id = :user_id) "
+                    "AND strftime('%Y', transaction_date) = :year "
                     "AND strftime('%m', transaction_date) = :month"
                 ),
-                {"year": str(year), "month": f"{month:02d}"},
+                {"user_id": session.get("user_id"), "year": str(year), "month": f"{month:02d}"},
             ).first()
         except Exception:
             return {"received_money_total": 0.0, "received_money_count": 0}
@@ -79,12 +122,38 @@ def register_statement_import(app, db, Transaction) -> None:
             "received_money_count": int(row[1] or 0) if row else 0,
         }
 
+    @app.route("/demo")
+    def demo_dashboard():
+        """Render a public, read-only product demo using only fictional data."""
+        return render_template(
+            "demo_dashboard.html",
+            demo_data={
+                "month": "September 2026",
+                "health": "Good",
+                "summary": "Spending is under control this month, with most activity concentrated in everyday essentials.",
+                "change": "+8%",
+                "change_label": "Monthly spending increased",
+                "current_total": "₹18,420",
+                "previous_total": "₹17,060",
+                "driver": "Food & Dining",
+                "driver_change": "₹1,120 more",
+                "driver_share": "82% of the monthly increase",
+                "transactions": "42",
+                "top_category": "Food & Dining",
+                "average_day": "₹614",
+            },
+        )
+
     if statement_import_bp.name not in app.blueprints:
         app.register_blueprint(statement_import_bp)
 
 
 @statement_import_bp.route("/import", methods=["GET", "POST"])
 def import_statement_page():
+    if session.get("user_id") is None:
+        flash("Please sign in before importing your statement.", "warning")
+        return redirect(url_for("login", next=request.full_path))
+
     if request.method == "GET":
         return render_template("statement_import.html", flash_messages=[])
 
@@ -118,8 +187,9 @@ def import_statement_page():
     Transaction = current_app.extensions["statement_import_transaction_model"]
 
     try:
-        summary = import_statement(db.session, Transaction, result)
+        summary = import_statement(db.session, Transaction, result, user_id=session.get("user_id"))
     except Exception:
+        current_app.logger.exception("STATEMENT IMPORT FAILED")
         db.session.rollback()
         flash("The statement could not be saved. No imported spending data was committed.", "danger")
         return redirect(url_for("statement_import.import_statement_page"))
@@ -154,15 +224,31 @@ def dashboard_attention():
         month = datetime.now().month
 
     year = datetime.now().year
+    user_id = session.get("user_id")
+    user_scope = (
+        Transaction.user_id.is_(None)
+        if user_id is None
+        else Transaction.user_id == user_id
+    )
+
     transactions = (
         Transaction.query.filter(
+            user_scope,
             db.extract("month", Transaction.date) == month,
             db.extract("year", Transaction.date) == year,
         )
         .order_by(Transaction.date.desc())
         .all()
     )
-    attention = build_attention_queue(transactions)
+    history_transactions = (
+        Transaction.query.filter(user_scope)
+        .order_by(Transaction.date.desc())
+        .all()
+    )
+    attention = build_attention_queue(
+        transactions,
+        history_transactions=history_transactions,
+    )
     return render_template(
         "_attention.html",
         attention=attention,
@@ -177,7 +263,7 @@ def resolve_dashboard_attention(transaction_id: int):
     Transaction = current_app.extensions["statement_import_transaction_model"]
     category = request.form.get("category", "").strip()
     next_url = request.form.get("next") or "/dashboard"
-    if not next_url.startswith("/"):
+    if not next_url.startswith("/") or next_url.startswith("//"):
         next_url = "/dashboard"
     elif next_url.startswith("/dashboard/attention"):
         # The attention section is rendered as a dashboard partial. If its form
@@ -185,8 +271,17 @@ def resolve_dashboard_attention(transaction_id: int):
         # dashboard while preserving query parameters such as the selected month.
         next_url = "/dashboard" + next_url[len("/dashboard/attention"):]
 
+    user_id = session.get("user_id")
+    if user_id is None:
+        flash("Please sign in to resolve transactions.", "warning")
+        return redirect(url_for("login", next=next_url))
+
     transaction = db.session.get(Transaction, transaction_id)
     if not transaction:
+        flash("That transaction could not be found.", "danger")
+        return redirect(next_url)
+
+    if hasattr(transaction, "user_id") and transaction.user_id != user_id:
         flash("That transaction could not be found.", "danger")
         return redirect(next_url)
 
@@ -210,14 +305,16 @@ def resolve_dashboard_attention(transaction_id: int):
         # transactions for the same merchant so one correction teaches the
         # current statement instead of forcing the user to repeat themselves.
         merchant_name = transaction.merchant_name
+        propagation_update = update(Transaction).where(
+            Transaction.id != transaction_id,
+            Transaction.merchant_name == merchant_name,
+            Transaction.category == "Unknown",
+        )
+        if hasattr(Transaction, "user_id"):
+            propagation_update = propagation_update.where(Transaction.user_id == user_id)
+
         propagation = db.session.execute(
-            update(Transaction)
-            .where(
-                Transaction.id != transaction_id,
-                Transaction.merchant_name == merchant_name,
-                Transaction.category == "Unknown",
-            )
-            .values(category=category)
+            propagation_update.values(category=category)
         )
 
         db.session.commit()

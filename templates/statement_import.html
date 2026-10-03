@@ -17,6 +17,7 @@
     <div class="card shadow-sm border-0">
       <div class="card-body p-4 p-md-5">
         <form method="post" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <label for="statement" class="form-label fw-semibold">Statement file</label>
           <input
             class="form-control form-control-lg"

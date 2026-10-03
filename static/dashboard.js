@@ -438,6 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const exploreSection = document.getElementById('explore-your-spending');
+  const attentionSection = document.getElementById('dashboard-needs-attention');
   const searchForm = document.getElementById('spend-search-form');
   const searchInput = document.getElementById('spend-search-input');
 
@@ -485,6 +486,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (exploreSection && window.location.hash === '#explore-your-spending') {
     exploreSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function restoreDashboardAnchor() {
+    if (window.location.hash !== '#dashboard-needs-attention') return;
+
+    const target = document.getElementById('dashboard-needs-attention');
+    if (!target) return;
+
+    // The dashboard contains charts that finish laying out after DOMContentLoaded.
+    // Restore the anchor after the page has settled so the browser does not
+    // immediately shift back toward the top when those sections resize.
+    target.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' });
+  }
+
+  if (attentionSection && window.location.hash === '#dashboard-needs-attention') {
+    window.addEventListener('load', restoreDashboardAnchor, { once: true });
+    window.setTimeout(restoreDashboardAnchor, 100);
+    window.setTimeout(restoreDashboardAnchor, 600);
   }
 
 });

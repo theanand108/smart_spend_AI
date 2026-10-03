@@ -5,10 +5,13 @@
     <script>
       (function () {
         try {
-          if (localStorage.getItem('theme') === 'dark') {
+          // Dark mode is the SSAI default. Respect an explicit light-mode choice.
+          if (localStorage.getItem('theme') !== 'light') {
             document.documentElement.setAttribute('data-theme', 'dark');
           }
-        } catch (e) {}
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -25,7 +28,7 @@
      {% endblock head %}
 
   </head>
-  <body>
+  <body data-clerk-publishable-key="{{ clerk_publishable_key or '' }}">
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
       <div class="container">
         <a class="navbar-brand fw-bold fs-4" href="/">Smart Spend AI</a>
@@ -37,6 +40,7 @@
             <li class="nav-item">
               <a class="nav-link" href="/dashboard">Dashboard</a>
             </li>
+            {% if logged_in %}
             <li class="nav-item ms-2">
               <a class="nav-link d-flex align-items-center" href="/import">
                 <i class="bi bi-download me-1" aria-hidden="true"></i>
@@ -46,6 +50,30 @@
             <li class="nav-item ms-2">
               <a class="btn btn-outline-primary btn-sm rounded-pill" href="/simulateATransaction">+ Add Transaction</a>
             </li>
+            <li class="nav-item ms-2">
+              <button type="button"
+                      id="feedback-btn"
+                      class="btn btn-outline-secondary btn-sm rounded-pill"
+                      data-bs-toggle="modal"
+                      data-bs-target="#feedbackModal">
+                <i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>
+                Feedback
+              </button>
+            </li>
+            <li class="nav-item ms-2">
+              <form method="post" action="/logout" class="d-inline">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-link nav-link">Sign out</button>
+              </form>
+            </li>
+            {% else %}
+            <li class="nav-item ms-2">
+              <a class="nav-link" href="/login">Sign in</a>
+            </li>
+            <li class="nav-item ms-2">
+              <a class="btn btn-primary btn-sm rounded-pill" href="/register">Start using SSAI</a>
+            </li>
+            {% endif %}
             {% if request.endpoint in ['dashboard1', 'home'] %}
             <li class="nav-item ms-2">
               <button type="button" id="theme-toggle-btn" class="btn btn-outline-secondary btn-sm rounded-pill" aria-label="Toggle dark mode" aria-pressed="false">
@@ -76,7 +104,11 @@
           </div>
           <div class="modal-footer border-0">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-            <a id="confirm-delete-link" href="#" class="btn btn-danger">Delete</a>
+            <form id="confirm-delete-form" method="post" action="#">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
           </div>
         </div>
       </div>
@@ -140,10 +172,60 @@
       });
     </script>
     <script>
+      // Preserve the exact browser scroll position across destructive POST -> redirect -> GET
+      // navigations. This uses sessionStorage rather than a page-specific anchor, so it
+      // works for any transaction list or section without hardcoding a destination.
+      (function () {
+        var scrollStorageKey = 'ssai.pending-scroll:' + window.location.pathname + window.location.search;
+
+        function saveScrollPosition() {
+          try {
+            sessionStorage.setItem(scrollStorageKey, String(window.scrollY));
+          } catch (e) {}
+        }
+
+        function restoreScrollPosition() {
+          try {
+            var stored = sessionStorage.getItem(scrollStorageKey);
+            if (stored === null) return;
+
+            var scrollY = Number(stored);
+            if (!Number.isFinite(scrollY) || scrollY < 0) {
+              sessionStorage.removeItem(scrollStorageKey);
+              return;
+            }
+
+            var restore = function () {
+              window.scrollTo(0, scrollY);
+            };
+
+            requestAnimationFrame(function () {
+              requestAnimationFrame(restore);
+            });
+            window.setTimeout(restore, 250);
+            window.setTimeout(function () {
+              restore();
+              sessionStorage.removeItem(scrollStorageKey);
+            }, 1000);
+          } catch (e) {}
+        }
+
+        window.addEventListener('load', restoreScrollPosition);
+        window.addEventListener('pageshow', restoreScrollPosition);
+
+        document.addEventListener('DOMContentLoaded', function () {
+          var deleteForm = document.getElementById('confirm-delete-form');
+          if (!deleteForm) return;
+
+          deleteForm.addEventListener('submit', saveScrollPosition);
+        });
+      })();
+    </script>
+    <script>
       document.addEventListener('DOMContentLoaded', function () {
         var deleteModalEl = document.getElementById('deleteModal');
-        var confirmDeleteLink = document.getElementById('confirm-delete-link');
-        if (!deleteModalEl || !confirmDeleteLink) return;
+        var confirmDeleteForm = document.getElementById('confirm-delete-form');
+        if (!deleteModalEl || !confirmDeleteForm) return;
 
         var fallbackBackdrop = null;
 
@@ -170,7 +252,7 @@
           var deleteUrl = trigger.getAttribute('data-delete-url');
           if (!deleteUrl) return;
 
-          confirmDeleteLink.setAttribute('href', deleteUrl);
+          confirmDeleteForm.setAttribute('action', deleteUrl);
 
           if (window.bootstrap && bootstrap.Modal) {
             bootstrap.Modal.getOrCreateInstance(deleteModalEl).show();
@@ -204,5 +286,61 @@
         });
       });
     </script>
+  <!-- Feedback Modal -->
+  <div class="modal fade" id="feedbackModal" tabindex="-1"
+       aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="feedbackModalLabel">Share your feedback</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+
+        <form method="post" action="/feedback">
+          <div class="modal-body">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="page" value="{{ request.path }}">
+
+            <div class="mb-3">
+              <label class="form-label">How was your experience?</label>
+              <select name="rating" class="form-select">
+                <option value="">Rating (optional)</option>
+                <option value="5">5 — Excellent</option>
+                <option value="4">4 — Good</option>
+                <option value="3">3 — Okay</option>
+                <option value="2">2 — Needs improvement</option>
+                <option value="1">1 — Poor</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="feedback-message" class="form-label">
+                What can we improve?
+              </label>
+              <textarea
+                id="feedback-message"
+                name="message"
+                class="form-control"
+                rows="4"
+                maxlength="2000"
+                placeholder="Tell us what worked, what didn't, or what you'd like to see..."
+                required></textarea>
+              <div class="form-text">Maximum 2000 characters.</div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              Send Feedback
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   </body>
 </html>

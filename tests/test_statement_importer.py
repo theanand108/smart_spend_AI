@@ -52,6 +52,24 @@ def test_phonepe_csv_normalizes_debits_and_credits():
     assert result.received[0].note == "Received from MUKUND KUSHWAHA"
 
 
+def test_phonepe_csv_accepts_september_abbreviation():
+    csv_text = '''Transaction Statement for 6307183070
+Duration,"26 Aug, 2026 - 25 Sept, 2026"
+
+Date,Time,Transaction Details,Transaction ID,UTR,Transaction Type,Credit/debit instrument,Amount
+"Sept 25, 2026","05:15 pm","Paid to NEERAJ KUMAR","T2609251715303336256820","073306645051","DEBIT","Paid by XXXXXXX1831","35"
+"Sept 24, 2026","02:18 pm","Paid to Himanshu","R10502609241418466445214036","324041203358","DEBIT","Paid by XXXXXXX1831","175"
+"Aug 26, 2026","09:00 am","Received from MUKUND KUSHWAHA","T2608260900463826377542","660440391566","CREDIT","Credited to XXXXXXX1831","5000"
+'''
+    result = parse_phonepe_csv(csv_text)
+
+    assert len(result.transactions) == 3
+    assert len(result.expenses) == 2
+    assert len(result.received) == 1
+    assert result.expenses[0].date.strftime("%Y-%m-%d %H:%M") == "2026-09-25 17:15"
+    assert result.expenses[1].date.strftime("%Y-%m-%d %H:%M") == "2026-09-24 14:18"
+
+
 def test_google_pay_pdf_text_normalizes_paid_and_received_transactions():
     result = parse_google_pay_text(GPAY_SAMPLE)
 

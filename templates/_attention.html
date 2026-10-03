@@ -1,9 +1,9 @@
 {% if attention %}
 {% set dashboard_month = request.args.get('month')|int %}
 {% if dashboard_month >= 1 and dashboard_month <= 12 %}
-{% set dashboard_return_url = url_for('dashboard1', month=dashboard_month) %}
+{% set dashboard_return_url = url_for('dashboard1', month=dashboard_month) + '#dashboard-needs-attention' %}
 {% else %}
-{% set dashboard_return_url = url_for('dashboard1') %}
+{% set dashboard_return_url = url_for('dashboard1') + '#dashboard-needs-attention' %}
 {% endif %}
 <section class="container dashboard-section-block" id="dashboard-needs-attention">
   <div class="card dashboard-card">
@@ -27,6 +27,7 @@
           <div class="dashboard-transaction-meta">
             <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
             <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
+            <span class="dashboard-transaction-date">{{ item.transaction.date.strftime('%A, %d %b %Y · %I:%M %p') }}</span>
             {% if item.category %}
             <span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>
             {% endif %}
@@ -34,7 +35,9 @@
           <div class="dashboard-transaction-notes">{{ item.reason }}</div>
         </div>
         <div class="dashboard-transaction-actions">
+          {% if logged_in %}
           <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ dashboard_return_url }}">
             <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
               <option value="" {% if not item.category %}selected{% endif %}>Choose category</option>
@@ -47,6 +50,9 @@
             </select>
             <button type="submit" class="btn btn-primary btn-sm">Save</button>
           </form>
+          {% else %}
+          <a href="{{ '/register?next=/get-started' }}" class="btn btn-outline-primary btn-sm">Sign in to resolve</a>
+          {% endif %}
         </div>
       </div>
       {% endfor %}
@@ -64,13 +70,16 @@
             <div class="dashboard-transaction-meta">
               <span class="badge rounded-pill dashboard-transaction-category">{{ item.status|replace('_', ' ')|title }}</span>
               <span class="dashboard-transaction-date">₹{{ item.transaction.amount }}</span>
+            <span class="dashboard-transaction-date">{{ item.transaction.date.strftime('%A, %d %b %Y · %I:%M %p') }}</span>
               {% if item.category %}<span class="dashboard-transaction-date">Suggested: {{ item.category }}</span>{% endif %}
             </div>
             <div class="dashboard-transaction-notes">{{ item.reason }}</div>
           </div>
           <div class="dashboard-transaction-actions">
+            {% if logged_in %}
             <form method="post" action="{{ url_for('statement_import.resolve_dashboard_attention', transaction_id=item.transaction.id) }}" class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
               <input type="hidden" name="next" value="{{ dashboard_return_url }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <select name="category" class="form-select form-select-sm" aria-label="Choose category for {{ item.transaction.merchant_name }}">
                 <option value="" {% if not item.category %}selected{% endif %}>Choose category</option>
                 {% if item.category and item.category not in review_categories %}
@@ -82,6 +91,9 @@
               </select>
               <button type="submit" class="btn btn-primary btn-sm">Save</button>
             </form>
+            {% else %}
+            <a href="{{ '/register?next=/get-started' }}" class="btn btn-outline-primary btn-sm">Sign in to resolve</a>
+            {% endif %}
           </div>
         </div>
         {% endfor %}
