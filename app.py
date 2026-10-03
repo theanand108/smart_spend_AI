@@ -67,3 +67,1603 @@ def current_user():
     user_id = current_user_id()
     return db.session.get(User, user_id) if user_id else None
 
+
+def scoped_transaction_query(query):
+    user_id = current_user_id()
+    if user_id is None:
+        return query.filter(Transaction.user_id.is_(None))
+    return query.filter(Transaction.user_id == user_id)
+
+
+def safe_next_url(value, fallback="/dashboard"):
+    value = (value or "").strip()
+
+    # Only allow internal application paths. Reject URL-like values,
+    # including scheme-relative and backslash-normalized external URLs.
+    if (
+        value.startswith("/")
+        and not value.startswith("//")
+        and "\\" not in value
+        and ":" not in value.split("?", 1)[0]
+    ):
+        return value
+
+    return fallback
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if current_user_id() is None:
+            flash("Please sign in to use your personal workspace.", "warning")
+            return redirect(url_for("login", next=safe_next_url(request.full_path)))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_auth_context():
+    return {
+        "current_user": current_user(),
+        "csrf_token": csrf_token,
+        "logged_in": current_user_id() is not None,
+        "clerk_publishable_key": app.config.get("CLERK_PUBLISHABLE_KEY"),
+    }
+
+
+@app.before_request
+def protect_state_changing_requests():
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+
+    expected = session.get("_csrf_token")
+    supplied = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token")
+    if not expected or not supplied or supplied != expected:
+        return ("Invalid or missing security token. Please refresh the page and try again.", 400)
+
+    return None
+
+
+def ensure_beta_schema():
+    with app.app_context():
+        db.create_all()
+        inspector = inspect(db.engine)
+
+        transaction_columns = {column["name"] for column in inspector.get_columns("transaction")}
+        if "user_id" not in transaction_columns:
+            with db.engine.begin() as connection:
+                connection.execute(text('ALTER TABLE "transaction" ADD COLUMN user_id INTEGER'))
+                connection.execute(text('CREATE INDEX IF NOT EXISTS ix_transaction_user_id ON "transaction" (user_id)'))
+
+        if "users" not in inspect(db.engine).get_table_names():
+            db.create_all()
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(320), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+class Feedback(db.Model):
+    __tablename__ = "feedback"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    rating = db.Column(db.Integer, nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    page = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+class Transaction(db.Model):
+    try:
+        id = db.Column(db.Integer, primary_key=True)
+        date = db.Column(db.DateTime, default=datetime.utcnow)
+        merchant_name = db.Column(db.String, nullable=False)
+        amount = db.Column(db.Float, nullable=False)
+        category = db.Column(db.String(50), nullable=True)
+        payment_method = db.Column(db.String(50))
+        notes = db.Column(db.String(200))
+        user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    except Exception as e:
+        print(f"Error defining Transaction model: {e}")
+
+    def __repr__(self):
+
+        return f"<Transaction {self.merchant_name}>"
+
+
+register_statement_import(app, db, Transaction)
+
+
+def categorize(merchant):
+    merchant = str(merchant).lower()
+
+    if (
+        "zomato" in merchant
+        or "swiggy" in merchant
+        or "starbucks" in merchant
+        or "dominoz" in merchant
+    ):
+        return "Food & Dining"
+    elif "uber" in merchant or "ola" in merchant or "petrol" in merchant:
+        return "Travel & Transport"
+    elif "netflix" in merchant or "spotify" in merchant or "bookmyshow" in merchant:
+        return "Entertainment"
+    elif "blinkit" in merchant or "kirana" in merchant:
+        return "Groceries"
+    elif "airtel" in merchant:
+        return "Bills & Utilities"
+    elif (
+        "myntra" in merchant
+        or "h&m" in merchant
+        or "amazon" in merchant
+        or "flipkart" in merchant
+    ):
+        return "Shopping"
+    elif "gym" in merchant or "health" in merchant or "hospital" in merchant:
+        return "Health & Fitness"
+    else:
+        return "Others"
+
+
+def build_transaction_query(month, year, search_query=""):
+    month_filters = [
+        db.extract("month", Transaction.date) == month,
+        db.extract("year", Transaction.date) == year,
+    ]
+    
+    query = scoped_transaction_query(Transaction.query).filter(*month_filters)
+
+    if search_query:
+        pattern = f"%{search_query}%"
+        query = query.filter(
+            or_(
+                Transaction.merchant_name.ilike(pattern),
+                Transaction.notes.ilike(pattern),
+                Transaction.category.ilike(pattern),
+            )
+        )
+
+    return query
+
+def get_spending_analytics(transaction_query):
+    top_merchant_query = (
+        transaction_query.with_entities(
+            Transaction.merchant_name, db.func.sum(Transaction.amount).label("total")
+        )
+        .group_by(Transaction.merchant_name)
+        .order_by(db.text("total DESC"))
+        .first()
+    )
+    most_freqMerchant_query = (
+        transaction_query.with_entities(
+            Transaction.merchant_name, db.func.count(Transaction.id).label("total")
+        )
+        .group_by(Transaction.merchant_name)
+        .order_by(db.text("total DESC"))
+        .first()
+    )
+    largest_transaction = (
+    transaction_query
+    .with_entities(db.func.max(Transaction.amount))
+    .scalar()
+    )
+    smallest_transaction = (
+    transaction_query
+    .with_entities(db.func.min(Transaction.amount))
+    .scalar()
+    )
+    
+    daily_spend = (
+        transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
+    )
+    days = (
+        transaction_query.with_entities(db.func.count(Transaction.id)).scalar()
+    )
+    avg_daily_spend = daily_spend / days if days else 1
+    
+    most_freqMerchant = most_freqMerchant_query[0] if most_freqMerchant_query else "N/A"
+    
+    if top_merchant_query:
+        top_merchant = top_merchant_query[0]
+        top_merchant_amount = top_merchant_query[1]
+    else:
+        top_merchant = "N/A"
+        top_merchant_amount = 0
+    
+    return {
+        "top_merchant": top_merchant,
+        "top_merchant_amount": top_merchant_amount,
+        "most_frequent_merchant": most_freqMerchant,
+        "largest_transaction": largest_transaction,
+        "smallest_transaction": smallest_transaction,
+        "avg_daily_spend": round(avg_daily_spend, 2)
+    }
+
+
+def safe_csv_cell(value):
+    """Neutralize spreadsheet formulas in user-controlled exported text."""
+    if isinstance(value, str) and value[:1] in {"=", "+", "-", "@"}:
+        return "'" + value
+    return value
+
+
+def format_currency(amount):
+    amount = float(amount or 0)
+    if amount.is_integer():
+        return f"₹{int(amount):,}"
+    return f"₹{amount:,.2f}"
+
+
+def normalize_month(month):
+    try:
+        month_value = int(month)
+    except (TypeError, ValueError):
+        return None
+
+    return month_value if 1 <= month_value <= 12 else None
+
+
+def make_insight(title, value, supporting_text, priority_score, insight_type):
+    return {
+        "title": title,
+        "value": value,
+        "supporting_text": supporting_text,
+        "priority_score": priority_score,
+        "type": insight_type,
+    }
+
+
+def format_signed_currency(amount):
+    amount = float(amount or 0)
+    if amount > 0:
+        return f"+{format_currency(amount)}"
+    if amount < 0:
+        return f"-{format_currency(abs(amount))}"
+    return format_currency(0)
+
+
+def format_signed_percentage(percent):
+    if percent is None:
+        return ""
+
+    percent = float(percent)
+    sign = "+" if percent > 0 else ""
+    return f"{sign}{percent:.0f}%"
+
+
+def format_natural_change(amount, percent=None):
+    amount_text = format_currency(abs(float(amount or 0)))
+    percent_text = format_signed_percentage(percent).lstrip("+-")
+    return f"{amount_text} ({percent_text})" if percent_text else amount_text
+def format_financial_insight_supporting_text(insight):
+    insight_type = insight.get("insight_type")
+    driver = insight.get("driver")
+    category = insight.get("category")
+    merchant = insight.get("merchant")
+    amount = insight.get("change_amount")
+    percent = insight.get("change_percent")
+    amount_text = format_natural_change(amount, percent)
+
+    if insight_type == "spending_increase":
+        if driver == "category_and_merchant" and category and merchant:
+            return (
+                f"{merchant} contributed most of the increase in {category}, "
+                f"which rose by {amount_text}. Review whether the extra spend was planned."
+            )
+        if category:
+            return (
+                f"{category} spending rose by {amount_text}, making it the "
+                "biggest contributor to the increase."
+            )
+        if merchant:
+            return (
+                f"{merchant} spending rose by {amount_text}, making it the "
+                "biggest contributor to the increase."
+            )
+        return (
+            f"Total spending rose by {amount_text} from last month. Review "
+            "where the extra spend came from."
+        )
+
+    if insight_type == "spending_decrease":
+        if driver == "category_and_merchant" and category and merchant:
+            return (
+                f"{merchant} contributed most to the reduction in {category}, "
+                f"which fell by {amount_text}. Keep the lower-spend pattern going."
+            )
+        if category:
+            return (
+                f"{category} spending fell by {amount_text} from last month, "
+                "making it the biggest contributor to the overall reduction."
+            )
+        if merchant:
+            return (
+                f"{merchant} spending fell by {amount_text} from last month, "
+                "making it the biggest contributor to the overall reduction."
+            )
+        return (
+            f"Total spending fell by {amount_text} from last month. Keep the "
+            "lower-spend pattern going."
+        )
+
+    if insight_type == "new_spending_area" and category:
+        merchant_text = f" through {merchant}" if merchant else ""
+        return (
+            f"{category} is a new spending area this month{merchant_text}, adding "
+            f"{format_currency(amount)} to your spending. Check whether it was expected."
+        )
+
+    if insight_type == "frequency_increase":
+        focus = f" for {merchant}" if merchant else f" in {category}" if category else ""
+        return (
+            f"Transaction frequency increased{focus}, contributing "
+            f"{amount_text} to the monthly change."
+        )
+
+    if insight_type in {"basket_size_increase", "average_transaction_increase"}:
+        focus = f" in {category}" if category else f" at {merchant}" if merchant else ""
+        return (
+            f"Your typical transaction got larger{focus} by {amount_text}. Check "
+            "whether the bigger purchases were planned."
+        )
+
+    if insight_type == "distributed_increase":
+        return (
+            f"Spending increased by {amount_text} across several areas, with "
+            "no single category explaining most of the change."
+        )
+
+    return (
+        f"Spending changed by {amount_text}. Review the categories and merchants "
+        "behind the shift."
+    )
+
+
+def format_financial_insight_card(insight):
+    title = insight.get("title")
+    if not title:
+        return None
+
+    return {
+        "title": title,
+        "value": format_signed_currency(insight.get("change_amount")),
+        "supporting_text": format_financial_insight_supporting_text(insight),
+    }
+
+
+def append_distinct_insight(cards, insight, limit):
+    if not insight or len(cards) >= limit:
+        return
+
+    signature = (
+        insight.get("title"),
+        insight.get("value"),
+        insight.get("supporting_text"),
+    )
+    existing = {
+        (
+            card.get("title"),
+            card.get("value"),
+            card.get("supporting_text"),
+        )
+        for card in cards
+    }
+    if signature not in existing:
+        cards.append(insight)
+
+
+def build_structured_financial_insight_cards(
+    current_transactions,
+    previous_transactions,
+    fallback_insights=None,
+    limit=3,
+):
+    facts = build_financial_facts(current_transactions, previous_transactions)
+    structured_insights = generate_financial_insights(facts, limit=limit)
+    insight_cards = []
+    for insight in structured_insights:
+        append_distinct_insight(
+            insight_cards,
+            format_financial_insight_card(insight),
+            limit,
+        )
+
+    for insight in fallback_insights or []:
+        fallback_card = dict(insight)
+        fallback_card["title"] = f"{insight.get('title')} :: {insight.get('value')}"
+        append_distinct_insight(insight_cards, fallback_card, limit)
+
+    return insight_cards
+
+
+def biggest_money_destination_insight(context):
+    if not context["merchant_amounts"] or not context["total_expense"]:
+        return None
+
+    merchant, amount = max(context["merchant_amounts"].items(), key=lambda item: item[1])
+    if not merchant or amount <= 0:
+        return None
+
+    percent = (amount / context["total_expense"]) * 100
+    return make_insight(
+        "Biggest Money Destination",
+        merchant,
+        f"{format_currency(amount)} · {percent:.0f}% of monthly spending",
+        76 + min(percent * 0.16, 12),
+        "spending",
+    )
+
+
+def largest_transaction_insight(context):
+    largest_transaction = context["largest_transaction"]
+    if not largest_transaction:
+        return None
+
+    amount = float(largest_transaction.amount or 0)
+    if amount <= 0:
+        return None
+
+    percent = (amount / context["total_expense"] * 100) if context["total_expense"] else 0
+    merchant = largest_transaction.merchant_name or "one merchant"
+    return make_insight(
+        "Largest Transaction",
+        format_currency(amount),
+        f"{merchant} · {percent:.0f}% of monthly spending",
+        74 + min(percent * 0.16, 12),
+        "warning",
+    )
+
+
+def most_frequent_merchant_insight(context):
+    if not context["merchant_counts"]:
+        return None
+
+    merchant, count = max(context["merchant_counts"].items(), key=lambda item: item[1])
+    if count <= 1:
+        return None
+
+    return make_insight(
+        "Most Frequent Merchant",
+        merchant,
+        f"{count} transactions this month",
+        72 + min(count * 1.5, 12),
+        "habit",
+    )
+
+
+def highest_spending_category_insight(context):
+    if context["top_category"] == "N/A" or context["top_category_amount"] <= 0:
+        return None
+
+    percent = (
+        (context["top_category_amount"] / context["total_expense"]) * 100
+        if context["total_expense"]
+        else 0
+    )
+    return make_insight(
+        "Highest Spending Category",
+        context["top_category"],
+        f"{format_currency(context['top_category_amount'])} · {percent:.0f}% of monthly spending",
+        78 + min(percent * 0.16, 12),
+        "spending",
+    )
+
+
+def weekend_spending_pattern_insight(context):
+    ratio = context["weekend_spending_ratio"]
+    if ratio < 0.5:
+        return None
+
+    return make_insight(
+        "Weekend Spending",
+        f"{ratio * 100:.0f}% of your spending",
+        "Most spending happened on weekends",
+        74 + min(ratio * 10, 10),
+        "behavior",
+    )
+
+
+def small_purchase_habit_insight(context):
+    if context["small_tx_count"] < 2 or context["small_tx_ratio"] < 0.5:
+        return None
+
+    return make_insight(
+        "Small Purchase Habit",
+        f"{context['small_tx_count']} small purchases",
+        f"{context['small_tx_ratio'] * 100:.0f}% of transactions under ₹100",
+        68 + min(context["small_tx_ratio"] * 12, 12),
+        "habit",
+    )
+
+
+def high_daily_average_insight(context):
+    avg_daily_spend = context["calendar_avg_daily_spend"]
+    if avg_daily_spend < 1000:
+        return None
+
+    return make_insight(
+        "High Daily Average",
+        f"{format_currency(avg_daily_spend)} per day",
+        "Higher than usual this month",
+        70 + min(avg_daily_spend / 375, 12),
+        "warning",
+    )
+
+
+def few_transactions_this_month_insight(context):
+    if not 1 < context["total_transactions"] <= 3:
+        return None
+
+    return make_insight(
+        "Few Transactions This Month",
+        f"{context['total_transactions']} transactions",
+        "Limited data — trends may still shift",
+        83,
+        "trend",
+    )
+
+
+def first_transaction_this_month_insight(context):
+    if context["total_transactions"] != 1:
+        return None
+
+    return make_insight(
+        "First Transaction This Month",
+        "1 transaction",
+        "Only expense recorded so far",
+        88,
+        "trend",
+    )
+
+
+INSIGHT_GENERATORS = [
+    biggest_money_destination_insight,
+    largest_transaction_insight,
+    most_frequent_merchant_insight,
+    highest_spending_category_insight,
+    weekend_spending_pattern_insight,
+    small_purchase_habit_insight,
+    high_daily_average_insight,
+    few_transactions_this_month_insight,
+    first_transaction_this_month_insight,
+]
+
+
+def build_key_insights(context, limit=3):
+    insights = []
+    for generator in INSIGHT_GENERATORS:
+        insight = generator(context)
+        if insight:
+            insights.append(insight)
+
+    return sorted(
+        insights,
+        key=lambda insight: insight["priority_score"],
+        reverse=True,
+    )[:limit]
+
+
+def get_category_totals_for_query(transaction_query):
+    return {
+        category or "Others": float(total or 0)
+        for category, total in transaction_query.with_entities(
+            Transaction.category,
+            db.func.sum(Transaction.amount),
+        )
+        .group_by(Transaction.category)
+        .all()
+    }
+
+
+def get_previous_month(month, year):
+    if month == 1:
+        return 12, year - 1
+    return month - 1, year
+
+
+def get_top_category_for_query(transaction_query):
+    top_category_query = (
+        transaction_query.with_entities(
+            Transaction.category, db.func.sum(Transaction.amount).label("total")
+        )
+        .group_by(Transaction.category)
+        .order_by(db.text("total DESC"))
+        .first()
+    )
+
+    if not top_category_query:
+        return "N/A", 0
+
+    return top_category_query[0], top_category_query[1]
+
+
+def format_percentage_change(current_value, previous_value):
+    if previous_value == 0:
+        return ""
+
+    change = abs((current_value - previous_value) / previous_value) * 100
+    return f"{change:.0f}%"
+
+
+def format_numeric_change(current_value, previous_value):
+    difference = abs(current_value - previous_value)
+    if difference == 0:
+        return "0"
+    return f"{difference:g}"
+
+
+def get_change_details(current_value, previous_value, lower_is_better=False):
+    if current_value == previous_value:
+        return "→", "text-muted"
+
+    improved = current_value < previous_value if lower_is_better else current_value > previous_value
+    trend_indicator = "↓" if current_value < previous_value else "↑"
+    trend_class = "text-success" if improved else "text-danger"
+    return trend_indicator, trend_class
+
+
+def build_comparison_row(
+    metric_title,
+    current_value,
+    previous_value,
+    previous_sort_value,
+    current_sort_value,
+    helper_text,
+    difference_text="",
+    lower_is_better=False,
+):
+    trend_indicator, trend_class = get_change_details(
+        current_sort_value,
+        previous_sort_value,
+        lower_is_better=lower_is_better,
+    )
+
+    return {
+        "metric_title": metric_title,
+        "previous_value": previous_value,
+        "current_value": current_value,
+        "trend_indicator": trend_indicator,
+        "trend_class": trend_class,
+        "difference_text": difference_text,
+        "helper_text": helper_text,
+    }
+
+
+def get_financial_health(financial_pulse, current_total, previous_total):
+    rule = financial_pulse.get("rule")
+
+    if rule == "spending_decreased":
+        return {"level": "excellent", "label": "Excellent"}
+    if rule in {"default"} and current_total <= previous_total:
+        return {"level": "good", "label": "Good"}
+    if rule in {
+        "limited_transaction_history",
+        "first_transaction",
+        "few_transactions",
+        "largest_category",
+        "weekend_dominant",
+        "frequent_merchant",
+    }:
+        return {"level": "stable", "label": "Stable"}
+    if rule in {"spending_increased", "high_daily_average", "largest_transaction"}:
+        return {"level": "attention", "label": "Watch Closely"}
+    if rule == "spending_increased_significantly":
+        return {"level": "warning", "label": "Needs Attention"}
+    if rule == "no_activity":
+        return {"level": "stable", "label": "Stable"}
+
+    return {"level": "good", "label": "Good"}
+
+
+def format_driver_change(amount):
+    amount = float(amount or 0)
+    if amount < 0:
+        return f"Saved {format_currency(abs(amount))}"
+    if amount > 0:
+        return f"{format_currency(amount)} more"
+    return "No change"
+
+
+def build_biggest_driver(current_category_totals, previous_category_totals, total_change):
+    category_changes = []
+    for category in set(current_category_totals) | set(previous_category_totals):
+        current_amount = current_category_totals.get(category, 0)
+        previous_amount = previous_category_totals.get(category, 0)
+        category_changes.append((category, current_amount - previous_amount))
+
+    if not category_changes:
+        return {
+            "category": "No category yet",
+            "amount_change": "No change yet",
+            "tone": "neutral",
+            "share_text": "Add more transactions to reveal what is driving changes.",
+        }
+
+    if total_change > 0:
+        category, change = max(category_changes, key=lambda item: item[1])
+        share = (change / total_change * 100) if change > 0 else 0
+        share_text = f"{share:.0f}% of the monthly increase" if share else "No single category drove the increase"
+    elif total_change < 0:
+        category, change = min(category_changes, key=lambda item: item[1])
+        share = (abs(change) / abs(total_change) * 100) if change < 0 else 0
+        share_text = f"{share:.0f}% of the monthly reduction" if share else "Savings were spread across categories"
+    else:
+        category, change = max(category_changes, key=lambda item: abs(item[1]))
+        share_text = "Spending was mostly unchanged overall"
+
+    return {
+        "category": category,
+        "amount_change": format_driver_change(change),
+        "tone": "positive" if change < 0 else "neutral",
+        "share_text": share_text,
+    }
+
+
+def build_overall_assessment(financial_pulse, biggest_driver, total_change):
+    rule = financial_pulse.get("rule")
+    category = biggest_driver["category"]
+    has_driver = category and category != "No category yet"
+
+    if rule == "no_activity":
+        return "No spending has been recorded this month yet."
+    if rule == "first_transaction":
+        return "Only one transaction has been recorded so far this month."
+    if rule in {"few_transactions", "limited_transaction_history"}:
+        return "There isn't enough transaction history yet to identify a clear spending pattern."
+    if rule == "spending_increased_significantly":
+        driver = f", primarily driven by {category}" if has_driver else ""
+        return f"Monthly spending increased noticeably compared to last month{driver}."
+    if rule == "spending_increased":
+        driver = f", mainly in {category}" if has_driver else ""
+        return f"Spending increased slightly compared to last month{driver}."
+    if rule == "spending_decreased":
+        return "Overall spending decreased compared to last month while maintaining a balanced pattern."
+    if rule == "largest_transaction":
+        return "A single large transaction shaped most of this month's spending."
+    if rule == "largest_category":
+        if has_driver:
+            return f"Most spending was concentrated in {category} this month."
+        return "Most spending was concentrated in a single category this month."
+    if rule == "frequent_merchant":
+        return "Spending this month was concentrated around one frequently used merchant."
+    if rule == "weekend_dominant":
+        return "Weekend spending made up a larger share of this month's expenses than weekdays."
+    if rule == "high_daily_average":
+        return "Daily spending has been higher than usual this month."
+
+    if total_change < 0:
+        return "Spending remained balanced this month with no unusual category spikes."
+    if total_change > 0:
+        return "Spending was slightly higher than last month, without any single category standing out."
+    return "Spending stayed steady compared to last month."
+
+
+def build_financial_pulse_summary(
+    *,
+    financial_pulse,
+    current_total,
+    previous_total,
+    current_category_totals,
+    previous_category_totals,
+):
+    total_change = current_total - previous_total
+    if previous_total:
+        percent_change = (total_change / previous_total) * 100
+        main_change_value = f"{percent_change:+.0f}%"
+    elif current_total:
+        main_change_value = "+100%"
+    else:
+        main_change_value = "0%"
+
+    if total_change > 0:
+        main_change_label = "Monthly spending increased"
+        main_change_tone = "negative"
+    elif total_change < 0:
+        main_change_label = "Monthly spending decreased"
+        main_change_tone = "positive"
+    else:
+        main_change_label = "Monthly spending stayed stable"
+        main_change_tone = "neutral"
+
+    biggest_driver = build_biggest_driver(
+        current_category_totals,
+        previous_category_totals,
+        total_change,
+    )
+
+    return {
+        "health": get_financial_health(financial_pulse, current_total, previous_total),
+        "main_change_value": main_change_value,
+        "main_change_label": main_change_label,
+        "main_change_tone": main_change_tone,
+        "current_total": format_currency(current_total),
+        "previous_total": format_currency(previous_total),
+        "biggest_driver": biggest_driver,
+        "summary": build_overall_assessment(
+            financial_pulse,
+            biggest_driver,
+            total_change,
+        ),
+    }
+
+
+def build_month_comparison_summary(
+    *,
+    current_total_expense,
+    current_total_transactions,
+    current_top_category,
+    current_days_in_month,
+    previous_total_expense,
+    previous_total_transactions,
+    previous_top_category,
+    previous_days_in_month,
+):
+    if previous_total_transactions == 0:
+        return None
+
+    current_daily_average = current_total_expense / current_days_in_month
+    previous_daily_average = previous_total_expense / previous_days_in_month
+    spending_difference = abs(current_total_expense - previous_total_expense)
+    daily_average_difference = abs(current_daily_average - previous_daily_average)
+
+    if current_total_expense < previous_total_expense:
+        spending_helper = f"{format_currency(spending_difference)} less than last month"
+    elif current_total_expense > previous_total_expense:
+        spending_helper = f"{format_currency(spending_difference)} more than last month"
+    else:
+        spending_helper = "Unchanged from last month"
+
+    if current_total_transactions < previous_total_transactions:
+        transaction_helper = f"{format_numeric_change(current_total_transactions, previous_total_transactions)} fewer than last month"
+    elif current_total_transactions > previous_total_transactions:
+        transaction_helper = f"{format_numeric_change(current_total_transactions, previous_total_transactions)} more than last month"
+    else:
+        transaction_helper = "Unchanged from last month"
+
+    if current_top_category != previous_top_category:
+        category_helper = f"Changed from {previous_top_category}"
+    else:
+        category_helper = "Largest category unchanged"
+
+    if current_daily_average < previous_daily_average:
+        daily_average_helper = f"{format_currency(daily_average_difference)} lower than last month"
+    elif current_daily_average > previous_daily_average:
+        daily_average_helper = f"{format_currency(daily_average_difference)} higher than last month"
+    else:
+        daily_average_helper = "Unchanged from last month"
+
+    return {
+        "rows": [
+            build_comparison_row(
+                "Overall Spending",
+                format_currency(current_total_expense),
+                format_currency(previous_total_expense),
+                previous_total_expense,
+                current_total_expense,
+                spending_helper,
+                format_percentage_change(current_total_expense, previous_total_expense),
+                lower_is_better=True,
+            ),
+            build_comparison_row(
+                "Total Transactions",
+                str(current_total_transactions),
+                str(previous_total_transactions),
+                previous_total_transactions,
+                current_total_transactions,
+                transaction_helper,
+                format_numeric_change(current_total_transactions, previous_total_transactions),
+                lower_is_better=True,
+            ),
+            build_comparison_row(
+                "Top Category",
+                current_top_category,
+                previous_top_category,
+                0,
+                0,
+                category_helper,
+            ),
+            build_comparison_row(
+                "Average Spend per Day",
+                format_currency(current_daily_average),
+                format_currency(previous_daily_average),
+                previous_daily_average,
+                current_daily_average,
+                daily_average_helper,
+                format_percentage_change(current_daily_average, previous_daily_average),
+                lower_is_better=True,
+            ),
+        ]
+    }
+
+
+def _clerk_authorized_parties():
+    configured = app.config.get("CLERK_AUTHORIZED_PARTIES") or []
+    if configured:
+        return configured
+    # Development fallback only. Production should always set an explicit allow-list.
+    return [request.host_url.rstrip("/")]
+
+
+def _get_clerk_user_email(clerk_user):
+    primary_id = getattr(clerk_user, "primary_email_address_id", None)
+    addresses = getattr(clerk_user, "email_addresses", None) or []
+
+    for address in addresses:
+        if getattr(address, "id", None) == primary_id:
+            email = getattr(address, "email_address", None)
+            if email:
+                return email.strip().lower()
+
+    for address in addresses:
+        email = getattr(address, "email_address", None)
+        if email:
+            return email.strip().lower()
+
+    return None
+
+
+@app.route("/auth/clerk/sync", methods=["POST"])
+def sync_clerk_session():
+    secret_key = app.config.get("CLERK_SECRET_KEY")
+    if not secret_key:
+        return jsonify({"ok": False, "error": "Clerk is not configured on the server."}), 503
+
+    try:
+        state = authenticate_request(
+            request,
+            AuthenticateRequestOptions(
+                secret_key=secret_key,
+                jwt_key=app.config.get("CLERK_JWT_KEY"),
+                authorized_parties=_clerk_authorized_parties(),
+                accepts_token=["session_token"],
+            ),
+        )
+    except Exception as exc:
+        print(f"Clerk authentication exception: {type(exc).__name__}: {exc}")
+        return jsonify({"ok": False, "error": "Unable to verify the Clerk session."}), 401
+
+    if not state.is_signed_in:
+        reason = getattr(state, "reason", None)
+        reason_name = getattr(reason, "name", None) or str(reason or "unknown")
+        print(f"Clerk authentication rejected the session: {reason_name}")
+        return jsonify({"ok": False, "error": "Clerk session is not signed in."}), 401
+
+    clerk_user_id = state.payload.get("sub")
+    if not clerk_user_id:
+        return jsonify({"ok": False, "error": "Clerk user identity is missing."}), 401
+
+    try:
+        clerk = Clerk(bearer_auth=secret_key)
+        clerk_user = clerk.users.get(user_id=clerk_user_id)
+        email = _get_clerk_user_email(clerk_user)
+    except Exception:
+        return jsonify({"ok": False, "error": "Unable to retrieve the Clerk user."}), 502
+
+    if not email or "@" not in email or len(email) > 320:
+        return jsonify({"ok": False, "error": "Clerk account does not have a usable email address."}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        user = User(
+            email=email,
+            # Clerk owns authentication for this account. Keep the existing local
+            # schema intact while preventing this account from having a usable
+            # locally-generated password.
+            password_hash=generate_password_hash(token_urlsafe(48)),
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    session.clear()
+    session["user_id"] = user.id
+    csrf_token()
+    has_transactions = scoped_transaction_query(Transaction.query).first() is not None
+    return jsonify({
+        "ok": True,
+        "user_id": user.id,
+        "has_transactions": has_transactions,
+    })
+
+
+@app.route("/clerk-sync")
+def clerk_sync_page():
+    next_url = safe_next_url(request.args.get("next"), "/dashboard")
+    return render_template("clerk_sync.html", next=next_url)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if current_user_id() is not None:
+        return redirect(url_for("dashboard1"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        next_url = safe_next_url(request.form.get("next"), "/get-started")
+
+        if not email or "@" not in email or len(email) > 320:
+            flash("Enter a valid email address.", "warning")
+            return render_template("auth.html", mode="register", next=next_url)
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "warning")
+            return render_template("auth.html", mode="register", next=next_url)
+
+        if User.query.filter_by(email=email).first():
+            flash("An account with that email already exists. Sign in instead.", "warning")
+            return redirect(url_for("login", next=next_url))
+
+        user = User(email=email, password_hash=generate_password_hash(password))
+        db.session.add(user)
+        db.session.commit()
+
+        session.clear()
+        session["user_id"] = user.id
+        csrf_token()
+        flash("Your personal workspace is ready.", "success")
+        return redirect(next_url)
+
+    return render_template("auth.html", mode="register", next=safe_next_url(request.args.get("next"), "/get-started"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user_id() is not None:
+        return redirect(url_for("dashboard1"))
+
+    next_url = safe_next_url(request.args.get("next") or request.form.get("next"), "/dashboard")
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(email=email).first()
+
+        if not user or not check_password_hash(user.password_hash, password):
+            flash("Email or password is incorrect.", "danger")
+            return render_template("auth.html", mode="login", next=next_url)
+
+        session.clear()
+        session["user_id"] = user.id
+        csrf_token()
+        flash("Welcome back.", "success")
+        if not scoped_transaction_query(Transaction.query).first():
+            return redirect(url_for("get_started"))
+        return redirect(next_url)
+
+    return render_template("auth.html", mode="login", next=next_url)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    flash("You have been signed out.", "success")
+    return redirect(url_for("home"))
+
+
+@app.route("/get-started")
+@login_required
+def get_started():
+    has_transactions = scoped_transaction_query(Transaction.query).first() is not None
+    if has_transactions:
+        return redirect(url_for("dashboard1"))
+    return render_template("get_started.html")
+
+
+@app.route("/submit_expense", methods=["POST"])
+@login_required
+def submit():
+    try:
+        merchant_name = request.form.get("merchant_name")
+        amount = request.form.get("amount")
+        notes = request.form.get("notes")
+        payment_method = request.form.get("payment_method")
+
+        if not merchant_name or not amount:
+            raise ValueError("Merchant and amount are required.")
+
+        parsed_amount = float(amount)
+        if parsed_amount <= 0:
+            raise ValueError("Amount must be greater than zero.")
+
+        transaction = Transaction(
+            merchant_name=merchant_name.strip(),
+            amount=parsed_amount,
+            category=None,
+            notes=notes,
+            payment_method=payment_method,
+            user_id=current_user_id(),
+        )
+
+        db.session.add(transaction)
+        db.session.commit()
+
+        flash("Transaction added successfully.", "success")
+        return redirect(f"/simulateATransaction?new_id={transaction.id}")
+    except Exception:
+        flash("Something went wrong.", "danger")
+
+    return redirect("/simulateATransaction")
+
+
+@app.post("/feedback")
+@login_required
+def submit_feedback():
+    rating = request.form.get("rating", type=int)
+    message = (request.form.get("message") or "").strip()
+    page = (request.form.get("page") or "").strip()[:255]
+
+    if rating is not None and not 1 <= rating <= 5:
+        flash("Please choose a valid rating.", "warning")
+        return redirect(url_for("dashboard1"))
+
+    if not message or len(message) > 2000:
+        flash("Please enter feedback between 1 and 2000 characters.", "warning")
+        return redirect(url_for("dashboard1"))
+
+    feedback = Feedback(
+        user_id=current_user_id(),
+        rating=rating,
+        message=message,
+        page=page or None,
+    )
+
+    db.session.add(feedback)
+    db.session.commit()
+
+    flash("Thanks for your feedback!", "success")
+    return redirect(url_for("dashboard1"))
+
+
+@app.route("/")
+def home():
+    allTransactions = scoped_transaction_query(Transaction.query).all()
+    return render_template("index.html", allTransactions=allTransactions)
+
+@app.route("/simulateATransaction", methods=["POST", "GET"])
+def simulate_transaction():
+    allTransactions = (
+        scoped_transaction_query(Transaction.query)
+        .order_by(Transaction.date.desc())
+        .limit(10)
+        .all()
+    )
+    flash_messages = get_flashed_messages(with_categories=True)
+    new_id = request.args.get('new_id')
+    return render_template(
+        "index2.html",
+        allTransactions=allTransactions,
+        flash_messages=flash_messages,
+        new_id=new_id,
+    )
+
+
+@app.route("/dashboard")
+@app.route("/dashboard/<int:month>")
+def dashboard1(month=None):
+    curr_month = datetime.now().month
+    curr_year = datetime.now().year
+    if month is not None:
+        normalized_month = normalize_month(month)
+        if normalized_month is None:
+            return redirect("/dashboard")
+        curr_month = normalized_month
+
+    latest_tx_current_year = (
+        scoped_transaction_query(Transaction.query).filter(db.extract('year', Transaction.date) == curr_year)
+        .order_by(Transaction.date.desc())
+        .first()
+    )
+    if latest_tx_current_year and getattr(latest_tx_current_year, 'date', None):
+        latest_month_for_dropdown = latest_tx_current_year.date.month
+    else:
+        latest_month_for_dropdown = curr_month
+
+    months = [
+        {"num": i, "name": month_name[i]} for i in range(1, latest_month_for_dropdown + 1)
+    ]
+
+    search_query = request.args.get("q", "").strip()
+    month_transaction_query = build_transaction_query(curr_month, curr_year)
+    transaction_query = build_transaction_query(curr_month, curr_year, search_query)
+
+    total_expense = (
+        month_transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
+        or 0
+    )
+    total_transactions = month_transaction_query.count()
+    top_category, top_category_amount = get_top_category_for_query(month_transaction_query)
+    average_expense = total_expense / total_transactions if total_transactions else 0
+    analytics = get_spending_analytics(month_transaction_query)
+
+    category_data = (
+        transaction_query.with_entities(
+            Transaction.category, db.func.sum(Transaction.amount)
+        )
+        .group_by(Transaction.category)
+        .all()
+    )
+    month_category_totals = get_category_totals_for_query(month_transaction_query)
+
+    transactions = transaction_query.order_by(Transaction.date.desc()).all()
+    filtered_total_expense = (
+        transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar() or 0
+    )
+    filtered_total_transactions = transaction_query.count()
+    filtered_top_category, filtered_top_category_amount = get_top_category_for_query(
+        transaction_query
+    )
+
+    prev_month, prev_year = get_previous_month(curr_month, curr_year)
+    previous_month_transaction_query = build_transaction_query(prev_month, prev_year)
+    previous_transaction_query = build_transaction_query(
+        prev_month,
+        prev_year,
+        search_query,
+    )
+    previous_month_total_expense = (
+        previous_month_transaction_query.with_entities(
+            db.func.sum(Transaction.amount)
+        ).scalar()
+        or 0
+    )
+    prev_month_Transaction_amount = previous_month_total_expense
+    filtered_previous_total_expense = (
+        previous_transaction_query.with_entities(db.func.sum(Transaction.amount)).scalar()
+        or 0
+    )
+    previous_total_transactions = previous_transaction_query.count()
+    previous_top_category, _ = get_top_category_for_query(previous_transaction_query)
+    previous_month_category_totals = get_category_totals_for_query(
+        previous_month_transaction_query
+    )
+
+    merchant_counts: dict[str, int] = {}
+    merchant_amounts: dict[str, float] = {}
+    weekend_spend = 0.0
+    weekday_spend = 0.0
+
+    for t in transactions:
+        name = t.merchant_name or "N/A"
+        amt = float(t.amount or 0)
+        merchant_counts[name] = merchant_counts.get(name, 0) + 1
+        merchant_amounts[name] = merchant_amounts.get(name, 0.0) + amt
+        if getattr(t, "date", None) and getattr(t, "date").weekday() >= 5:
+            weekend_spend += amt
+        else:
+            weekday_spend += amt
+
+    month_merchant_counts: dict[str, int] = {}
+    month_weekend_spend = 0.0
+    month_transactions = month_transaction_query.order_by(Transaction.date.desc()).all()
+    previous_month_transactions = (
+        previous_month_transaction_query.order_by(Transaction.date.desc()).all()
+    )
+    for t in month_transactions:
+        name = t.merchant_name or "N/A"
+        amt = float(t.amount or 0)
+        month_merchant_counts[name] = month_merchant_counts.get(name, 0) + 1
+        if getattr(t, "date", None) and getattr(t, "date").weekday() >= 5:
+            month_weekend_spend += amt
+
+    most_frequent_merchant_count = (
+        max(month_merchant_counts.values()) if month_merchant_counts else 0
+    )
+    most_frequent_merchant_ratio = (
+        (most_frequent_merchant_count / total_transactions) if total_transactions else 0
+    )
+
+    month_weekend_spending_ratio = (
+        (month_weekend_spend / total_expense) if total_expense else 0
+    )
+    weekend_spending_ratio = (
+        (weekend_spend / filtered_total_expense) if filtered_total_expense else 0
+    )
+    small_tx_count = sum(1 for t in transactions if float(t.amount or 0) < 100)
+    small_tx_ratio = (
+        (small_tx_count / filtered_total_transactions)
+        if filtered_total_transactions
+        else 0
+    )
+    largest_transaction = max(
+        transactions,
+        key=lambda transaction: float(transaction.amount or 0),
+        default=None,
+    )
+
+    days_in_month = monthrange(curr_year, curr_month)[1]
+    previous_days_in_month = monthrange(prev_year, prev_month)[1]
+    number_of_weeks = (days_in_month + 6) // 7
+    weekly_totals = [0.0] * number_of_weeks
+    for t in transactions:
+        if getattr(t, "date", None):
+            day = getattr(t, "date").day
+            week_index = min((day - 1) // 7, number_of_weeks - 1)
+            weekly_totals[week_index] += float(t.amount or 0)
+
+    weekly_labels = [f"Week {i + 1}" for i in range(number_of_weeks)]
+    weekly_values = [round(value, 2) for value in weekly_totals]
+
+    weekly_spending_data = [
+        {
+            "week": weekly_labels[i],
+            "total": weekly_values[i],
+            "range": f"{i*7+1}-{min((i+1)*7, days_in_month)}",
+        }
+        for i in range(number_of_weeks)
+    ]
+
+    insight_context = {
+        "transactions": transactions,
+        "total_expense": float(filtered_total_expense or 0),
+        "total_transactions": filtered_total_transactions,
+        "top_category": filtered_top_category,
+        "top_category_amount": float(filtered_top_category_amount or 0),
+        "merchant_counts": merchant_counts,
+        "merchant_amounts": merchant_amounts,
+        "largest_transaction": largest_transaction,
+        "weekend_spending_ratio": weekend_spending_ratio,
+        "small_tx_count": small_tx_count,
+        "small_tx_ratio": small_tx_ratio,
+        "calendar_avg_daily_spend": (float(filtered_total_expense or 0) / days_in_month),
+    }
+    key_insights = build_key_insights(insight_context)
+    month_largest_transaction = max(
+        month_transactions,
+        key=lambda transaction: float(transaction.amount or 0),
+        default=None,
+    )
+    month_merchant_amounts: dict[str, float] = {}
+    for t in month_transactions:
+        name = t.merchant_name or "N/A"
+        month_merchant_amounts[name] = month_merchant_amounts.get(name, 0.0) + float(
+            t.amount or 0
+        )
+    month_insight_context = {
+        "transactions": month_transactions,
+        "total_expense": float(total_expense or 0),
+        "total_transactions": total_transactions,
+        "top_category": top_category,
+        "top_category_amount": float(top_category_amount or 0),
+        "merchant_counts": month_merchant_counts,
+        "merchant_amounts": month_merchant_amounts,
+        "largest_transaction": month_largest_transaction,
+        "weekend_spending_ratio": month_weekend_spending_ratio,
+        "small_tx_count": sum(
+            1 for t in month_transactions if float(t.amount or 0) < 100
+        ),
+        "small_tx_ratio": (
+            sum(1 for t in month_transactions if float(t.amount or 0) < 100)
+            / total_transactions
+            if total_transactions
+            else 0
+        ),
+        "calendar_avg_daily_spend": (float(total_expense or 0) / days_in_month),
+    }
+    financial_insight_fallbacks = build_key_insights(month_insight_context)
+    try:
+        financial_insights = build_structured_financial_insight_cards(
+            month_transactions,
+            previous_month_transactions,
+            fallback_insights=financial_insight_fallbacks,
+        )
+    except Exception:
+        financial_insights = []
+    if not financial_insights:
+        financial_insights = financial_insight_fallbacks
+
+    month_comparison_summary = build_month_comparison_summary(
+        current_total_expense=float(filtered_total_expense or 0),
+        current_total_transactions=filtered_total_transactions,
+        current_top_category=filtered_top_category,
+        current_days_in_month=days_in_month,
+        previous_total_expense=float(filtered_previous_total_expense or 0),
+        previous_total_transactions=previous_total_transactions,
+        previous_top_category=previous_top_category,
+        previous_days_in_month=previous_days_in_month,
+    )
+
+    financial_pulse = generate_financial_pulse(
+        current_month_spending=total_expense,
+        last_month_spending=prev_month_Transaction_amount,
+        top_category=top_category,
+        top_category_spending=top_category_amount,
+        largest_transaction=analytics["largest_transaction"],
+        total_transactions=total_transactions,
+        most_frequent_merchant_count=most_frequent_merchant_count,
+        most_frequent_merchant_ratio=most_frequent_merchant_ratio,
+        weekend_spending_ratio=month_weekend_spending_ratio,
+        avg_daily_spend=analytics.get("avg_daily_spend"),
+    )
+    financial_pulse_summary = build_financial_pulse_summary(
+        financial_pulse=financial_pulse,
+        current_total=float(total_expense or 0),
+        previous_total=float(prev_month_Transaction_amount or 0),
+        current_category_totals=month_category_totals,
+        previous_category_totals=previous_month_category_totals,
+    )
+
+    labels = [row[0] for row in category_data]
+    values = [float(row[1]) for row in category_data]
+
+    trend_data = (
+        scoped_transaction_query(Transaction.query)
+        .with_entities(
+            db.extract("year", Transaction.date).label("year"),
+            db.extract("month", Transaction.date).label("month"),
+            db.func.sum(Transaction.amount),
+        )
+        .group_by("year", "month")
+        .order_by("year", "month")
+        .all()
+    )
+
+    trend_labels = [f"{int(row[0]):04d}-{int(row[1]):02d}" for row in trend_data]
+    trend_values = [float(row[2]) for row in trend_data]
+
+    curr_month_name = datetime(curr_year, curr_month, 1).strftime("%B")
+    flash_messages = get_flashed_messages(with_categories=True)
+    show_charts = filtered_total_transactions > 0
+    return render_template(
+        "dashboard.html",
+        total_expense=total_expense,
+        total_transactions=total_transactions,
+        month_spending=total_expense,
+        top_category=top_category,
+        average_expense=round(average_expense,2),
+        chart_labels=labels,
+        chart_values=values,
+        transactions=transactions,
+        search_query=search_query,
+        curr_month=curr_month,
+        curr_month_name=curr_month_name,
+        trend_labels=trend_labels,
+        trend_values=trend_values,
+        analytics=analytics,
+        financial_pulse=financial_pulse,
+        financial_pulse_summary=financial_pulse_summary,
+        prev_month_Transaction_amount = prev_month_Transaction_amount,
+        key_insights=key_insights,
+        financial_insights=financial_insights,
+        month_comparison_summary=month_comparison_summary,
+        weekly_labels=weekly_labels,
+        weekly_values=weekly_values,
+        weekly_spending_data=weekly_spending_data,
+        flash_messages=flash_messages,
+        months=months,
+        show_charts=show_charts,
+    )
+
+
+@app.route("/delete/<int:id>", methods=["POST"])
+@login_required
+def delete_transaction(id):
+    next_url = safe_next_url(request.form.get("next") or request.args.get("next"), "/simulateATransaction")
+
+    transaction = scoped_transaction_query(Transaction.query).filter_by(id=id).first()
+    if not transaction:
+        flash("Unable to delete transaction.", "danger")
+        return redirect(next_url)
+
+    try:
+        db.session.delete(transaction)
+        db.session.commit()
+        flash("Transaction deleted successfully.", "success")
+    except Exception:
+        flash("Unable to delete transaction.", "danger")
+
+    return redirect(next_url)
+
+
+@app.route("/update/<int:id>", methods=["GET", "POST"])
+@login_required
+def update_transaction(id):
+    next_url = safe_next_url(request.args.get("next") or request.form.get("next"), "/simulateATransaction")
+
+    transaction = scoped_transaction_query(Transaction.query).filter_by(id=id).first()
+    if not transaction:
+        flash("Unable to update transaction.", "danger")
+        return redirect(next_url)
+
+    if request.method == "POST":
+        try:
+            transaction.merchant_name = request.form.get("merchant_name")
+            transaction.amount = float(request.form.get("amount"))
+            transaction.notes = request.form.get("notes")
+            transaction.payment_method = request.form.get("payment_method")
+            transaction.category = None
+
+            db.session.commit()
+            flash("Transaction updated successfully.", "success")
+        except Exception:
+            flash("Unable to update transaction.", "danger")
+        return redirect(next_url)
+
+    flash_messages = get_flashed_messages(with_categories=True)
+    return render_template("update.html", transaction=transaction, next=next_url, flash_messages=flash_messages)
+
+
+@app.route("/export/<int:month>")
+@login_required
+def exportCSV(month=None):
+    normalized_month = normalize_month(month)
+    if normalized_month is None:
+        return redirect("/dashboard")
+
+    curr_month = normalized_month
+    curr_year = datetime.now().year
+    search_query = request.args.get("q", "").strip()
+
+    arrayMonths = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+
+    transaction_query = build_transaction_query(curr_month, curr_year, search_query)
+    transactions = transaction_query.order_by(Transaction.date.desc()).all()
+
+    total_transactions = len(transactions)
+    total_amount = sum(t.amount for t in transactions)
+
+    export_date = datetime.now().strftime("%d-%b-%Y")
+    month_name = datetime(curr_year, curr_month, 1).strftime("%B")
+
+    output = io.StringIO(newline="")
+    csv_writer = csv.writer(output)
+    csv_writer.writerow(["Smart Spend AI - Expense Report"])
+    csv_writer.writerow([])
+    csv_writer.writerow(["Export Date", export_date])
+    csv_writer.writerow(["Month", month_name])
+    csv_writer.writerow(["Category", "All Categories"])
+    csv_writer.writerow(["Search", safe_csv_cell(search_query) if search_query else "None"])
+    csv_writer.writerow(["Total Transactions", total_transactions])
+    csv_writer.writerow(["Total Amount", f"₹{total_amount:.2f}"])
+    csv_writer.writerow([])
+    csv_writer.writerow(["S.No", "Date", "Merchant Name", "Category", "Amount", "Payment Method", "Notes"])
+    for index, transaction in enumerate(transactions, start=1):
+        csv_writer.writerow([
+            index,
+            transaction.date,
+            safe_csv_cell(transaction.merchant_name),
+            safe_csv_cell(transaction.category),
+            transaction.amount,
+            safe_csv_cell(transaction.payment_method),
+            safe_csv_cell(transaction.notes),
+        ])
+
+    response = app.response_class(response=output.getvalue(), status=200, mimetype="text/csv")
+    filename_suffix = "_filtered" if search_query else ""
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename=SmartSpend_{arrayMonths[curr_month - 1]}_{curr_year}{filename_suffix}.csv"
+    )
+    return response
+
+
+ensure_beta_schema()
+
+if __name__ == "__main__":
+    ensure_beta_schema()
+        
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False)
