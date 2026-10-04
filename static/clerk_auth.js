@@ -31,6 +31,33 @@
     return atob(encoded).slice(0, -1);
   }
 
+  function wait(milliseconds) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, milliseconds);
+    });
+  }
+
+  async function getSessionTokenWithRetry(clerk) {
+    var attempts = 8;
+
+    for (var attempt = 0; attempt < attempts; attempt += 1) {
+      if (clerk.isSignedIn && clerk.session) {
+        try {
+          var token = await clerk.session.getToken({ skipCache: attempt > 0 });
+          if (token) return token;
+        } catch (error) {
+          console.warn("Clerk session token attempt failed:", error);
+        }
+      }
+
+      if (attempt < attempts - 1) {
+        await wait(400);
+      }
+    }
+
+    return null;
+  }
+
   async function loadClerk() {
     if (window.Clerk && window.Clerk.loaded) return window.Clerk;
 
@@ -84,7 +111,7 @@
         var callbackUrl = window.location.origin + "/clerk-sync?next=" + encodeURIComponent(next);
 
         if (clerk.isSignedIn && clerk.session) {
-          var existingToken = await clerk.session.getToken();
+          var existingToken = await getSessionTokenWithRetry(clerk);
           if (!existingToken) throw new Error("Unable to obtain the existing Clerk session token.");
 
           var existingResponse = await fetch("/auth/clerk/sync", {
@@ -145,11 +172,7 @@
         status.textContent = "Finishing sign-in…";
         var clerk = await loadClerk();
 
-        if (!clerk.isSignedIn || !clerk.session) {
-          throw new Error("No active Clerk session.");
-        }
-
-        var token = await clerk.session.getToken();
+        var token = await getSessionTokenWithRetry(clerk);
         if (!token) {
           throw new Error("Unable to obtain a Clerk session token.");
         }
@@ -172,7 +195,8 @@
         window.location.replace(destination);
       } catch (error) {
         console.error("Clerk session sync failed:", error);
-        status.textContent = "We couldn't finish Google sign-in.";
+        var safeMessage = error && error.message ? error.message : "We couldn't finish Google sign-in.";
+        status.textContent = safeMessage;
         var retry = document.getElementById("clerk-sync-retry");
         if (retry) retry.hidden = false;
       }
