@@ -1019,7 +1019,13 @@ def sync_clerk_session():
     secret_key = app.config.get("CLERK_SECRET_KEY")
     if not secret_key:
         return jsonify({"ok": False, "error": "Clerk is not configured on the server."}), 503
-
+    authorization = request.headers.get("Authorization")
+    print(
+        "Clerk auth diagnostic:",
+        "authorization_present=", bool(authorization),
+        "authorization_scheme=",
+        authorization.split(" ", 1)[0] if authorization else None,
+    )
     try:
         state = authenticate_request(
             request,
