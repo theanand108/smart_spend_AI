@@ -51,11 +51,12 @@ def _recreate_import_indexes(bind: Any) -> None:
     """Create user-scoped dedupe indexes using the active database dialect."""
     received_money, statement_import_records = _import_tables()
 
-    for index_name in (
-        "ux_received_money_source_transaction",
-        "ux_statement_import_source_transaction",
-    ):
-        bind.exec_driver_sql(f"DROP INDEX IF EXISTS {index_name}")
+    with bind.connect() as connection:
+        for index_name in (
+            "ux_received_money_source_transaction",
+            "ux_statement_import_source_transaction",
+        ):
+            connection.exec_driver_sql(f"DROP INDEX IF EXISTS {index_name}")
 
     Index(
         "ux_received_money_source_transaction",
