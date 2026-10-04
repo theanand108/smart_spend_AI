@@ -48,34 +48,40 @@ def _import_tables() -> tuple[Table, Table]:
 
 
 def _recreate_import_indexes(bind: Any) -> None:
-    """Create user-scoped dedupe indexes using the active database dialect."""
+    """Rebuild user-scoped dedupe indexes in one committed DB transaction."""
     received_money, statement_import_records = _import_tables()
 
-    with bind.connect() as connection:
+    # PostgreSQL transactional DDL is important here. The previous
+    # implementation used ``with bind.connect()`` for the DROP statements,
+    # which could leave the DROP inside an uncommitted transaction. The later
+    # CREATE would then run on another connection and fail with "relation
+    # already exists" in production. Keep DROP + CREATE on the same connection
+    # and commit them together.
+    with bind.begin() as connection:
         for index_name in (
             "ux_received_money_source_transaction",
             "ux_statement_import_source_transaction",
         ):
             connection.exec_driver_sql(f"DROP INDEX IF EXISTS {index_name}")
 
-    Index(
-        "ux_received_money_source_transaction",
-        received_money.c.source,
-        received_money.c.source_transaction_id,
-        received_money.c.user_id,
-        unique=True,
-        sqlite_where=received_money.c.source_transaction_id.is_not(None),
-        postgresql_where=received_money.c.source_transaction_id.is_not(None),
-    ).create(bind=bind)
-    Index(
-        "ux_statement_import_source_transaction",
-        statement_import_records.c.source,
-        statement_import_records.c.source_transaction_id,
-        statement_import_records.c.user_id,
-        unique=True,
-        sqlite_where=statement_import_records.c.source_transaction_id.is_not(None),
-        postgresql_where=statement_import_records.c.source_transaction_id.is_not(None),
-    ).create(bind=bind)
+        Index(
+            "ux_received_money_source_transaction",
+            received_money.c.source,
+            received_money.c.source_transaction_id,
+            received_money.c.user_id,
+            unique=True,
+            sqlite_where=received_money.c.source_transaction_id.is_not(None),
+            postgresql_where=received_money.c.source_transaction_id.is_not(None),
+        ).create(bind=connection)
+        Index(
+            "ux_statement_import_source_transaction",
+            statement_import_records.c.source,
+            statement_import_records.c.source_transaction_id,
+            statement_import_records.c.user_id,
+            unique=True,
+            sqlite_where=statement_import_records.c.source_transaction_id.is_not(None),
+            postgresql_where=statement_import_records.c.source_transaction_id.is_not(None),
+        ).create(bind=connection)
 
 
 def ensure_import_tables(session: Any) -> None:
@@ -92,8 +98,8 @@ def ensure_import_tables(session: Any) -> None:
             session.execute(text(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER"))
 
     # Rebuild the dedupe indexes so the same provider transaction is scoped to
-    # the current user. The previous SQLite-only partial-index SQL is replaced
-    # by SQLAlchemy-generated SQL for both supported database dialects.
+    # the current user. The rebuild is committed atomically so PostgreSQL does
+    # not retain the old index after the DROP connection closes.
     _recreate_import_indexes(bind)
     session.flush()
 
