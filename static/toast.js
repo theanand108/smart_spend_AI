@@ -113,3 +113,125 @@ document.addEventListener('DOMContentLoaded', function () {
       // The dashboard remains fully usable if the intelligence review request fails.
     });
 });
+
+// Smart Spend AI uses a Flask logout endpoint for the application session and
+// Clerk for the browser authentication session. Keep both in sync while using
+// the same confirmation UX as destructive transaction actions.
+document.addEventListener('DOMContentLoaded', function () {
+  const logoutForm = document.querySelector('form[action="/logout"]');
+  if (!logoutForm) return;
+
+  const logoutSubmitButton = logoutForm.querySelector('button[type="submit"]');
+  if (!logoutSubmitButton) return;
+
+  const modalId = 'logoutConfirmModal';
+  let modalElement = document.getElementById(modalId);
+
+  if (!modalElement) {
+    modalElement = document.createElement('div');
+    modalElement.className = 'modal fade';
+    modalElement.id = modalId;
+    modalElement.tabIndex = -1;
+    modalElement.setAttribute('aria-labelledby', 'logoutConfirmModalLabel');
+    modalElement.setAttribute('aria-hidden', 'true');
+    modalElement.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header border-0">
+            <h5 class="modal-title" id="logoutConfirmModalLabel">Sign out</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-0">Are you sure you want to sign out?</p>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" id="confirm-logout-button" class="btn btn-danger">Sign out</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modalElement);
+  }
+
+  const confirmLogoutButton = modalElement.querySelector('#confirm-logout-button');
+  if (!confirmLogoutButton) return;
+
+  async function loadClerkForLogout() {
+    if (window.Clerk && window.Clerk.loaded) return window.Clerk;
+
+    const publishableKey = document.body.getAttribute('data-clerk-publishable-key');
+    if (!publishableKey) return null;
+
+    const encoded = publishableKey.split('_')[2];
+    if (!encoded) throw new Error('Invalid Clerk publishable key.');
+
+    const domain = atob(encoded).slice(0, -1);
+
+    if (!window.__ssaiLogoutClerkLoading) {
+      window.__ssaiLogoutClerkLoading = new Promise(function (resolve, reject) {
+        const script = document.createElement('script');
+        script.src = 'https://' + domain + '/npm/@clerk/clerk-js@6/dist/clerk.browser.js';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.setAttribute('data-clerk-publishable-key', publishableKey);
+        script.onload = resolve;
+        script.onerror = function () {
+          reject(new Error('Unable to load Clerk.'));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    await window.__ssaiLogoutClerkLoading;
+
+    if (!window.Clerk || typeof window.Clerk.load !== 'function') {
+      throw new Error('ClerkJS failed to initialize.');
+    }
+
+    if (!window.Clerk.loaded) {
+      await window.Clerk.load({
+        signInUrl: window.location.origin + '/login',
+        signUpUrl: window.location.origin + '/register',
+      });
+    }
+
+    return window.Clerk;
+  }
+
+  async function clearClerkSession() {
+    const clerk = await loadClerkForLogout();
+    if (!clerk || typeof clerk.signOut !== 'function') return;
+
+    // Explicitly clear the active Clerk session. The Flask logout still runs
+    // afterward even if Clerk is temporarily unavailable.
+    if (clerk.isSignedIn || clerk.session) {
+      await clerk.signOut();
+    }
+  }
+
+  logoutSubmitButton.type = 'button';
+
+  logoutSubmitButton.addEventListener('click', function (event) {
+    event.preventDefault();
+
+    if (window.bootstrap && bootstrap.Modal) {
+      bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    }
+  });
+
+  confirmLogoutButton.addEventListener('click', async function () {
+    confirmLogoutButton.disabled = true;
+    confirmLogoutButton.textContent = 'Signing out…';
+
+    try {
+      await clearClerkSession();
+    } catch (error) {
+      // Never leave the SSAI session active because Clerk was unavailable.
+      // The server-side logout remains the authoritative application logout.
+      console.warn('Clerk sign-out failed; continuing with SSAI logout:', error);
+    }
+
+    logoutForm.submit();
+  });
+});
