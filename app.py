@@ -55,6 +55,13 @@ app.config["CLERK_AUTHORIZED_PARTIES"] = [
     if part.strip()
 ]
 
+# Render exposes the canonical public HTTPS origin at runtime. Always include
+# it in Clerk's authorized-party allow-list so a stale/local-only
+# CLERK_AUTHORIZED_PARTIES value cannot reject production session tokens.
+render_external_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+if render_external_url and render_external_url not in app.config["CLERK_AUTHORIZED_PARTIES"]:
+    app.config["CLERK_AUTHORIZED_PARTIES"].append(render_external_url)
+
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
