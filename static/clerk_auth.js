@@ -40,9 +40,7 @@
   async function refreshActiveSession(clerk) {
     if (clerk.isSignedIn && clerk.session) return clerk.session;
 
-    // OAuth can finish in another window before this Clerk instance has
-    // refreshed its client resource. Reload it before declaring the session
-    // missing.
+    // OAuth can finish before this Clerk instance has refreshed its client.
     if (clerk.client && typeof clerk.client.reload === "function") {
       try {
         await clerk.client.reload();
@@ -56,9 +54,6 @@
     var client = clerk.client;
     if (!client) return null;
 
-    // If Clerk created a signed-in session but did not select it as active,
-    // explicitly select the newest completed session. This is especially
-    // important when returning from OAuth in a popup/redirect flow.
     var sessions = client.signedInSessions || [];
     var candidate = null;
 
@@ -153,6 +148,7 @@
 
     var response = await fetch("/auth/clerk/sync", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Authorization": "Bearer " + token,
         "X-CSRF-Token": (document.querySelector('input[name="_csrf_token"]') || {}).value || "",
@@ -180,60 +176,13 @@
         var clerk = await loadClerk();
         var next = googleButton.getAttribute("data-next") || "/dashboard";
         var authMode = googleButton.getAttribute("data-auth-mode") || "login";
-        var syncing = false;
-        var unsubscribe = null;
-        var pollTimer = null;
-        var pollStartedAt = Date.now();
 
-        async function finishWithSession() {
-          if (syncing) return;
-          var session = await refreshActiveSession(clerk);
-          if (!session) return;
-
-          syncing = true;
-          if (unsubscribe) unsubscribe();
-          if (pollTimer) window.clearInterval(pollTimer);
-          googleButton.innerHTML = "Finishing sign-in…";
-
-          try {
-            await syncCurrentClerkSession(clerk, next);
-          } catch (error) {
-            console.error("Clerk session sync failed:", error);
-            syncing = false;
-            googleButton.disabled = false;
-            googleButton.innerHTML = originalText;
-            if (typeof showToast === "function") {
-              showToast(error.message || "Unable to finish sign-in.", "warning");
-            }
-          }
-        }
-
-        unsubscribe = clerk.addListener(function (emission) {
-          if (emission && emission.session) {
-            finishWithSession();
-          }
-        }, { skipInitialEmit: true });
-
-        if (clerk.isSignedIn && clerk.session) {
-          await finishWithSession();
-          return;
-        }
-
-        // Keep checking the Clerk client while the OAuth popup is open. This
-        // covers browsers where the popup completes authentication but the
-        // parent window receives the client/session update slightly later.
-        pollTimer = window.setInterval(function () {
-          if (Date.now() - pollStartedAt > 30000) {
-            window.clearInterval(pollTimer);
-            pollTimer = null;
-            return;
-          }
-          finishWithSession();
-        }, 750);
-
+        // Use Clerk's full-page OAuth redirect instead of a popup. This makes
+        // the OAuth callback and the __session cookie land in the same browser
+        // context that will perform the SSAI sync, avoiding popup/session races.
         if (authMode === "register") {
           clerk.openSignUp({
-            oauthFlow: "popup",
+            oauthFlow: "redirect",
             transferable: false,
             signInUrl: window.location.origin + "/login",
             forceRedirectUrl: window.location.origin + "/clerk-sync?next=" + encodeURIComponent(next),
@@ -242,7 +191,7 @@
           clerk.openSignIn({
             withSignUp: true,
             transferable: false,
-            oauthFlow: "popup",
+            oauthFlow: "redirect",
             signUpUrl: window.location.origin + "/register",
             forceRedirectUrl: window.location.origin + "/clerk-sync?next=" + encodeURIComponent(next),
           });
@@ -263,29 +212,74 @@
     (async function () {
       var status = document.getElementById("clerk-sync-status");
       var next = syncPage.getAttribute("data-next") || "/dashboard";
+      var csrfToken = syncPage.getAttribute("data-csrf-token") || "";
 
-      try {
-        status.textContent = "Checking your Clerk session…";
-        var clerk = await loadClerk();
-        var token = await getSessionTokenWithRetry(clerk);
-        if (!token) {
-          throw new Error("Clerk session is not signed in.");
-        }
-
+      async function syncUsingCookie() {
+        // On the same origin Clerk sends the __session cookie automatically.
+        // Prefer this path on the callback page: it removes the dependency on
+        // ClerkJS having already exposed the new session to JavaScript.
         var response = await fetch("/auth/clerk/sync", {
           method: "POST",
+          credentials: "same-origin",
           headers: {
-            "Authorization": "Bearer " + token,
-            "X-CSRF-Token": syncPage.getAttribute("data-csrf-token") || "",
+            "X-CSRF-Token": csrfToken,
             "Accept": "application/json",
           },
         });
         var data = await response.json().catch(function () { return {}; });
-        if (!response.ok || !data.ok) {
-          throw new Error(data.error || "Unable to create the SSAI session.");
+        return { response: response, data: data };
+      }
+
+      async function syncUsingBearer(clerk) {
+        var token = await getSessionTokenWithRetry(clerk);
+        if (!token) return null;
+
+        var response = await fetch("/auth/clerk/sync", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "X-CSRF-Token": csrfToken,
+            "Accept": "application/json",
+          },
+        });
+        var data = await response.json().catch(function () { return {}; });
+        return { response: response, data: data };
+      }
+
+      try {
+        status.textContent = "Checking your Clerk session…";
+
+        // First allow the browser/Clerk handshake a short window to establish
+        // the same-origin __session cookie, then authenticate server-side.
+        for (var attempt = 0; attempt < 8; attempt += 1) {
+          var cookieResult = await syncUsingCookie();
+          if (cookieResult.response.ok && cookieResult.data.ok) {
+            window.location.replace(cookieResult.data.has_transactions ? next : "/get-started");
+            return;
+          }
+
+          if (cookieResult.response.status !== 401) {
+            throw new Error(cookieResult.data.error || "Unable to create the SSAI session.");
+          }
+
+          if (attempt < 7) await wait(500);
         }
 
-        window.location.replace(data.has_transactions ? next : "/get-started");
+        // Fallback for browsers where Clerk's callback cookie is not yet
+        // visible to the backend: obtain the session token from ClerkJS and
+        // send it explicitly.
+        var clerk = await loadClerk();
+        var bearerResult = await syncUsingBearer(clerk);
+        if (bearerResult && bearerResult.response.ok && bearerResult.data.ok) {
+          window.location.replace(bearerResult.data.has_transactions ? next : "/get-started");
+          return;
+        }
+
+        throw new Error(
+          (bearerResult && bearerResult.data && bearerResult.data.error) ||
+          "Clerk session is not signed in."
+        );
       } catch (error) {
         console.error("Clerk session sync failed:", error);
         status.textContent = "We couldn't finish Google sign-in.";
