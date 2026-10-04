@@ -177,6 +177,16 @@
         var next = googleButton.getAttribute("data-next") || "/dashboard";
         var authMode = googleButton.getAttribute("data-auth-mode") || "login";
 
+        // Clerk is configured for a single session. If a previous Clerk
+        // session still exists while the SSAI session has expired, starting
+        // another sign-in would trigger Clerk's session_exists error. Reuse
+        // the existing verified session and synchronize it with SSAI instead.
+        var activeSession = await refreshActiveSession(clerk);
+        if (activeSession) {
+          await syncCurrentClerkSession(clerk, next);
+          return;
+        }
+
         // Use Clerk's full-page OAuth redirect instead of a popup. This makes
         // the OAuth callback and the __session cookie land in the same browser
         // context that will perform the SSAI sync, avoiding popup/session races.
