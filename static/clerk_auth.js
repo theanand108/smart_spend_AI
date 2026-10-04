@@ -98,6 +98,30 @@
     return window.Clerk;
   }
 
+  async function syncCurrentClerkSession(clerk, next) {
+    var token = await getSessionTokenWithRetry(clerk);
+    if (!token) {
+      throw new Error("Unable to obtain the Clerk session token.");
+    }
+
+    var response = await fetch("/auth/clerk/sync", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "X-CSRF-Token": (document.querySelector('input[name="_csrf_token"]') || {}).value || "",
+        "Accept": "application/json",
+      },
+    });
+
+    var data = await response.json().catch(function () { return {}; });
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "Unable to create the SSAI session.");
+    }
+
+    var destination = data.has_transactions ? next : "/get-started";
+    window.location.replace(destination);
+  }
+
   var googleButton = document.getElementById("clerk-google-button");
   if (googleButton) {
     googleButton.addEventListener("click", async function () {
@@ -108,46 +132,55 @@
       try {
         var clerk = await loadClerk();
         var next = googleButton.getAttribute("data-next") || "/dashboard";
-        var callbackUrl = window.location.origin + "/clerk-sync?next=" + encodeURIComponent(next);
+        var authMode = googleButton.getAttribute("data-auth-mode") || "login";
+        var syncing = false;
+        var unsubscribe = null;
 
-        if (clerk.isSignedIn && clerk.session) {
-          var existingToken = await getSessionTokenWithRetry(clerk);
-          if (!existingToken) throw new Error("Unable to obtain the existing Clerk session token.");
+        async function finishWithSession() {
+          if (syncing || !clerk.isSignedIn || !clerk.session) return;
+          syncing = true;
+          if (unsubscribe) unsubscribe();
+          googleButton.innerHTML = "Finishing sign-in…";
 
-          var existingResponse = await fetch("/auth/clerk/sync", {
-            method: "POST",
-            headers: {
-              "Authorization": "Bearer " + existingToken,
-              "X-CSRF-Token": (document.querySelector('input[name="_csrf_token"]') || {}).value || "",
-              "Accept": "application/json",
-            },
-          });
-          var existingData = await existingResponse.json().catch(function () { return {}; });
-          if (!existingResponse.ok || !existingData.ok) {
-            throw new Error(existingData.error || "Unable to create the SSAI session.");
+          try {
+            await syncCurrentClerkSession(clerk, next);
+          } catch (error) {
+            console.error("Clerk session sync failed:", error);
+            syncing = false;
+            googleButton.disabled = false;
+            googleButton.innerHTML = originalText;
+            if (typeof showToast === "function") {
+              showToast(error.message || "Unable to finish sign-in.", "warning");
+            }
           }
-          var existingDestination = existingData.has_transactions ? next : "/get-started";
-          window.location.replace(existingDestination);
+        }
+
+        // Do not redirect to /clerk-sync after OAuth. Keeping the OAuth flow
+        // in the originating page lets Clerk establish the session in the
+        // same browser context before we exchange its token with our backend.
+        unsubscribe = clerk.addListener(function (emission) {
+          if (emission && emission.session) {
+            finishWithSession();
+          }
+        }, { skipInitialEmit: true });
+
+        // This also handles a user who is already signed into Clerk but not
+        // yet signed into the SSAI application.
+        if (clerk.isSignedIn && clerk.session) {
+          await finishWithSession();
           return;
         }
 
-        var authMode = googleButton.getAttribute("data-auth-mode") || "login";
-
         if (authMode === "register") {
           clerk.openSignUp({
-            oauthFlow: "redirect",
-            forceRedirectUrl: callbackUrl,
-            signInForceRedirectUrl: callbackUrl,
-            signUpForceRedirectUrl: callbackUrl,
+            oauthFlow: "popup",
+            transferable: false,
           });
         } else {
           clerk.openSignIn({
             withSignUp: true,
             transferable: false,
-            oauthFlow: "redirect",
-            forceRedirectUrl: callbackUrl,
-            signInForceRedirectUrl: callbackUrl,
-            signUpForceRedirectUrl: callbackUrl,
+            oauthFlow: "popup",
           });
         }
       } catch (error) {
@@ -166,37 +199,20 @@
     (async function () {
       var status = document.getElementById("clerk-sync-status");
       var next = syncPage.getAttribute("data-next") || "/dashboard";
-      var csrf = syncPage.getAttribute("data-csrf-token");
 
+      // Backward-compatible handler for any old redirect links. New Google
+      // flows no longer depend on this page for the OAuth session handoff.
       try {
-        status.textContent = "Finishing sign-in…";
+        status.textContent = "Checking your Clerk session…";
         var clerk = await loadClerk();
-
-        var token = await getSessionTokenWithRetry(clerk);
-        if (!token) {
-          throw new Error("Unable to obtain a Clerk session token.");
+        if (!clerk.isSignedIn || !clerk.session) {
+          throw new Error("Clerk session is not signed in.");
         }
 
-        var response = await fetch("/auth/clerk/sync", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + token,
-            "X-CSRF-Token": csrf || "",
-            "Accept": "application/json",
-          },
-        });
-
-        var data = await response.json().catch(function () { return {}; });
-        if (!response.ok || !data.ok) {
-          throw new Error(data.error || "Unable to create the SSAI session.");
-        }
-
-        var destination = data.has_transactions ? next : "/get-started";
-        window.location.replace(destination);
+        await syncCurrentClerkSession(clerk, next);
       } catch (error) {
         console.error("Clerk session sync failed:", error);
-        var safeMessage = error && error.message ? error.message : "We couldn't finish Google sign-in.";
-        status.textContent = safeMessage;
+        status.textContent = "We couldn't finish Google sign-in.";
         var retry = document.getElementById("clerk-sync-retry");
         if (retry) retry.hidden = false;
       }
