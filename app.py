@@ -55,6 +55,13 @@ app.config["CLERK_AUTHORIZED_PARTIES"] = [
     if part.strip()
 ]
 
+# Render exposes the canonical public HTTPS origin at runtime. Always include
+# it in Clerk's authorized-party allow-list so a stale/local-only
+# CLERK_AUTHORIZED_PARTIES value cannot reject production session tokens.
+render_external_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+if render_external_url and render_external_url not in app.config["CLERK_AUTHORIZED_PARTIES"]:
+    app.config["CLERK_AUTHORIZED_PARTIES"].append(render_external_url)
+
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
@@ -1019,7 +1026,13 @@ def sync_clerk_session():
     secret_key = app.config.get("CLERK_SECRET_KEY")
     if not secret_key:
         return jsonify({"ok": False, "error": "Clerk is not configured on the server."}), 503
-
+    authorization = request.headers.get("Authorization")
+    print(
+        "Clerk auth diagnostic:",
+        "authorization_present=", bool(authorization),
+        "authorization_scheme=",
+        authorization.split(" ", 1)[0] if authorization else None,
+    )
     try:
         state = authenticate_request(
             request,
