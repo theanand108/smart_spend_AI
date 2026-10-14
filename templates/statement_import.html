@@ -9,7 +9,7 @@
       <p class="text-uppercase small fw-semibold text-primary mb-2">Import transactions</p>
       <h1 class="fw-bold mb-2">Bring your statement into Smart Spend AI</h1>
       <p class="text-muted mb-0">
-        Upload a PhonePe CSV or your original Google Pay transaction-statement PDF.
+        Upload a PhonePe CSV, your original Google Pay transaction-statement PDF, or a Paytm Excel export.
         Spending transactions will use SSAI's existing V2 intelligence; received money is tracked separately.
       </p>
     </div>
@@ -24,11 +24,11 @@
             type="file"
             id="statement"
             name="statement"
-            accept=".csv,.pdf"
+            accept=".csv,.pdf,.xlsx"
             required
           >
           <div class="form-text mt-2">
-            Supported: PhonePe CSV and Google Pay PDF. Generic structured CSV files are also accepted when their columns can be identified.
+            Supported: PhonePe CSV, Google Pay PDF, Paytm .xlsx, and generic structured CSV files when their columns can be identified.
           </div>
 
           <div class="row g-3 mt-4">
@@ -42,6 +42,15 @@
               <div class="border rounded-3 p-3 h-100">
                 <div class="fw-semibold mb-1">Google Pay PDF</div>
                 <div class="small text-muted">Use the original Google Pay statement PDF — no PDF-to-CSV conversion is required.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-12">
+              <div class="border rounded-3 p-3">
+                <div class="fw-semibold mb-1">Paytm Excel (.xlsx)</div>
+                <div class="small text-muted">Import the original Paytm Excel statement. Spending and received money are separated automatically, and UPI reference numbers help identify duplicates.</div>
               </div>
             </div>
           </div>
