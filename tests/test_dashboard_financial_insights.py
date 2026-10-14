@@ -84,6 +84,8 @@ def test_dashboard_renders_structured_financial_insights(dashboard_app):
     assert "+₹1,000" in html
     assert "Spending changed by ₹1,000 (100%)" in html
     assert "Education" in html
+    assert "What to consider:" in html
+    assert "Review recent transactions in Food &amp; Dining" in html
 
 
 def test_dashboard_preserves_v1_three_card_composition(dashboard_app):
