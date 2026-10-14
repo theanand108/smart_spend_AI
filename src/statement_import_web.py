@@ -21,7 +21,7 @@ from .statement_importer import parse_statement
 
 statement_import_bp = Blueprint("statement_import", __name__)
 
-ALLOWED_EXTENSIONS = {"csv", "pdf"}
+ALLOWED_EXTENSIONS = {"csv", "pdf", "xlsx"}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 REVIEW_CATEGORIES = (
     "Food & Dining",
@@ -168,12 +168,12 @@ def import_statement_page():
 
     uploaded = request.files.get("statement")
     if not uploaded or not uploaded.filename:
-        flash("Choose a PhonePe CSV or Google Pay PDF to import.", "warning")
+        flash("Choose a PhonePe CSV, Google Pay PDF, or Paytm Excel file to import.", "warning")
         return redirect(url_for("statement_import.import_statement_page"))
 
     filename = secure_filename(uploaded.filename)
     if not _allowed_filename(filename):
-        flash("Unsupported file type. Upload a CSV or PDF statement.", "danger")
+        flash("Unsupported file type. Upload a CSV, PDF, or XLSX statement.", "danger")
         return redirect(url_for("statement_import.import_statement_page"))
 
     try:
@@ -189,7 +189,7 @@ def import_statement_page():
         flash(str(exc), "danger")
         return redirect(url_for("statement_import.import_statement_page"))
     except Exception:
-        flash("Unable to read this statement. Make sure it is a supported PhonePe CSV or Google Pay PDF.", "danger")
+        flash("Unable to read this statement. Make sure it is a supported PhonePe CSV, Google Pay PDF, or Paytm Excel file.", "danger")
         return redirect(url_for("statement_import.import_statement_page"))
 
     db = current_app.extensions["statement_import_db"]
