@@ -237,9 +237,9 @@ def test_user_export_contains_only_their_transactions(dashboard_app):
 
 def test_category_distribution_is_sorted_by_spending_descending(dashboard_app):
     with dashboard_app.app_context():
-        add_transaction(8, 100, "Cafe", "Food & Dining")
-        add_transaction(8, 500, "Rent", "Housing / Rent")
-        add_transaction(8, 250, "Market", "Groceries")
+        add_transaction(8, 100, "Cafe", "Food & Dining", preserve_category=True)
+        add_transaction(8, 500, "Rent", "Housing / Rent", preserve_category=True)
+        add_transaction(8, 250, "Market", "Groceries", preserve_category=True)
         db.session.commit()
 
     with dashboard_app.test_client() as client:
