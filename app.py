@@ -414,8 +414,9 @@ def format_financial_insight_supporting_text(insight):
 
     if insight_type == "frequency_increase":
         return (
-            "Your average purchase amount remained relatively stable, so the "
-            "increase appears to be driven mainly by making purchases more often."
+            f"Total spending rose by {amount_text}. Your average purchase amount "
+            "remained relatively stable, so the increase appears to be driven "
+            "mainly by making purchases more often."
         )
 
     if insight_type in {"basket_size_increase", "average_transaction_increase"}:
