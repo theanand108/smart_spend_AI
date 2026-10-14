@@ -68,4 +68,4 @@ def test_statement_import_rejects_unsupported_extension():
         with client.session_transaction() as session:
             flashed = session.get("_flashes", [])
 
-    assert ("danger", "Unsupported file type. Upload a CSV or PDF statement.") in flashed
+    assert ("danger", "Unsupported file type. Upload a CSV, PDF, or XLSX statement.") in flashed
