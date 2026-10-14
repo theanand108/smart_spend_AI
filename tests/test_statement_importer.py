@@ -1,4 +1,8 @@
-from src.statement_importer import parse_google_pay_text, parse_phonepe_csv
+from io import BytesIO
+
+from openpyxl import Workbook
+
+from src.statement_importer import parse_google_pay_text, parse_phonepe_csv, parse_paytm_xlsx, parse_statement
 
 
 PHONEPE_SAMPLE = '''Transaction Statement for 6307183070
@@ -98,3 +102,59 @@ def test_gpay_converted_flat_csv_is_not_treated_as_a_supported_transaction_table
         assert "header" in str(exc).lower()
     else:
         raise AssertionError("A flattened PDF-to-CSV file should not be accepted as a structured CSV.")
+
+
+
+def _paytm_workbook_bytes():
+    workbook = Workbook()
+    workbook.active.title = "Summary"
+    sheet = workbook.create_sheet("Passbook Payment History")
+    sheet.append([
+        "Date", "Time", "Transaction Details", "Other Transaction Details (UPI ID or A/c No)",
+        "Your Account", "Amount", "UPI Ref No.", "Order ID", "Remarks", "Tags", "Comment",
+    ])
+    sheet.append(["17/04/2026", "19:09:56", "Received from One97 Communications Limited", "poweraccess.paytm3@axisbank", "Fino Payments Bank - 31", "+100.00", "827494321076", None, None, "# Money Received", None])
+    sheet.append(["16/04/2026", "22:10:12", "Cashback Received from One97 Communications Limited", "poweraccess.paytm3@axisbank", "Fino Payments Bank - 31", "+50.00", "650171861066", None, "Payment on Flipkart using UPI on Apr 01 2026", "# Cashback", None])
+    sheet.append(["04/04/2026", "18:23:48", "Recharge of Jio Mobile 6307183070", "paybil3066@ptybl on Paytm", "Fino Payments Bank - 31", "-299.00", "609442929881", "26848413096", None, "# Bill Payments", None])
+    sheet.append(["04/04/2026", "02:04:27", "Paid to Blinkit", "blinkit.rzp@hdfcbank", "Fino Payments Bank - 31", "-383.00", "609442100191", None, "PayviaRazorpay", "# Groceries", None])
+    sheet.append(["01/04/2026", "22:08:46", "Paid to Flipkart Payments", "paytm-56505013@ptybl on Paytm", "Fino Payments Bank - 31", "-186.00", "609169306754", None, None, "# Shopping", None])
+    output = BytesIO()
+    workbook.save(output)
+    workbook.close()
+    return output.getvalue()
+
+
+def test_paytm_xlsx_imports_debits_credits_and_reference_ids():
+    result = parse_paytm_xlsx(_paytm_workbook_bytes())
+
+    assert len(result.transactions) == 5
+    assert len(result.expenses) == 3
+    assert len(result.received) == 2
+    assert sum(t.amount for t in result.expenses) == 868
+    assert sum(t.amount for t in result.received) == 150
+    assert result.expenses[0].merchant_name == "Recharge of Jio Mobile 6307183070"
+    assert result.expenses[0].source_transaction_id == "609442929881"
+    assert result.expenses[0].source == "paytm"
+    assert result.received[1].merchant_name == "Cashback Received from One97 Communications Limited"
+    assert "Payment on Flipkart" in result.received[1].note
+
+
+def test_parse_statement_routes_xlsx_to_paytm_parser():
+    result = parse_statement("Paytm_UPI_Statement.xlsx", _paytm_workbook_bytes())
+    assert len(result.transactions) == 5
+    assert all(transaction.source == "paytm" for transaction in result.transactions)
+
+
+def test_paytm_xlsx_rejects_unrelated_workbook():
+    workbook = Workbook()
+    workbook.active.append(["hello", "world"])
+    output = BytesIO()
+    workbook.save(output)
+    workbook.close()
+
+    try:
+        parse_paytm_xlsx(output.getvalue())
+    except ValueError as exc:
+        assert "Paytm" in str(exc)
+    else:
+        raise AssertionError("An unrelated workbook should not be accepted as a Paytm statement.")
