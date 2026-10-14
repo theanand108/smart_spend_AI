@@ -51,18 +51,14 @@ def _recreate_import_indexes(bind: Any) -> None:
     """Rebuild user-scoped dedupe indexes in one committed DB transaction."""
     received_money, statement_import_records = _import_tables()
 
-    # PostgreSQL transactional DDL is important here. The previous
-    # implementation used ``with bind.connect()`` for the DROP statements,
-    # which could leave the DROP inside an uncommitted transaction. The later
-    # CREATE would then run on another connection and fail with "relation
-    # already exists" in production. Keep DROP + CREATE on the same connection
-    # and commit them together.
     with bind.begin() as connection:
         for index_name in (
             "ux_received_money_source_transaction",
             "ux_statement_import_source_transaction",
         ):
-            connection.exec_driver_sql(f"DROP INDEX IF EXISTS {index_name}")
+            connection.exec_driver_sql(
+                f"DROP INDEX IF EXISTS {index_name}"
+            )
 
         Index(
             "ux_received_money_source_transaction",
@@ -73,6 +69,7 @@ def _recreate_import_indexes(bind: Any) -> None:
             sqlite_where=received_money.c.source_transaction_id.is_not(None),
             postgresql_where=received_money.c.source_transaction_id.is_not(None),
         ).create(bind=connection)
+
         Index(
             "ux_statement_import_source_transaction",
             statement_import_records.c.source,
@@ -82,7 +79,6 @@ def _recreate_import_indexes(bind: Any) -> None:
             sqlite_where=statement_import_records.c.source_transaction_id.is_not(None),
             postgresql_where=statement_import_records.c.source_transaction_id.is_not(None),
         ).create(bind=connection)
-
 
 def ensure_import_tables(session: Any) -> None:
     """Create or migrate the small import-only tables for SQLite/PostgreSQL."""

@@ -12,7 +12,7 @@ import csv
 import io
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, time
 
 
 @dataclass(frozen=True)
@@ -207,6 +207,125 @@ def parse_phonepe_csv(text: str) -> StatementImportResult:
     return parse_csv_text(text, source="phonepe")
 
 
+def _parse_paytm_datetime(date_value: object, time_value: object) -> datetime:
+    """Parse Paytm date/time cells whether they are text or Excel-native values."""
+    if isinstance(date_value, datetime):
+        parsed_date = date_value.date()
+    elif isinstance(date_value, date):
+        parsed_date = date_value
+    else:
+        parsed_date = None
+
+    if isinstance(time_value, datetime):
+        parsed_time = time_value.time()
+    elif isinstance(time_value, time):
+        parsed_time = time_value
+    else:
+        parsed_time = None
+
+    if parsed_date is not None:
+        return datetime.combine(parsed_date, parsed_time or time.min)
+
+    date_text = _clean(date_value)
+    time_text = _clean(time_value)
+    for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(f"{date_text} {time_text}".strip(), fmt)
+        except ValueError:
+            continue
+    return _parse_date(date_text, time_text)
+
+
+def parse_paytm_xlsx(data: bytes) -> StatementImportResult:
+    """Parse Paytm's native Excel export from its Passbook Payment History sheet."""
+    try:
+        from openpyxl import load_workbook
+    except ImportError as exc:  # pragma: no cover
+        raise RuntimeError("Paytm Excel import requires openpyxl.") from exc
+
+    try:
+        workbook = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+    except Exception as exc:
+        raise ValueError("This Excel file could not be opened. Upload the original Paytm .xlsx export.") from exc
+
+    try:
+        worksheet = workbook["Passbook Payment History"] if "Passbook Payment History" in workbook.sheetnames else None
+        if worksheet is None:
+            raise ValueError("No Paytm Passbook Payment History sheet was found in this Excel file.")
+
+        header_row_index = None
+        headers = []
+        for row_index, row in enumerate(worksheet.iter_rows(values_only=True), start=1):
+            normalized = {_header_key(cell): index for index, cell in enumerate(row) if cell is not None}
+            if {"date", "transactiondetails", "amount"}.issubset(normalized):
+                header_row_index = row_index
+                headers = list(row)
+                break
+        if header_row_index is None:
+            raise ValueError("The Paytm sheet must contain Date, Transaction Details, and Amount columns.")
+
+        columns = {_header_key(cell): index for index, cell in enumerate(headers) if cell is not None}
+        parsed: list[ImportedTransaction] = []
+        skipped: list[str] = []
+
+        for row_number, row in enumerate(
+            worksheet.iter_rows(min_row=header_row_index + 1, values_only=True),
+            start=header_row_index + 1,
+        ):
+            if not any(cell is not None and _clean(cell) for cell in row):
+                continue
+            try:
+                details = _clean(row[columns["transactiondetails"]])
+                raw_amount = _clean(row[columns["amount"]]).replace(",", "").replace("₹", "").replace("INR", "").strip()
+                if not raw_amount:
+                    raise ValueError("amount is empty")
+                signed_amount = float(raw_amount.replace("+", ""))
+                if signed_amount == 0:
+                    raise ValueError("zero-value transaction")
+                direction = "credit" if signed_amount > 0 else "debit"
+                merchant = _merchant_from_details(details)
+                if not merchant:
+                    raise ValueError("transaction details are empty")
+
+                transaction_date = _parse_paytm_datetime(
+                    row[columns["date"]],
+                    row[columns["time"]] if "time" in columns and columns["time"] < len(row) else None,
+                )
+                reference_index = columns.get("upirefno")
+                source_id = _clean(row[reference_index]) if reference_index is not None and reference_index < len(row) else ""
+                account_index = columns.get("youraccount")
+                payment_method = _clean(row[account_index]) if account_index is not None and account_index < len(row) else ""
+                remarks_index = columns.get("remarks")
+                tags_index = columns.get("tags")
+                context = [details]
+                if remarks_index is not None and remarks_index < len(row) and _clean(row[remarks_index]):
+                    context.append(f"Note: {_clean(row[remarks_index])}")
+                if tags_index is not None and tags_index < len(row) and _clean(row[tags_index]):
+                    context.append(f"Tag: {_clean(row[tags_index])}")
+
+                parsed.append(
+                    ImportedTransaction(
+                        date=transaction_date,
+                        merchant_name=merchant,
+                        amount=abs(signed_amount),
+                        direction=direction,
+                        source="paytm",
+                        source_transaction_id=source_id or None,
+                        payment_method=payment_method or None,
+                        note=" | ".join(context),
+                    )
+                )
+            except (IndexError, TypeError, ValueError) as exc:
+                skipped.append(f"row {row_number}: {exc}")
+
+        if not parsed:
+            detail = skipped[0] if skipped else "No transaction rows were found."
+            raise ValueError(f"No Paytm transactions could be read. {detail}")
+        return StatementImportResult(tuple(parsed), tuple(skipped))
+    finally:
+        workbook.close()
+
+
 _GPAY_DATE = re.compile(r"(\d{2}\s*[A-Za-z]{3},\s*\d{4})")
 _GPAY_TIME = re.compile(r"(\d{2}:\d{2}\s*(?:AM|PM))", re.I)
 _GPAY_UPI_ID = re.compile(r"UPI\s*Transaction\s*ID\s*:\s*([A-Za-z0-9]+)", re.I)
@@ -283,4 +402,6 @@ def parse_statement(filename: str, data: bytes) -> StatementImportResult:
     if lower_name.endswith(".csv"):
         text = data.decode("utf-8-sig", errors="replace")
         return parse_csv_text(text)
-    raise ValueError("Unsupported statement format. Upload CSV or Google Pay PDF.")
+    if lower_name.endswith(".xlsx"):
+        return parse_paytm_xlsx(data)
+    raise ValueError("Unsupported statement format. Upload PhonePe CSV, Google Pay PDF, or Paytm Excel (.xlsx).")
