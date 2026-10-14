@@ -233,3 +233,22 @@ def test_user_export_contains_only_their_transactions(dashboard_app):
     assert b"USER ONE MERCHANT" in response.data
     assert b"USER TWO SECRET MERCHANT" not in response.data
     assert b"9999" not in response.data
+
+
+def test_category_distribution_is_sorted_by_spending_descending(dashboard_app):
+    with dashboard_app.app_context():
+        add_transaction(8, 100, "Cafe", "Food & Dining")
+        add_transaction(8, 500, "Rent", "Housing / Rent")
+        add_transaction(8, 250, "Market", "Groceries")
+        db.session.commit()
+
+    with dashboard_app.test_client() as client:
+        authenticate(client)
+        response = client.get("/dashboard/8")
+
+    html = response.data.decode("utf-8")
+    assert response.status_code == 200
+    rent_index = html.index("Housing / Rent")
+    groceries_index = html.index("Groceries")
+    food_index = html.index("Food &amp; Dining")
+    assert rent_index < groceries_index < food_index
