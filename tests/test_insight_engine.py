@@ -92,6 +92,7 @@ def test_frequency_change_is_detected_even_when_total_spending_decreases():
     frequency = next(item for item in insights if item["insight_type"] == "frequency_increase")
     assert frequency["driver"] == "frequency_increase"
     assert frequency["recommendation"] == "review_purchase_frequency"
+    assert frequency["title"] == "Purchase frequency increased :: 4 vs 2 purchases"
 
 
 def test_frequency_pattern_is_distinguished_from_larger_transactions():
