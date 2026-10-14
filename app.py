@@ -1229,7 +1229,12 @@ def submit_feedback():
 @app.route("/")
 def home():
     allTransactions = scoped_transaction_query(Transaction.query).all()
-    return render_template("index.html", allTransactions=allTransactions)
+    flash_messages = get_flashed_messages(with_categories=True)
+    return render_template(
+        "index.html",
+        allTransactions=allTransactions,
+        flash_messages=flash_messages,
+    )
 
 @app.route("/simulateATransaction", methods=["POST", "GET"])
 def simulate_transaction():
