@@ -1339,9 +1339,10 @@ def dashboard1(month=None):
 
     category_data = (
         transaction_query.with_entities(
-            Transaction.category, db.func.sum(Transaction.amount)
+            Transaction.category, db.func.sum(Transaction.amount).label("category_total")
         )
         .group_by(Transaction.category)
+        .order_by(db.desc("category_total"), db.asc(Transaction.category))
         .all()
     )
     month_category_totals = get_category_totals_for_query(month_transaction_query)
