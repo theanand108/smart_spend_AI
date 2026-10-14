@@ -413,10 +413,9 @@ def format_financial_insight_supporting_text(insight):
         )
 
     if insight_type == "frequency_increase":
-        focus = f" for {merchant}" if merchant else f" in {category}" if category else ""
         return (
-            f"Transaction frequency increased{focus}, contributing "
-            f"{amount_text} to the monthly change."
+            "Your average purchase amount remained relatively stable, so the "
+            "increase appears to be driven mainly by making purchases more often."
         )
 
     if insight_type in {"basket_size_increase", "average_transaction_increase"}:
@@ -443,10 +442,42 @@ def format_financial_insight_card(insight):
     if not title:
         return None
 
+    recommendation = insight.get("recommendation")
+    category = insight.get("category")
+    merchant = insight.get("merchant")
+    recommendation_copy = {
+        "review_purchase_frequency": (
+            "Review the additional purchases to see whether they reflect planned "
+            "needs or a change in your usual habits."
+        ),
+        "review_large_purchases": (
+            "Review your largest recent transactions and consider whether the "
+            "bigger purchases were planned."
+        ),
+        "review_category_spike": (
+            f"Review recent transactions in {category} to understand what drove "
+            "the increase and whether it was expected."
+        ) if category else "Review recent transactions in this spending area and check whether the increase was expected.",
+        "review_new_category": (
+            f"Check whether spending in {category} was expected and fits your "
+            "current budget."
+        ) if category else "Check whether this new spending area was expected and fits your budget.",
+        "review_category": (
+            f"Review recent transactions in {category} to see what drove the change."
+        ) if category else "Review the transactions that contributed most to the change.",
+        "review_merchant": (
+            f"Review recent transactions at {merchant} and check whether the increase was planned."
+        ) if merchant else "Review the merchants that contributed most to the increase.",
+        "review_driver": "Review the transactions behind this change and decide whether any action is needed.",
+        "review_overall_spending": "Review the categories that increased and identify any spending you want to adjust.",
+        "maintain_pattern": "Keep the lower-spending pattern going while making sure your needs are still covered.",
+    }.get(recommendation)
+
     return {
         "title": title,
         "value": format_signed_currency(insight.get("change_amount")),
         "supporting_text": format_financial_insight_supporting_text(insight),
+        "recommendation": recommendation_copy,
     }
 
 
