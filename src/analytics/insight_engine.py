@@ -217,7 +217,11 @@ def _build_frequency_insight(facts: FinancialFacts) -> FinancialInsight | None:
     return FinancialInsight(
         insight_type="frequency_increase",
         severity="observation",
-        title=f"You made more purchases :: {count_change} more purchases",
+        title=(
+            "Purchase frequency increased :: "
+            f"{facts.current_transaction_count} vs "
+            f"{facts.previous_transaction_count} purchases"
+        ),
         category=None,
         merchant=None,
         change_amount=facts.spending_change,

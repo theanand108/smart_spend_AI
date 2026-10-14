@@ -1063,6 +1063,22 @@ body {
     margin-bottom: 0;
     max-width: 46rem;
 }
+.insight-recommendation {
+    color: var(--dashboard-text);
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.5;
+    margin: 0.85rem 0 0;
+    padding: 0.7rem 0.85rem;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    background: var(--surface-elevated-alt);
+}
+.insight-recommendation strong {
+    color: var(--accent);
+    font-weight: 700;
+}
+
 .insight-card-secondary .insight-context {
     color: var(--dashboard-muted);
     font-size: 0.88rem;

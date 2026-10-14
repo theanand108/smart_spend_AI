@@ -55,6 +55,13 @@ app.config["CLERK_AUTHORIZED_PARTIES"] = [
     if part.strip()
 ]
 
+# Render exposes the canonical public HTTPS origin at runtime. Always include
+# it in Clerk's authorized-party allow-list so a stale/local-only
+# CLERK_AUTHORIZED_PARTIES value cannot reject production session tokens.
+render_external_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+if render_external_url and render_external_url not in app.config["CLERK_AUTHORIZED_PARTIES"]:
+    app.config["CLERK_AUTHORIZED_PARTIES"].append(render_external_url)
+
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
@@ -406,10 +413,10 @@ def format_financial_insight_supporting_text(insight):
         )
 
     if insight_type == "frequency_increase":
-        focus = f" for {merchant}" if merchant else f" in {category}" if category else ""
         return (
-            f"Transaction frequency increased{focus}, contributing "
-            f"{amount_text} to the monthly change."
+            f"Total spending rose by {amount_text}. Your average purchase amount "
+            "remained relatively stable, so the increase appears to be driven "
+            "mainly by making purchases more often."
         )
 
     if insight_type in {"basket_size_increase", "average_transaction_increase"}:
@@ -436,10 +443,42 @@ def format_financial_insight_card(insight):
     if not title:
         return None
 
+    recommendation = insight.get("recommendation")
+    category = insight.get("category")
+    merchant = insight.get("merchant")
+    recommendation_copy = {
+        "review_purchase_frequency": (
+            "Review the additional purchases to see whether they reflect planned "
+            "needs or a change in your usual habits."
+        ),
+        "review_large_purchases": (
+            "Review your largest recent transactions and consider whether the "
+            "bigger purchases were planned."
+        ),
+        "review_category_spike": (
+            f"Review recent transactions in {category} to understand what drove "
+            "the increase and whether it was expected."
+        ) if category else "Review recent transactions in this spending area and check whether the increase was expected.",
+        "review_new_category": (
+            f"Check whether spending in {category} was expected and fits your "
+            "current budget."
+        ) if category else "Check whether this new spending area was expected and fits your budget.",
+        "review_category": (
+            f"Review recent transactions in {category} to see what drove the change."
+        ) if category else "Review the transactions that contributed most to the change.",
+        "review_merchant": (
+            f"Review recent transactions at {merchant} and check whether the increase was planned."
+        ) if merchant else "Review the merchants that contributed most to the increase.",
+        "review_driver": "Review the transactions behind this change and decide whether any action is needed.",
+        "review_overall_spending": "Review the categories that increased and identify any spending you want to adjust.",
+        "maintain_pattern": "Keep the lower-spending pattern going while making sure your needs are still covered.",
+    }.get(recommendation)
+
     return {
         "title": title,
         "value": format_signed_currency(insight.get("change_amount")),
         "supporting_text": format_financial_insight_supporting_text(insight),
+        "recommendation": recommendation_copy,
     }
 
 
@@ -1019,7 +1058,13 @@ def sync_clerk_session():
     secret_key = app.config.get("CLERK_SECRET_KEY")
     if not secret_key:
         return jsonify({"ok": False, "error": "Clerk is not configured on the server."}), 503
-
+    authorization = request.headers.get("Authorization")
+    print(
+        "Clerk auth diagnostic:",
+        "authorization_present=", bool(authorization),
+        "authorization_scheme=",
+        authorization.split(" ", 1)[0] if authorization else None,
+    )
     try:
         state = authenticate_request(
             request,
@@ -1229,7 +1274,12 @@ def submit_feedback():
 @app.route("/")
 def home():
     allTransactions = scoped_transaction_query(Transaction.query).all()
-    return render_template("index.html", allTransactions=allTransactions)
+    flash_messages = get_flashed_messages(with_categories=True)
+    return render_template(
+        "index.html",
+        allTransactions=allTransactions,
+        flash_messages=flash_messages,
+    )
 
 @app.route("/simulateATransaction", methods=["POST", "GET"])
 def simulate_transaction():
@@ -1289,9 +1339,10 @@ def dashboard1(month=None):
 
     category_data = (
         transaction_query.with_entities(
-            Transaction.category, db.func.sum(Transaction.amount)
+            Transaction.category, db.func.sum(Transaction.amount).label("category_total")
         )
         .group_by(Transaction.category)
+        .order_by(db.desc("category_total"), db.asc(Transaction.category))
         .all()
     )
     month_category_totals = get_category_totals_for_query(month_transaction_query)
