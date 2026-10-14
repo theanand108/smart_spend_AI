@@ -173,6 +173,9 @@ block body %}
         <p class="insight-context">
           {% if insight_parts|length > 1 %}{{ insight.value }} · {% endif %}{{ insight.supporting_text }}
         </p>
+        {% if insight.recommendation %}
+        <p class="insight-recommendation"><strong>What to consider:</strong> {{ insight.recommendation }}</p>
+        {% endif %}
       </div>
       {% endif %}
     {% endfor %}
@@ -190,6 +193,9 @@ block body %}
           <p class="insight-context">
             {% if insight_parts|length > 1 %}{{ insight.value }} · {% endif %}{{ insight.supporting_text }}
           </p>
+          {% if insight.recommendation %}
+          <p class="insight-recommendation"><strong>What to consider:</strong> {{ insight.recommendation }}</p>
+          {% endif %}
         </div>
         {% endif %}
       {% endfor %}
