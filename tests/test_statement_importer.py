@@ -115,6 +115,8 @@ def _paytm_workbook_bytes():
     ])
     sheet.append(["17/04/2026", "19:09:56", "Received from One97 Communications Limited", "poweraccess.paytm3@axisbank", "Fino Payments Bank - 31", "+100.00", "827494321076", None, None, "# Money Received", None])
     sheet.append(["16/04/2026", "22:10:12", "Cashback Received from One97 Communications Limited", "poweraccess.paytm3@axisbank", "Fino Payments Bank - 31", "+50.00", "650171861066", None, "Payment on Flipkart using UPI on Apr 01 2026", "# Cashback", None])
+    sheet.append(["04/04/2026", "18:24:41", "Cashback Received from One97 Communications Limited", "poweraccess.paytm3@axisbank", "Fino Payments Bank - 31", "+2.00", "189616340946", None, "Paying using UPI on Apr 04 2026", "# Cashback", None])
+    sheet.append(["04/04/2026", "18:24:35", "Cashback Received from One97 Communications Limited", "poweraccess.paytm3@axisbank", "Fino Payments Bank - 31", "+1.00", "189593710946", None, "Paying using UPI on Apr 04 2026", "# Cashback", None])
     sheet.append(["04/04/2026", "18:23:48", "Recharge of Jio Mobile 6307183070", "paybil3066@ptybl on Paytm", "Fino Payments Bank - 31", "-299.00", "609442929881", "26848413096", None, "# Bill Payments", None])
     sheet.append(["04/04/2026", "02:04:27", "Paid to Blinkit", "blinkit.rzp@hdfcbank", "Fino Payments Bank - 31", "-383.00", "609442100191", None, "PayviaRazorpay", "# Groceries", None])
     sheet.append(["01/04/2026", "22:08:46", "Paid to Flipkart Payments", "paytm-56505013@ptybl on Paytm", "Fino Payments Bank - 31", "-186.00", "609169306754", None, None, "# Shopping", None])
@@ -127,11 +129,11 @@ def _paytm_workbook_bytes():
 def test_paytm_xlsx_imports_debits_credits_and_reference_ids():
     result = parse_paytm_xlsx(_paytm_workbook_bytes())
 
-    assert len(result.transactions) == 5
+    assert len(result.transactions) == 7
     assert len(result.expenses) == 3
-    assert len(result.received) == 2
+    assert len(result.received) == 4
     assert sum(t.amount for t in result.expenses) == 868
-    assert sum(t.amount for t in result.received) == 150
+    assert sum(t.amount for t in result.received) == 153
     assert result.expenses[0].merchant_name == "Recharge of Jio Mobile 6307183070"
     assert result.expenses[0].source_transaction_id == "609442929881"
     assert result.expenses[0].source == "paytm"
@@ -141,7 +143,7 @@ def test_paytm_xlsx_imports_debits_credits_and_reference_ids():
 
 def test_parse_statement_routes_xlsx_to_paytm_parser():
     result = parse_statement("Paytm_UPI_Statement.xlsx", _paytm_workbook_bytes())
-    assert len(result.transactions) == 5
+    assert len(result.transactions) == 7
     assert all(transaction.source == "paytm" for transaction in result.transactions)
 
 
