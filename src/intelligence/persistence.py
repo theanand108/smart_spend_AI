@@ -19,14 +19,55 @@ from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 from .categorizer import categorize_transaction
+from sqlalchemy import event, func
+
+from .context import normalize_text
+import re
 
 
 _INSTALLED = False
 
 
-def _history_for_transaction(session: Session, transaction: Any) -> list[dict[str, Any]]:
+def _history_for_transaction(
+    session: Session,
+    transaction: Any,
+) -> list[dict[str, Any]]:
     model = type(transaction)
+
+    merchant = normalize_text(transaction.merchant_name)
+
+    if not merchant:
+        return []
+
     query = session.query(model)
+
+    # Only retrieve transactions belonging to the same merchant.
+    # The categorizer uses normalized merchant names when matching history.
+    dialect = session.get_bind().dialect.name
+
+    if dialect == "postgresql":
+        # Normalize repeated whitespace in PostgreSQL, matching Python's
+        # whitespace normalization for ordinary transaction merchant names.
+        query = query.filter(
+            func.regexp_replace(
+                func.lower(model.merchant_name),
+                r"\s+",
+                " ",
+                "g",
+            ) == merchant
+        )
+    else:
+        # SQLite-compatible candidate search. The existing Python filter below
+        # performs the final exact normalized-name comparison.
+        tokens = [
+            token.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            for token in merchant.split()
+        ]
+        pattern = "%" + "%".join(tokens) + "%"
+
+        query = query.filter(
+            func.lower(model.merchant_name).like(pattern, escape="\\")
+        )
 
     transaction_id = getattr(transaction, "id", None)
     if transaction_id is not None:
@@ -51,9 +92,8 @@ def _history_for_transaction(session: Session, transaction: Any) -> list[dict[st
             "payment_method": row.payment_method,
         }
         for row in rows
+        if normalize_text(row.merchant_name) == merchant
     ]
-
-
 def _resolve_persisted_category(result: dict[str, Any]) -> str:
     if result.get("status") == "categorized" and result.get("category"):
         return str(result["category"])

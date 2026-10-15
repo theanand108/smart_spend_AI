@@ -6,7 +6,7 @@ from sqlalchemy.orm import DeclarativeBase, Session
 from src.intelligence.persistence import install
 from src.statement_import_service import import_statement, reconcile_unresolved_transactions
 from src.statement_importer import ImportedTransaction, StatementImportResult
-
+from src.intelligence.persistence import _history_for_transaction
 
 class Base(DeclarativeBase):
     pass
@@ -117,6 +117,43 @@ def test_reconcile_unresolved_uses_only_trusted_history():
     assert resolved == 1
     assert unknown.category == "Food & Dining"
 
+def test_history_matches_merchant_names_with_repeated_whitespace():
+    session = make_session()
+
+    session.add_all([
+        Transaction(
+            date=datetime(2026, 8, 1, 10, 0),
+            merchant_name="Campus  Services",
+            amount=120,
+            category="Food & Dining",
+            payment_method="upi",
+            notes="college canteen dinner",
+        ),
+        Transaction(
+            date=datetime(2026, 8, 2, 10, 0),
+            merchant_name="Campus Services Store",
+            amount=200,
+            category="Shopping",
+            payment_method="upi",
+            notes="stationery",
+        ),
+    ])
+    session.commit()
+
+    current = Transaction(
+        date=datetime(2026, 8, 3, 10, 0),
+        merchant_name="Campus Services",
+        amount=130,
+        category=None,
+        payment_method="upi",
+        notes=None,
+    )
+
+    history = _history_for_transaction(session, current)
+
+    assert [item["merchant_name"] for item in history] == [
+        "Campus  Services"
+    ]
 
 def test_reconcile_does_not_force_weak_unknown_transactions():
     session = make_session()

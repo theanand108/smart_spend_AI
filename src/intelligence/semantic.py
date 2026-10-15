@@ -10,6 +10,7 @@ history are handled by the transaction-intelligence layer.
 """
 
 from __future__ import annotations
+from functools import lru_cache
 
 import re
 from typing import Any
@@ -586,7 +587,7 @@ def _result(
         "reason": reason,
     }
 
-
+@lru_cache(maxsize=4096)
 def semantic_note_evidence(note: Any) -> dict[str, Any]:
     """Extract transaction-purpose evidence from a natural-language note."""
     text = _normalize(note)
